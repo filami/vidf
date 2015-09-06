@@ -180,6 +180,6 @@ function AddShader(fileName, entryPoint, shaderType)
 end
 
 
--- include "src/vidf"
+include "src/vidf"
 -- include "src/ext"
 -- include "src/research"
