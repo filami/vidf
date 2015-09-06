@@ -23,10 +23,10 @@
 *.lib
 
 # Executables
-*.exe
 *.out
 *.app
 
 # Auto Generated files
 make/*
 obj/*
+bin/*
