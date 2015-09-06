@@ -5,12 +5,12 @@ AddFilesToProject
 	["build"] =
 	{
 		"premake5.lua",
-		"pch.h",
-		"pch.cpp",
 	},
 	
 	["Common"] =
 	{
+		"pch.h",
+		"pch.cpp",
 		"common/aspectratio.h",
 		"common/bitfield.h",
 		"common/box.h",

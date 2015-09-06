@@ -64,11 +64,6 @@ function ConfigCommon(projName, targetLoc)
 		".",
 		_WORKING_DIR.."/src/",
 		_WORKING_DIR.."/src/vidf/",
-		_WORKING_DIR.."/src/ext/",
-		_WORKING_DIR.."/src/ext/box2d",
-		_WORKING_DIR.."/src/ext/gm/src/gm",
-		_WORKING_DIR.."/src/ext/gm/src/binds",
-		_WORKING_DIR.."/src/ext/gm/src/platform/win64msvc",
 	}
 	flags {"NoManifest", "NoRTTI"}
 	
@@ -110,11 +105,9 @@ function ConfigVIDFDependencies()
 	
 	configuration(debugConfig)
 	links{"vidf_x64_"..debugConfig}
-	links{"viext_x64_"..debugConfig}
 	
 	configuration(profileConfig)
 	links{"vidf_x64_"..profileConfig}
-	links{"viext_x64_"..profileConfig}
 end
 
 
@@ -182,4 +175,4 @@ end
 
 include "src/vidf"
 -- include "src/ext"
--- include "src/research"
+include "src/research"
