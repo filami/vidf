@@ -35,6 +35,11 @@ namespace vidf
 		return Color(lhv.r+rhv.r, lhv.g+rhv.g, lhv.b+rhv.b, lhv.a+rhv.a);
 	}
 
+	inline Color operator - (const Color& lhv, const Color& rhv)
+	{
+		return Color(lhv.r - rhv.r, lhv.g - rhv.g, lhv.b - rhv.b, lhv.a - rhv.a);
+	}
+
 
 	template<typename T>
 	inline Color operator * (const Color& lhv, T rhv)

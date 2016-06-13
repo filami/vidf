@@ -1,3 +1,4 @@
+#include <cassert>
 #include <string>
 #include <vector>
 #include <map>
@@ -16,6 +17,7 @@
 #include <functional>
 #include <queue>
 #include <stack>
+#include <array>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -29,26 +31,10 @@
 # undef min
 # undef max
 
-
-#pragma warning(push)
-#pragma warning(disable : 4005)
-#include <d3d9.h>
-#include <d3d11.h>
-#include <d3d11shader.h>
-#include <d3dcompiler.h>
-#include <d3dx11.h>
-#include <d3dx9.h>
-#include <XInput.h>
-# undef GetObject
-# undef DrawText
-# undef min
-# undef max
-#pragma warning(pop)
-
 #include <gl/GL.H>
 #include <gl/GLU.H>
 
-
+#include <vulkan/vulkan.h>
 
 #include "vidf/common/rtti.h"
 #include "vidf/common/types.h"

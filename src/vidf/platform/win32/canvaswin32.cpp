@@ -165,7 +165,7 @@ namespace vidf
 
 
 
-		void* CreateCanvasWindow(const CanvasDesc& desc, Canvas_ptr owner, bool simpleFrame)
+		void* CreateCanvasWindow(const CanvasDesc& desc, CanvasPtr owner, bool simpleFrame)
 		{
 			HINSTANCE hInstance = GetModuleHandle(0);
 
@@ -211,16 +211,16 @@ namespace vidf
 
 
 
-	Canvas_ptr Canvas::CreateCanvas(const CanvasDesc& desc)
+	CanvasPtr Canvas::Create(const CanvasDesc& desc)
 	{
 		if (!CreateCanvasClass())
-			return Canvas_ptr();
+			return CanvasPtr();
 
-		Canvas_ptr canvas(new Canvas(desc));
+		CanvasPtr canvas(new Canvas(desc));
 
 		void* handle = CreateCanvasWindow(desc, canvas, desc.simpleFrame);
 		if (!handle)
-			return Canvas_ptr();
+			return CanvasPtr();
 		ResizeCanvasWindow(desc, handle);
 		canvas->handle = handle;
 		canvas->deviceContext = GetDC((HWND)handle);

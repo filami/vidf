@@ -50,11 +50,11 @@ namespace vidf { namespace proto {
 		};
 
 	public:
-		CameraOrtho2D(Canvas_ptr _canvas, OrthoYAxis orthoYAxis=Upward, CameraListenerType type=CameraListener_Full);
+		CameraOrtho2D(CanvasPtr _canvas, OrthoYAxis orthoYAxis=Upward, CameraListenerType type=CameraListener_Full);
 		~CameraOrtho2D();
 
 		void SetCamera(const Vector2f& camCenter, float camSize);
-		Canvas_ptr GetCanvas() const {return canvas;}
+		CanvasPtr GetCanvas() const {return canvas;}
 
 		void CommitToGL() const;
 
@@ -65,7 +65,7 @@ namespace vidf { namespace proto {
 
 	private:
 		Listerner listener;
-		Canvas_ptr canvas;
+		CanvasPtr canvas;
 		AspectRatio aspectRatio;
 
 		OrthoYAxis yAxis;
@@ -112,10 +112,10 @@ namespace vidf { namespace proto {
 		};
 
 	public:
-		OrbitalCamera(Canvas_ptr _canvas, CameraListenerType type=CameraListener_Full);
+		OrbitalCamera(CanvasPtr _canvas, CameraListenerType type=CameraListener_Full);
 		~OrbitalCamera();
 
-		Canvas_ptr GetCanvas() const {return canvas;}
+		CanvasPtr GetCanvas() const {return canvas;}
 
 		void SetPerspective(float _radFoV, float _nearPlane, float _farPlane);
 		void SetCamera(const Vector3f& _target, const Quaternionf& _rotation, float _distance);
@@ -145,7 +145,7 @@ namespace vidf { namespace proto {
 
 	private:
 		Listerner listener;
-		Canvas_ptr canvas;
+		CanvasPtr canvas;
 		AspectRatio aspectRatio;
 
 		Quaternionf rotation;

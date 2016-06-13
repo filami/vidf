@@ -110,7 +110,7 @@ namespace vidf { namespace proto {
 		canvasDesc.height = desc.height;
 		canvasDesc.simpleFrame = desc.fullscreen;
 
-		canvas = Canvas::CreateCanvas(canvasDesc);
+		canvas = Canvas::Create(canvasDesc);
 		if (!canvas)
 			return false;
 		canvasListener = new ProtoCanvasListener();

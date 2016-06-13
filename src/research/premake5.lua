@@ -14,4 +14,9 @@ AddFilesToProject
 		"pch.h",
 		"pch.cpp",
 	},
+	
+	["tests"] =
+	{
+		"tests/vulkan.cpp",
+	},
 }

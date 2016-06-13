@@ -9,7 +9,7 @@ namespace vidf
 
 
 	class Canvas;
-	typedef std::shared_ptr<Canvas> Canvas_ptr;
+	typedef std::shared_ptr<Canvas> CanvasPtr;
 
 
 
@@ -53,7 +53,7 @@ namespace vidf
 	public:
 		~Canvas();
 
-		static Canvas_ptr CreateCanvas(const CanvasDesc& desc);
+		static CanvasPtr Create(const CanvasDesc& desc);
 		const CanvasDesc& GetCanvasDesc() const {return canvasDesc;}
 		void* GetHandle() const {return handle;}
 		void* GetDeviceContext() const {return deviceContext;}

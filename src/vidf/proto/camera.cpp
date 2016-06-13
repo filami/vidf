@@ -6,7 +6,7 @@ namespace vidf { namespace proto {
 
 
 
-	CameraOrtho2D::CameraOrtho2D(Canvas_ptr _canvas, OrthoYAxis orthoYAxis, CameraListenerType type)
+	CameraOrtho2D::CameraOrtho2D(CanvasPtr _canvas, OrthoYAxis orthoYAxis, CameraListenerType type)
 		:	canvas(_canvas)	
 		,	center(zero)
 		,	size(1.0f)
@@ -143,7 +143,7 @@ namespace vidf { namespace proto {
 
 
 
-	OrbitalCamera::OrbitalCamera(Canvas_ptr _canvas, CameraListenerType type)
+	OrbitalCamera::OrbitalCamera(CanvasPtr _canvas, CameraListenerType type)
 		:	canvas(_canvas)	
 		,	listener(*this)
 		,	target(zero)

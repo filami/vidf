@@ -64,7 +64,9 @@ function ConfigCommon(projName, targetLoc)
 		".",
 		_WORKING_DIR.."/src/",
 		_WORKING_DIR.."/src/vidf/",
+		_WORKING_DIR.."/ext/include/",
 	}
+	defines {"VK_USE_PLATFORM_WIN32_KHR"}
 	flags {"NoManifest", "NoRTTI"}
 	
 	-- debug
@@ -89,18 +91,13 @@ function ConfigVIDFDependencies()
 	libdirs
 	{
 		_WORKING_DIR.."/lib/",
+		_WORKING_DIR.."/ext/lib/vulkan/",
 	}
 	
 	links
 	{
-		"d3d9",
-		"d3dx10",
-		"d3d11",
-		"D3DX11",
-		"dxguid",
-		"d3dcompiler",
-		"dxgi",
-		"dsound"
+		"dsound",
+		"vulkan-1",
 	}
 	
 	configuration(debugConfig)
@@ -174,5 +171,4 @@ end
 
 
 include "src/vidf"
--- include "src/ext"
 include "src/research"

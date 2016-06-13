@@ -69,6 +69,22 @@ AddFilesToProject
 		"platform/win32/timewin32.cpp",
 	},
 
+	["Renderer"] =
+	{
+		"renderer/common.h",
+		"renderer/rendercontext.cpp",
+		"renderer/rendercontext.h",
+		"renderer/renderdevice.cpp",
+		"renderer/renderdevice.h",
+		"renderer/swapchain.cpp",
+		"renderer/swapchain.h",
+	},
+	["Renderer/VulkanWin32"] =
+	{
+		"renderer/vulkanwin32/renderdevicevkwin32.cpp",
+		"renderer/vulkanwin32/swapchainvkwin32.cpp",
+	},
+
 	["Proto"] =
 	{
 		"proto/camera.cpp",

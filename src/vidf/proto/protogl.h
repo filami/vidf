@@ -53,12 +53,12 @@ namespace vidf { namespace proto {
 		const ProtoGLDesc& GetProtoGLDesc() const {return protoGLDesc;}
 		const AspectRatio& GetAspectRatio() const {return aspectRatio;}
 
-		Canvas_ptr GetCanvas() const {return canvas;}
+		CanvasPtr GetCanvas() const {return canvas;}
 
 	private:
 		ProtoGLDevice device;
 		ProtoGLDesc protoGLDesc;
-		Canvas_ptr canvas;
+		CanvasPtr canvas;
 		AspectRatio aspectRatio;
 		CanvasListener* canvasListener;
 	};

@@ -6,7 +6,13 @@
 #include "vector2.h"
 #include "vector3.h"
 
-namespace vidf {
+
+#define ZeroStruct(str) ZeroMemory(&str, sizeof(str))
+
+
+
+namespace vidf
+{
 
 
 	const float PI = std::acos(-1.0f);
