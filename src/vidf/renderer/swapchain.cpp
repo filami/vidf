@@ -1,12 +1,14 @@
 #include "pch.h"
 #include "renderer/swapchain.h"
 #include "renderer/common.h"
+#include "renderer/renderdevice.h"
 
 namespace vidf
 {
 
 
-	SwapChain::SwapChain()
+	SwapChain::SwapChain(RenderDevicePtr _device)
+		: device(_device)
 	{
 	}
 
@@ -18,27 +20,31 @@ namespace vidf
 
 
 
-	bool SwapChain::Connect(VkInstance _instance, VkPhysicalDevice _physicalDevice, VkDevice _device, VkCommandBuffer _setupCmdBuffer, VkQueue _queue)
+	bool SwapChain::Initialize(const SwapChainDesc& desc)
 	{
-		instance = _instance;
-		physicalDevice = _physicalDevice;
-		device = _device;
-		setupCmdBuffer = _setupCmdBuffer;
-		queue = _queue;
-		GET_INSTANCE_PROC_ADDR(instance, GetPhysicalDeviceSurfaceSupportKHR);
-		GET_INSTANCE_PROC_ADDR(instance, GetPhysicalDeviceSurfaceCapabilitiesKHR);
-		GET_INSTANCE_PROC_ADDR(instance, GetPhysicalDeviceSurfaceFormatsKHR);
-		GET_INSTANCE_PROC_ADDR(instance, GetPhysicalDeviceSurfacePresentModesKHR);
-		GET_DEVICE_PROC_ADDR(device, CreateSwapchainKHR);
-		GET_DEVICE_PROC_ADDR(device, DestroySwapchainKHR);
-		GET_DEVICE_PROC_ADDR(device, GetSwapchainImagesKHR);
-		GET_DEVICE_PROC_ADDR(device, AcquireNextImageKHR);
-		GET_DEVICE_PROC_ADDR(device, QueuePresentKHR);
+		GET_INSTANCE_PROC_ADDR(device->GetInstance(), GetPhysicalDeviceSurfaceSupportKHR);
+		GET_INSTANCE_PROC_ADDR(device->GetInstance(), GetPhysicalDeviceSurfaceCapabilitiesKHR);
+		GET_INSTANCE_PROC_ADDR(device->GetInstance(), GetPhysicalDeviceSurfaceFormatsKHR);
+		GET_INSTANCE_PROC_ADDR(device->GetInstance(), GetPhysicalDeviceSurfacePresentModesKHR);
+		GET_DEVICE_PROC_ADDR(device->GetDevice(), CreateSwapchainKHR);
+		GET_DEVICE_PROC_ADDR(device->GetDevice(), DestroySwapchainKHR);
+		GET_DEVICE_PROC_ADDR(device->GetDevice(), GetSwapchainImagesKHR);
+		GET_DEVICE_PROC_ADDR(device->GetDevice(), AcquireNextImageKHR);
+		GET_DEVICE_PROC_ADDR(device->GetDevice(), QueuePresentKHR);
+
+		if (!CreateSurface(desc))
+			return false;
+		QueryColorFormat();
+		if (!InitSwapChain(desc))
+			return false;
+		if (!ConvertFrameBuffers())
+			return false;
+
 		return true;
 	}
 
 
-
+	
 	bool SwapChain::CreateSurface(const SwapChainDesc& desc)
 	{
 		VkWin32SurfaceCreateInfoKHR surfaceCreateInfo;
@@ -47,7 +53,10 @@ namespace vidf
 		surfaceCreateInfo.hinstance = GetModuleHandle(0);
 		surfaceCreateInfo.hwnd = (HWND)desc.windowHandle;
 
-		VK_VERIFY_RETURN(vkCreateWin32SurfaceKHR(instance, &surfaceCreateInfo, nullptr, &surface));
+		VK_VERIFY_RETURN(
+			vkCreateWin32SurfaceKHR(
+				device->GetInstance(), &surfaceCreateInfo,
+				nullptr, &surface));
 
 		return true;
 	}
@@ -58,9 +67,13 @@ namespace vidf
 	{
 		uint32_t formatCount = 0;
 		std::vector<VkSurfaceFormatKHR> surfaceFormats;
-		vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(
+			device->GetPhysicalDevice(), surface,
+			&formatCount, nullptr);
 		surfaceFormats.resize(formatCount);
-		vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, surfaceFormats.data());
+		vkGetPhysicalDeviceSurfaceFormatsKHR(
+			device->GetPhysicalDevice(), surface,
+			&formatCount, surfaceFormats.data());
 
 		if (formatCount == 1 && surfaceFormats[0].format == VK_FORMAT_UNDEFINED)
 			colorFormat = VK_FORMAT_B8G8R8_UNORM;
@@ -71,77 +84,16 @@ namespace vidf
 
 
 
-	bool SwapChain::QueryQueueNodeIndex()
-	{
-		uint32_t queueCount;
-		std::vector<VkQueueFamilyProperties> queueProps;
-		vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueCount, nullptr);
-		queueProps.resize(queueCount);
-		vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueCount, queueProps.data());
-		std::vector<VkBool32> supportsPresent(queueCount);
-		for (uint32_t i = 0; i < queueCount; i++)
-			vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &supportsPresent[i]);
-
-		uint32_t graphicsQueueNodeIndex = UINT32_MAX;
-		uint32_t presentQueueNodeIndex = UINT32_MAX;
-		for (uint32_t i = 0; i < queueCount; i++)
-		{
-			if ((queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
-			{
-				if (graphicsQueueNodeIndex == UINT32_MAX)
-				{
-					graphicsQueueNodeIndex = i;
-				}
-
-				if (supportsPresent[i] == VK_TRUE)
-				{
-					graphicsQueueNodeIndex = i;
-					presentQueueNodeIndex = i;
-					break;
-				}
-			}
-		}
-		if (presentQueueNodeIndex == UINT32_MAX)
-		{
-			for (uint32_t i = 0; i < queueCount; ++i)
-			{
-				if (supportsPresent[i] == VK_TRUE)
-				{
-					presentQueueNodeIndex = i;
-					break;
-				}
-			}
-		}
-
-		if (graphicsQueueNodeIndex == UINT32_MAX || presentQueueNodeIndex == UINT32_MAX)
-		{
-			// vkTools::exitFatal("Could not find a graphics and/or presenting queue!", "Fatal error");
-			return false;
-		}
-
-		if (graphicsQueueNodeIndex != presentQueueNodeIndex)
-		{
-			// vkTools::exitFatal("Separate graphics and presenting queues are not supported yet!", "Fatal error");
-			return false;
-		}
-
-		queueNodeIndex = graphicsQueueNodeIndex;
-
-		return true;
-	}
-
-
-
 	bool SwapChain::InitSwapChain(const SwapChainDesc& desc)
 	{
 		uint32_t presentModeCount;
 		VkSurfaceCapabilitiesKHR surfCaps;
 		std::vector<VkPresentModeKHR> presentModes;
 
-		VK_VERIFY_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfCaps));
-		VK_VERIFY_RETURN(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr));
+		VK_VERIFY_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device->GetPhysicalDevice(), surface, &surfCaps));
+		VK_VERIFY_RETURN(vkGetPhysicalDeviceSurfacePresentModesKHR(device->GetPhysicalDevice(), surface, &presentModeCount, nullptr));
 		presentModes.resize(presentModeCount);
-		VK_VERIFY_RETURN(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.data()));
+		VK_VERIFY_RETURN(vkGetPhysicalDeviceSurfacePresentModesKHR(device->GetPhysicalDevice(), surface, &presentModeCount, presentModes.data()));
 
 		VkExtent2D swapchainExtent = surfCaps.currentExtent;
 		if (swapchainExtent.width == -1)
@@ -183,7 +135,7 @@ namespace vidf
 		swapChainInfo.presentMode = swapchainPresentMode;
 		swapChainInfo.clipped = true;
 		swapChainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-		VK_VERIFY_RETURN(vkCreateSwapchainKHR(device, &swapChainInfo, nullptr, &swapChain));
+		VK_VERIFY_RETURN(vkCreateSwapchainKHR(device->GetDevice(), &swapChainInfo, nullptr, &swapChain));
 
 		return true;
 	}
@@ -193,9 +145,9 @@ namespace vidf
 	bool SwapChain::ConvertFrameBuffers()
 	{
 		uint32_t imageCount = 0;
-		vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
+		vkGetSwapchainImagesKHR(device->GetDevice(), swapChain, &imageCount, nullptr);
 		presentImages.resize(imageCount);
-		vkGetSwapchainImagesKHR(device, swapChain, &imageCount, presentImages.data());
+		vkGetSwapchainImagesKHR(device->GetDevice(), swapChain, &imageCount, presentImages.data());
 
 		const VkComponentMapping components =
 		{
@@ -224,7 +176,7 @@ namespace vidf
 		ZeroStruct(fenceCreateInfo);
 		fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		VkFence submitFence;
-		vkCreateFence(device, &fenceCreateInfo, nullptr, &submitFence);
+		vkCreateFence(device->GetDevice(), &fenceCreateInfo, nullptr, &submitFence);
 
 		const VkImageSubresourceRange resourceRange =
 		{
@@ -241,7 +193,7 @@ namespace vidf
 		{
 			presentImagesViewCreateInfo.image = presentImages[i];
 
-			vkBeginCommandBuffer(setupCmdBuffer, &beginInfo);
+			vkBeginCommandBuffer(device->GetSetupCommandBuffer(), &beginInfo);
 
 			VkImageMemoryBarrier layoutTransitionBarrier;
 			ZeroStruct(layoutTransitionBarrier);
@@ -255,7 +207,7 @@ namespace vidf
 			layoutTransitionBarrier.subresourceRange = resourceRange;
 
 			vkCmdPipelineBarrier(
-				setupCmdBuffer,
+				device->GetSetupCommandBuffer(),
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 				0,
@@ -263,7 +215,7 @@ namespace vidf
 				0, nullptr,
 				1, &layoutTransitionBarrier);
 
-			vkEndCommandBuffer(setupCmdBuffer);
+			vkEndCommandBuffer(device->GetSetupCommandBuffer());
 
 			VkSubmitInfo submitInfo;
 			ZeroStruct(submitInfo);
@@ -272,19 +224,19 @@ namespace vidf
 			submitInfo.pWaitSemaphores = NULL;
 			submitInfo.pWaitDstStageMask = waitStageMask;
 			submitInfo.commandBufferCount = 1;
-			submitInfo.pCommandBuffers = &setupCmdBuffer;
+			submitInfo.pCommandBuffers = &device->GetSetupCommandBuffer();
 			submitInfo.signalSemaphoreCount = 0;
 			submitInfo.pSignalSemaphores = NULL;
-			vkQueueSubmit(queue, 1, &submitInfo, submitFence);
+			vkQueueSubmit(device->GetQeueue(), 1, &submitInfo, submitFence);
 
-			vkWaitForFences(device, 1, &submitFence, VK_TRUE, UINT64_MAX);
-			vkResetFences(device, 1, &submitFence);
+			vkWaitForFences(device->GetDevice(), 1, &submitFence, VK_TRUE, UINT64_MAX);
+			vkResetFences(device->GetDevice(), 1, &submitFence);
 
-			vkResetCommandBuffer(setupCmdBuffer, 0);
+			vkResetCommandBuffer(device->GetSetupCommandBuffer(), 0);
 
 			VK_VERIFY_RETURN(
 				vkCreateImageView(
-					device, &presentImagesViewCreateInfo,
+					device->GetDevice(), &presentImagesViewCreateInfo,
 					nullptr, &presentImageViews[i]));
 		}
 
@@ -296,7 +248,7 @@ namespace vidf
 	void SwapChain::Present()
 	{
 		vkAcquireNextImageKHR(
-			device, swapChain, UINT64_MAX,
+			device->GetDevice(), swapChain, UINT64_MAX,
 			VK_NULL_HANDLE, VK_NULL_HANDLE, &nextImageIdx);
 
 		VkPresentInfoKHR presentInfo;
@@ -305,7 +257,7 @@ namespace vidf
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = &swapChain;
 		presentInfo.pImageIndices = &nextImageIdx;
-		vkQueuePresentKHR(queue, &presentInfo);
+		vkQueuePresentKHR(device->GetQeueue(), &presentInfo);
 	}
 
 

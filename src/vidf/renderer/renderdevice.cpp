@@ -39,20 +39,9 @@ namespace vidf
 
 	SwapChainPtr RenderDevice::CreateSwapChain(const SwapChainDesc& desc)
 	{
-		SwapChainPtr swapChain(new SwapChain());
-
-		if (!swapChain->Connect(instance, physicalDevice, device, setupCmdBuffer, queue))
+		SwapChainPtr swapChain(new SwapChain(shared_from_this()));
+		if (!swapChain->Initialize(desc))
 			return SwapChainPtr();
-		if (!swapChain->CreateSurface(desc))
-			return SwapChainPtr();
-		swapChain->QueryColorFormat();
-		if (!swapChain->QueryQueueNodeIndex())
-			return SwapChainPtr();
-		if (!swapChain->InitSwapChain(desc))
-			return SwapChainPtr();
-		if (!swapChain->ConvertFrameBuffers())
-			return SwapChainPtr();
-
 		return swapChain;
 	}
 
@@ -60,7 +49,7 @@ namespace vidf
 
 	RenderContextPtr RenderDevice::CreateRenderContext()
 	{
-		RenderContextPtr context(new RenderContext(device, commandPool, queue, queueIndex));
+		RenderContextPtr context(new RenderContext(shared_from_this()));
 		if (!context->Initialize())
 			return RenderContextPtr();
 		return context;

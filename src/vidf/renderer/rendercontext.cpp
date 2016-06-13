@@ -1,16 +1,14 @@
 #include "pch.h"
 #include "common.h"
 #include "rendercontext.h"
+#include "renderdevice.h"
 
 namespace vidf
 {
 
 
-	RenderContext::RenderContext(VkDevice _device, VkCommandPool _commandPool, VkQueue _queue, uint32_t _queueIndex)
+	RenderContext::RenderContext(RenderDevicePtr _device)
 		: device(_device)
-		, commandPool(_commandPool)
-		, queue(_queue)
-		, queueIndex(_queueIndex)
 	{
 	}
 
@@ -40,10 +38,13 @@ namespace vidf
 		VkCommandBufferAllocateInfo commandBufferAllocationInfo;
 		ZeroStruct(commandBufferAllocationInfo);
 		commandBufferAllocationInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		commandBufferAllocationInfo.commandPool = commandPool;
+		commandBufferAllocationInfo.commandPool = device->GetCommandPool();
 		commandBufferAllocationInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		commandBufferAllocationInfo.commandBufferCount = 1;
-		VK_VERIFY_RETURN(vkAllocateCommandBuffers(device, &commandBufferAllocationInfo, &drawCmdBuffer));
+		VK_VERIFY_RETURN(
+			vkAllocateCommandBuffers(
+				device->GetDevice(), &commandBufferAllocationInfo,
+				&drawCmdBuffer));
 
 		return true;
 	}

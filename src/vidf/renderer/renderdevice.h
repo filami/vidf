@@ -15,7 +15,7 @@ namespace vidf
 
 
 
-	class RenderDevice
+	class RenderDevice : public std::enable_shared_from_this<RenderDevice>
 	{
 	private:
 		struct Layers
@@ -34,9 +34,12 @@ namespace vidf
 		SwapChainPtr CreateSwapChain(const SwapChainDesc& desc);
 		RenderContextPtr CreateRenderContext();
 
-		VkInstance GetInstance() { return instance; }
-		VkDevice GetDevice() { return device; }
-		VkQueue GetQeueue() { return queue; }
+		const VkInstance& GetInstance() const { return instance; }
+		const VkPhysicalDevice& GetPhysicalDevice() const { return physicalDevice; }
+		const VkDevice& GetDevice() const { return device; }
+		const VkQueue& GetQeueue() { return queue; }
+		const VkCommandPool& GetCommandPool() const { return commandPool; }
+		const VkCommandBuffer& GetSetupCommandBuffer() const { return setupCmdBuffer; }
 
 	private:
 		RenderDevice();
@@ -47,8 +50,7 @@ namespace vidf
 		bool CreatePhysicalDevice();
 		bool CreateDevice(const RenderDeviceDesc& desc);
 
-	public:
-		// private:
+	private:
 		Layers layers;
 		DeviceExtensions extensions;
 		VkInstance instance = nullptr;

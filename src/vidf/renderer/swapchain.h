@@ -1,5 +1,7 @@
 #pragma once
 
+#include "common.h"
+
 namespace vidf
 {
 
@@ -21,6 +23,7 @@ namespace vidf
 	class SwapChain
 	{
 	public:
+		SwapChain(RenderDevicePtr _device);
 		~SwapChain();
 
 		VkFormat GetColorFormat() const { return colorFormat; }
@@ -34,10 +37,9 @@ namespace vidf
 		friend class RenderDevice;
 		SwapChain();
 
-		bool Connect(VkInstance instance, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandBuffer _setupCmdBuffer, VkQueue _queue);
+		bool Initialize(const SwapChainDesc& desc);
 		bool CreateSurface(const SwapChainDesc& desc);
 		void QueryColorFormat();
-		bool QueryQueueNodeIndex();
 		bool InitSwapChain(const SwapChainDesc& desc);
 		bool ConvertFrameBuffers();
 
@@ -53,19 +55,14 @@ namespace vidf
 		PFN_vkQueuePresentKHR vkQueuePresentKHR;
 
 	private:
-		VkInstance instance;
-		VkPhysicalDevice physicalDevice;
-		VkDevice device;
-		VkCommandBuffer setupCmdBuffer;
+		RenderDevicePtr device;
 		std::vector<VkImage> presentImages;
 		std::vector<VkImageView> presentImageViews;
 		VkSwapchainKHR swapChain = nullptr;
 		VkSurfaceKHR surface = nullptr;
-		VkQueue queue = nullptr;
 		VkFormat colorFormat;
 		VkColorSpaceKHR colorSpace;
 		uint32_t nextImageIdx = 0;
-		uint32_t queueNodeIndex = UINT32_MAX;
 	};
 
 

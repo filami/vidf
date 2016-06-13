@@ -15,17 +15,14 @@ namespace vidf
 		VkCommandBuffer GetDrawCommandBuffer() { return drawCmdBuffer; }
 
 	private:
-		RenderContext(VkDevice _device, VkCommandPool _commandPool, VkQueue _queue, uint32_t _queueIndex);
+		friend class RenderDevice;
+		RenderContext(RenderDevicePtr _device);
 
 		bool Initialize();
 
 	private:
-		friend class RenderDevice;
-		VkDevice device;
-		VkCommandPool commandPool;
+		RenderDevicePtr device;
 		VkCommandBuffer drawCmdBuffer;
-		VkQueue queue;
-		uint32_t queueIndex;
 		bool open = false;
 	};
 
