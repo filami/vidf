@@ -35,6 +35,8 @@ namespace vidf
 		RenderContextPtr CreateRenderContext();
 
 		VkInstance GetInstance() { return instance; }
+		VkDevice GetDevice() { return device; }
+		VkQueue GetQeueue() { return queue; }
 
 	private:
 		RenderDevice();

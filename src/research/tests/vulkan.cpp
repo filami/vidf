@@ -31,9 +31,9 @@ bool TestVulkan()
 
 	//////////////////////////////////////////////////////////////////////////
 
-	VkDevice _device = context->device;
-	VkQueue queue = device->queue;
-	VkCommandBuffer drawCmdBuffer = context->drawCmdBuffer;
+	VkDevice _device = device->GetDevice();
+	VkQueue queue = device->GetQeueue();
+	VkCommandBuffer drawCmdBuffer = context->GetDrawCommandBuffer();
 
 	//	VkImageView attachments[2];
 	VkImageView attachments[1];
@@ -45,7 +45,7 @@ bool TestVulkan()
 	//	VkAttachmentDescription attachments[2] = {};
 
 	// Color attachment
-	attachmentDescs[0].format = swapChain->colorFormat;
+	attachmentDescs[0].format = swapChain->GetColorFormat();
 	attachmentDescs[0].samples = VK_SAMPLE_COUNT_1_BIT;
 	attachmentDescs[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	attachmentDescs[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -120,13 +120,13 @@ bool TestVulkan()
 
 	// Create frame buffers for every swap chain image
 	std::vector<VkFramebuffer> frameBuffers;
-	frameBuffers.resize(swapChain->presentImages.size());
+	frameBuffers.resize(swapChain->GetPresentImages().size());
 	for (uint32_t i = 0; i < frameBuffers.size(); i++)
 	{
-		attachments[0] = swapChain->presentImageViews[i];
+		attachments[0] = swapChain->GetPresentImageViews()[i];
 		VK_VERIFY_RETURN(vkCreateFramebuffer(_device, &frameBufferCreateInfo, nullptr, &frameBuffers[i]));
 	}
-
+	
 	//////////////////////////////////////////////////////////////////////////
 
 	VkRenderPassBeginInfo renderPassBeginInfo;
@@ -142,8 +142,6 @@ bool TestVulkan()
 
 	//////////////////////////////////////////////////////////////////////////
 
-	//////////////////////////////////////////////////////////////////////////
-
 	// loop
 	while (UpdateSystemMessages() == SMR_Continue)
 	{
@@ -155,7 +153,7 @@ bool TestVulkan()
 		cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		VK_VERIFY_RETURN(vkBeginCommandBuffer(drawCmdBuffer, &cmdBufferBeginInfo));
 
-		renderPassBeginInfo.framebuffer = frameBuffers[swapChain->nextImageIdx];
+		renderPassBeginInfo.framebuffer = frameBuffers[swapChain->GetCurrentPresentId()];
 		vkCmdBeginRenderPass(drawCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 		VK_VERIFY_RETURN(vkEndCommandBuffer(drawCmdBuffer));

@@ -23,6 +23,11 @@ namespace vidf
 	public:
 		~SwapChain();
 
+		VkFormat GetColorFormat() const { return colorFormat; }
+		const std::vector<VkImage>& GetPresentImages() const { return presentImages; }
+		const std::vector<VkImageView>& GetPresentImageViews() const { return presentImageViews; }
+		uint32_t GetCurrentPresentId() const { return nextImageIdx; }
+
 		void Present();
 
 	private:
@@ -47,8 +52,7 @@ namespace vidf
 		PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR;
 		PFN_vkQueuePresentKHR vkQueuePresentKHR;
 
-	public:
-	// private:
+	private:
 		VkInstance instance;
 		VkPhysicalDevice physicalDevice;
 		VkDevice device;
