@@ -95,7 +95,7 @@ namespace vidf
 		presentModes.resize(presentModeCount);
 		VK_VERIFY_RETURN(vkGetPhysicalDeviceSurfacePresentModesKHR(device->GetPhysicalDevice(), surface, &presentModeCount, presentModes.data()));
 
-		VkExtent2D swapchainExtent = surfCaps.currentExtent;
+		swapchainExtent = surfCaps.currentExtent;
 		if (swapchainExtent.width == -1)
 		{
 			swapchainExtent.width = desc.width;

@@ -30,6 +30,7 @@ namespace vidf
 		const std::vector<VkImage>& GetPresentImages() const { return presentImages; }
 		const std::vector<VkImageView>& GetPresentImageViews() const { return presentImageViews; }
 		uint32_t GetCurrentPresentId() const { return nextImageIdx; }
+		VkExtent2D GetExtent() const { return swapchainExtent; }
 
 		void Present();
 
@@ -60,6 +61,7 @@ namespace vidf
 		std::vector<VkImageView> presentImageViews;
 		VkSwapchainKHR swapChain = nullptr;
 		VkSurfaceKHR surface = nullptr;
+		VkExtent2D swapchainExtent;
 		VkFormat colorFormat;
 		VkColorSpaceKHR colorSpace;
 		uint32_t nextImageIdx = 0;

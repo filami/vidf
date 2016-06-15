@@ -16,7 +16,7 @@
     vk##entrypoint = (PFN_vk##entrypoint) vkGetInstanceProcAddr(inst, "vk"#entrypoint); \
     if (vk##entrypoint == NULL)                                         \
 	{																    \
-         __debugbreak();                                                \
+         /*__debugbreak();*/                                            \
     }                                                                   \
 }
 
@@ -27,7 +27,7 @@
     vk##entrypoint = (PFN_vk##entrypoint) vkGetDeviceProcAddr(dev, "vk"#entrypoint);   \
     if (vk##entrypoint == NULL)                                         \
 	{																    \
-        __debugbreak();                                                 \
+		/*__debugbreak();*/                                             \
     }                                                                   \
 }
 

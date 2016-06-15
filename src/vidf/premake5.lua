@@ -76,6 +76,8 @@ AddFilesToProject
 		"renderer/rendercontext.h",
 		"renderer/renderdevice.cpp",
 		"renderer/renderdevice.h",
+		"renderer/renderpass.cpp",
+		"renderer/renderpass.h",
 		"renderer/swapchain.cpp",
 		"renderer/swapchain.h",
 	},
