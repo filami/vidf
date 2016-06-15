@@ -7,6 +7,11 @@ AddFilesToProject
 		"premake5.lua",
 	},
 	
+	["buildlib"] =
+	{
+		"../../premake5.lua",
+		"../build/buildlib.lua",
+	},
 	["Common"] =
 	{
 		"pch.h",
