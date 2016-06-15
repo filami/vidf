@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "vulkanext.h"
 
 namespace vidf
 {
@@ -43,17 +44,6 @@ namespace vidf
 		void QueryColorFormat();
 		bool InitSwapChain(const SwapChainDesc& desc);
 		bool ConvertFrameBuffers();
-
-	private:
-		PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR;
-		PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR;
-		PFN_vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfaceFormatsKHR;
-		PFN_vkGetPhysicalDeviceSurfacePresentModesKHR vkGetPhysicalDeviceSurfacePresentModesKHR;
-		PFN_vkCreateSwapchainKHR vkCreateSwapchainKHR;
-		PFN_vkDestroySwapchainKHR vkDestroySwapchainKHR;
-		PFN_vkGetSwapchainImagesKHR vkGetSwapchainImagesKHR;
-		PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR;
-		PFN_vkQueuePresentKHR vkQueuePresentKHR;
 
 	private:
 		RenderDevicePtr device;

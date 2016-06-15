@@ -32,6 +32,8 @@ namespace vidf
 		if (!device->CreateDevice(desc))
 			return RenderDevicePtr();
 
+		GetVkExtDebugMarker(device);
+
 		return device;
 	}
 

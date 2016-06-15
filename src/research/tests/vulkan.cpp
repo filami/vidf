@@ -63,19 +63,7 @@ bool TestVulkan()
 	VkQueue queue = device->GetQeueue();
 	VkCommandBuffer drawCmdBuffer = context->GetDrawCommandBuffer();
 
-	//////////////////////////////////////////////////////////////////////////
-	
-	PFN_vkDebugMarkerSetObjectTagEXT vkDebugMarkerSetObjectTagEXT = VK_NULL_HANDLE;
-	PFN_vkDebugMarkerSetObjectNameEXT vkDebugMarkerSetObjectNameEXT = VK_NULL_HANDLE;
-	PFN_vkCmdDebugMarkerBeginEXT vkCmdDebugMarkerBeginEXT = VK_NULL_HANDLE;
-	PFN_vkCmdDebugMarkerEndEXT vkCmdDebugMarkerEndEXT = VK_NULL_HANDLE;
-	PFN_vkCmdDebugMarkerInsertEXT vkCmdDebugMarkerInsertEXT = VK_NULL_HANDLE;
-	
-	GET_DEVICE_PROC_ADDR(device->GetDevice(), DebugMarkerSetObjectTagEXT);
-	GET_DEVICE_PROC_ADDR(device->GetDevice(), DebugMarkerSetObjectNameEXT);
-	GET_DEVICE_PROC_ADDR(device->GetDevice(), CmdDebugMarkerBeginEXT);
-	GET_DEVICE_PROC_ADDR(device->GetDevice(), CmdDebugMarkerEndEXT);
-	GET_DEVICE_PROC_ADDR(device->GetDevice(), CmdDebugMarkerInsertEXT);
+	auto& markerExt = GetVkExtDebugMarker();
 
 	//////////////////////////////////////////////////////////////////////////
 
@@ -90,22 +78,16 @@ bool TestVulkan()
 	{
 		context->Begin();
 
-		if (vkCmdDebugMarkerBeginEXT)
-		{
-			VkDebugMarkerMarkerInfoEXT markerInfo;
-			ZeroStruct(markerInfo);
-			markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-			// memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
-			markerInfo.pMarkerName = "Test";
-			vkCmdDebugMarkerBeginEXT(drawCmdBuffer, &markerInfo);
-		}
+		VkDebugMarkerMarkerInfoEXT markerInfo;
+		ZeroStruct(markerInfo);
+		markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+		// memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
+		markerInfo.pMarkerName = "Test";
+		markerExt.vkCmdDebugMarkerBeginEXT(drawCmdBuffer, &markerInfo);
 
 		simplePass.Render(context, swapChain);
 
-		if (vkCmdDebugMarkerEndEXT)
-		{
-			vkCmdDebugMarkerEndEXT(drawCmdBuffer);
-		}
+		markerExt.vkCmdDebugMarkerEndEXT(drawCmdBuffer);
 
 		context->End();
 		device->SubmitContext(context);

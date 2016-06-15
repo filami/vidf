@@ -22,16 +22,6 @@ namespace vidf
 
 	bool SwapChain::Initialize(const SwapChainDesc& desc)
 	{
-		GET_INSTANCE_PROC_ADDR(device->GetInstance(), GetPhysicalDeviceSurfaceSupportKHR);
-		GET_INSTANCE_PROC_ADDR(device->GetInstance(), GetPhysicalDeviceSurfaceCapabilitiesKHR);
-		GET_INSTANCE_PROC_ADDR(device->GetInstance(), GetPhysicalDeviceSurfaceFormatsKHR);
-		GET_INSTANCE_PROC_ADDR(device->GetInstance(), GetPhysicalDeviceSurfacePresentModesKHR);
-		GET_DEVICE_PROC_ADDR(device->GetDevice(), CreateSwapchainKHR);
-		GET_DEVICE_PROC_ADDR(device->GetDevice(), DestroySwapchainKHR);
-		GET_DEVICE_PROC_ADDR(device->GetDevice(), GetSwapchainImagesKHR);
-		GET_DEVICE_PROC_ADDR(device->GetDevice(), AcquireNextImageKHR);
-		GET_DEVICE_PROC_ADDR(device->GetDevice(), QueuePresentKHR);
-
 		if (!CreateSurface(desc))
 			return false;
 		QueryColorFormat();

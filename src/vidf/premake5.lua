@@ -80,6 +80,8 @@ AddFilesToProject
 		"renderer/renderpass.h",
 		"renderer/swapchain.cpp",
 		"renderer/swapchain.h",
+		"renderer/vulkanext.cpp",
+		"renderer/vulkanext.h",
 	},
 	["Renderer/VulkanWin32"] =
 	{

@@ -11,27 +11,6 @@
 
 
 
-#define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                        \
-{                                                                       \
-    vk##entrypoint = (PFN_vk##entrypoint) vkGetInstanceProcAddr(inst, "vk"#entrypoint); \
-    if (vk##entrypoint == NULL)                                         \
-	{																    \
-         /*__debugbreak();*/                                            \
-    }                                                                   \
-}
-
-
-
-#define GET_DEVICE_PROC_ADDR(dev, entrypoint)                           \
-{                                                                       \
-    vk##entrypoint = (PFN_vk##entrypoint) vkGetDeviceProcAddr(dev, "vk"#entrypoint);   \
-    if (vk##entrypoint == NULL)                                         \
-	{																    \
-		/*__debugbreak();*/                                             \
-    }                                                                   \
-}
-
-
 namespace vidf
 {
 
