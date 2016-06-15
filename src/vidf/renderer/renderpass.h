@@ -9,6 +9,7 @@ namespace vidf
 	class BaseRenderPass
 	{
 	public:
+		BaseRenderPass(const char* markerName=nullptr);
 		virtual ~BaseRenderPass();
 
 	protected:
@@ -22,6 +23,8 @@ namespace vidf
 	private:
 		void Begin(RenderContextPtr context, uint frameBufferIdx);
 
+		const VkExtDebugMarker& debugMarker;
+		std::string markerName;
 		std::vector<std::vector<VkImageView>> attachmentViews;
 		std::vector<VkAttachmentDescription> attachmentDescs;
 		std::vector<VkClearValue> clearValues;

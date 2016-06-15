@@ -11,6 +11,7 @@ using namespace vidf;
 class SimplePass : public BaseRenderPass
 {
 public:
+	SimplePass() : BaseRenderPass("SimplePass") {}
 	bool Prepare(RenderDevicePtr device, SwapChainPtr swapChain);
 	void Render(RenderContextPtr context, SwapChainPtr swapChain);
 };
@@ -60,34 +61,16 @@ bool TestVulkan()
 	if (!context)
 		return false;
 
-	VkQueue queue = device->GetQeueue();
-	VkCommandBuffer drawCmdBuffer = context->GetDrawCommandBuffer();
-
-	auto& markerExt = GetVkExtDebugMarker();
-
-	//////////////////////////////////////////////////////////////////////////
-
 	SimplePass simplePass;
 	if (!simplePass.Prepare(device, swapChain))
 		return false;
-
-	//////////////////////////////////////////////////////////////////////////
 
 	// loop
 	while (UpdateSystemMessages() == SMR_Continue)
 	{
 		context->Begin();
 
-		VkDebugMarkerMarkerInfoEXT markerInfo;
-		ZeroStruct(markerInfo);
-		markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-		// memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
-		markerInfo.pMarkerName = "Test";
-		markerExt.vkCmdDebugMarkerBeginEXT(drawCmdBuffer, &markerInfo);
-
 		simplePass.Render(context, swapChain);
-
-		markerExt.vkCmdDebugMarkerEndEXT(drawCmdBuffer);
 
 		context->End();
 		device->SubmitContext(context);

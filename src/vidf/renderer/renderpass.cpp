@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "vulkanext.h"
 #include "renderpass.h"
 #include "swapchain.h"
 #include "renderdevice.h"
@@ -7,6 +8,13 @@
 
 namespace vidf
 {
+
+
+	BaseRenderPass::BaseRenderPass(const char* _markerName)
+		: debugMarker(GetVkExtDebugMarker())
+		, markerName(_markerName ? _markerName : "RenderPass")
+	{
+	}
 
 
 
@@ -139,6 +147,15 @@ namespace vidf
 	{
 		assert(cooked);
 		assert(!started);
+
+		VkCommandBuffer drawCmdBuffer = context->GetDrawCommandBuffer();
+
+		VkDebugMarkerMarkerInfoEXT markerInfo;
+		ZeroStruct(markerInfo);
+		markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+		markerInfo.pMarkerName = markerName.c_str();
+		debugMarker.vkCmdDebugMarkerBeginEXT(drawCmdBuffer, &markerInfo);
+
 		VkRenderPassBeginInfo renderPassBeginInfo;
 		ZeroStruct(renderPassBeginInfo);
 		renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -150,7 +167,7 @@ namespace vidf
 		renderPassBeginInfo.pClearValues = clearValues.data();
 		renderPassBeginInfo.framebuffer = frameBuffers[frameBufferIdx];
 		vkCmdBeginRenderPass(
-			context->GetDrawCommandBuffer(), &renderPassBeginInfo,
+			drawCmdBuffer, &renderPassBeginInfo,
 			VK_SUBPASS_CONTENTS_INLINE);
 		started = true;
 	}
@@ -160,7 +177,12 @@ namespace vidf
 	void BaseRenderPass::End(RenderContextPtr context)
 	{
 		assert(started);
-		vkCmdEndRenderPass(context->GetDrawCommandBuffer());
+
+		VkCommandBuffer drawCmdBuffer = context->GetDrawCommandBuffer();
+
+		debugMarker.vkCmdDebugMarkerEndEXT(drawCmdBuffer);
+
+		vkCmdEndRenderPass(drawCmdBuffer);
 		started = false;
 	}
 
