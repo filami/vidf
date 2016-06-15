@@ -214,4 +214,17 @@ namespace vidf
 
 
 
+	bool RenderDevice::SubmitContext(RenderContextPtr context)
+	{
+		VkCommandBuffer cmdBuffer = context->GetDrawCommandBuffer();
+		VkSubmitInfo submitInfo;
+		ZeroStruct(submitInfo);
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &cmdBuffer;
+		VK_VERIFY_RETURN(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE));
+	}
+
+
+
 }

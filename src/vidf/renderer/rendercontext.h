@@ -9,8 +9,8 @@ namespace vidf
 	public:
 		~RenderContext();
 
-		void Begin();
-		void End();
+		bool Begin();
+		bool End();
 
 		VkCommandBuffer GetDrawCommandBuffer() { return drawCmdBuffer; }
 

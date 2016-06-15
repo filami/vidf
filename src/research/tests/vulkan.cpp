@@ -88,13 +88,7 @@ bool TestVulkan()
 	// loop
 	while (UpdateSystemMessages() == SMR_Continue)
 	{
-		/*	context->Begin();
-		context->End();*/
-
-		VkCommandBufferBeginInfo cmdBufferBeginInfo;
-		ZeroStruct(cmdBufferBeginInfo);
-		cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		VK_VERIFY_RETURN(vkBeginCommandBuffer(drawCmdBuffer, &cmdBufferBeginInfo));
+		context->Begin();
 
 		if (vkCmdDebugMarkerBeginEXT)
 		{
@@ -113,15 +107,8 @@ bool TestVulkan()
 			vkCmdDebugMarkerEndEXT(drawCmdBuffer);
 		}
 
-		VK_VERIFY_RETURN(vkEndCommandBuffer(drawCmdBuffer));
-
-		VkSubmitInfo submitInfo;
-		ZeroStruct(submitInfo);
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &drawCmdBuffer;
-		VK_VERIFY_RETURN(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE));
-
+		context->End();
+		device->SubmitContext(context);
 		swapChain->Present();
 	}
 

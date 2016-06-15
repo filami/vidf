@@ -41,6 +41,8 @@ namespace vidf
 		const VkCommandPool& GetCommandPool() const { return commandPool; }
 		const VkCommandBuffer& GetSetupCommandBuffer() const { return setupCmdBuffer; }
 
+		bool SubmitContext(RenderContextPtr context);
+
 	private:
 		RenderDevice();
 

@@ -20,14 +20,19 @@ namespace vidf
 
 
 
-	void RenderContext::Begin()
+	bool RenderContext::Begin()
 	{
+		VkCommandBufferBeginInfo cmdBufferBeginInfo;
+		ZeroStruct(cmdBufferBeginInfo);
+		cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		VK_VERIFY_RETURN(vkBeginCommandBuffer(drawCmdBuffer, &cmdBufferBeginInfo));
 	}
 
 
 
-	void RenderContext::End()
+	bool RenderContext::End()
 	{
+		VK_VERIFY_RETURN(vkEndCommandBuffer(drawCmdBuffer));
 	}
 
 
