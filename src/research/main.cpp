@@ -2,10 +2,12 @@
 
 
 bool TestVulkan();
+void TestGM();
 
 
 int main()
 {
-	TestVulkan();
+	// TestVulkan();
+	TestGM();
 	return 0;
 }

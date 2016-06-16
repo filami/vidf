@@ -64,9 +64,11 @@ function ConfigCommon(projName, targetLoc)
 		".",
 		_WORKING_DIR.."/src/",
 		_WORKING_DIR.."/src/vidf/",
+		_WORKING_DIR.."/src/ext/gm/src/gm/",
+		_WORKING_DIR.."/src/ext/gm/src/platform/win32msvc/",
 		_WORKING_DIR.."/ext/include/",
 	}
-	defines {"VK_USE_PLATFORM_WIN32_KHR"}
+	defines {"VK_USE_PLATFORM_WIN32_KHR", "WIN64"}
 	flags {"NoManifest", "NoRTTI"}
 	
 	-- debug
@@ -98,6 +100,7 @@ function ConfigVIDFDependencies()
 	{
 		"dsound",
 		"vulkan-1",
+		"viext",
 	}
 	
 	configuration(debugConfig)
