@@ -321,9 +321,6 @@ void TestGM()
 	ProtoGL protoGL;
 	protoGL.Initialize(ProtoGLDesc());
 
-	CameraOrtho2D camera(protoGL.GetCanvas());
-	camera.SetCamera(Vector2f(0.0f, 0.0f), 10.0f);
-
 	DebugDraw debugDraw;
 	gDebugDraw = &debugDraw;
 
@@ -347,8 +344,6 @@ void TestGM()
 
 		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
-
-	//	camera.CommitToGL();
 
 		debugDraw.Flush();
 
