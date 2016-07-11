@@ -1,3 +1,6 @@
+
+-- prebuildcommands{_WORKING_DIR.."/src/ext/gm/src/gm/gmfrontend.bat"}
+
 includedirs
 {
 	"src/platform/win32msvc"
