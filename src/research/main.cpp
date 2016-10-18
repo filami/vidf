@@ -7,7 +7,7 @@ void TestGM();
 
 int main()
 {
-	// TestVulkan();
-	TestGM();
+	TestVulkan();
+	// TestGM();
 	return 0;
 }
