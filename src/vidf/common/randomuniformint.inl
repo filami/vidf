@@ -46,6 +46,7 @@ namespace vidf {
 
 
 
+	// #VIDF wrong template default type
 	template<class IntType = int32>
 	class UniformInt {
 	public:

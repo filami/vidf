@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <vidf/common/random.h>
 #include "gmMachine.h"
 #include "gmArrayLib.h"
 #include "gmCall.h"
@@ -318,6 +319,7 @@ private:
 
 void TestGM()
 {
+#if 0
 	ProtoGL protoGL;
 	protoGL.Initialize(ProtoGLDesc());
 
@@ -348,5 +350,130 @@ void TestGM()
 		debugDraw.Flush();
 
 		protoGL.Swap();
+	}
+#endif
+
+	const uint worldSize = 1024;
+
+	ProtoGL protoGL;
+	protoGL.Initialize(ProtoGLDesc());
+
+	CameraOrtho2D camera(protoGL.GetCanvas());
+	camera.SetCamera(Vector2f(worldSize*0.5f, worldSize*0.5f), float(worldSize)*1.25f);
+
+	const auto DrawGrid = [](uint width, uint height)
+	{
+		glBegin(GL_LINES);
+		for (uint x = 0; x <= width; ++x)
+		{
+			glVertex2f(float(x), 0.0f);
+			glVertex2f(float(x), float(height));
+		}
+		for (uint y = 0; y <= width; ++y)
+		{
+			glVertex2f(0.0f, float(y));
+			glVertex2f(float(width), float(y));
+		}
+		glEnd();
+	};
+
+	enum class State : uint8
+	{
+		Dead,
+		Alive,
+	};
+	typedef std::array<State, worldSize*worldSize> World;
+	std::unique_ptr<World> world[2] =
+	{
+		std::make_unique<World>(),
+		std::make_unique<World>(),
+	};
+	uint from = 0;
+	uint to = 1;
+
+	Rand48 rand;
+	UniformInt<uint> stateRand(0, 1);
+	for (State& state : *world[from])
+		state = stateRand(rand) == 0 ? State::Alive : State::Dead;
+	*world[to] = *world[from];
+
+	const auto DrawWorld = [](const World& world, const uint worldSize)
+	{
+		glBegin(GL_QUADS);
+		for (uint idx = 0, y = 0; y < worldSize; ++y)
+		{
+			for (uint x = 0; x < worldSize; ++x, ++idx)
+			{
+				if (world[idx] == State::Dead)
+					continue;
+				glVertex2f(float(x) + 0.0f, float(y) + 0.0f);
+				glVertex2f(float(x) + 1.0f, float(y) + 0.0f);
+				glVertex2f(float(x) + 1.0f, float(y) + 1.0f);
+				glVertex2f(float(x) + 0.0f, float(y) + 1.0f);
+			}
+		}
+		glEnd();
+	};
+
+	const auto UpdateWorld = [](World* toWorld, const World& fromWorld, const uint worldSize)
+	{
+		auto NeightborCount = [&fromWorld, worldSize](uint x, uint y)
+		{
+			const uint mask = worldSize - 1;
+			const int minx = x - 1;
+			const int miny = y - 1;
+			const int maxx = x + 1;
+			const int maxy = y + 1;
+			uint count = 0;
+			for (int ny = miny; ny <= maxy; ++ny)
+			{
+				for (int nx = minx; nx <= maxx; ++nx)
+				{
+					const uint mx = nx & mask;
+					const uint my = ny & mask;
+					count += uint(fromWorld[mx + my*worldSize]);
+				}
+			}
+			count -= uint(fromWorld[x + y*worldSize]);
+			return count;
+		};
+		for (uint y = 0; y < worldSize; ++y)
+		{
+			for (uint x = 0; x < worldSize; ++x)
+			{
+				const uint idx = x + y*worldSize;
+				const uint count = NeightborCount(x, y);
+				if (fromWorld[idx] == State::Dead && count == 3)
+					(*toWorld)[idx] = State::Alive;
+				else if (fromWorld[idx] == State::Alive && (count < 2 || count > 3))
+					(*toWorld)[idx] = State::Dead;
+				else
+					(*toWorld)[idx] = fromWorld[idx];
+			}
+		}
+	};
+
+	while (protoGL.Update())
+	{
+		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		camera.CommitToGL();
+
+		// for (uint i = 0; i < 2; ++i)
+		{
+			UpdateWorld(world[to].get(), *world[from], worldSize);
+			from = !from;
+			to = !to;
+		}
+
+		glColor4ub(0, 0, 0, 255);
+		DrawWorld(*world[to], worldSize);
+
+		// glColor4ub(210, 210, 210, 255);
+		// DrawGrid(worldSize, worldSize);
+
+		protoGL.Swap();
+		// ::Sleep(200);
 	}
 }
