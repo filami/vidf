@@ -23,4 +23,11 @@ namespace vidf
 
 
 
+	void SetCurrentDirectory(const char* currentDir)
+	{
+		::SetCurrentDirectoryA(currentDir);
+	}
+
+
+
 }

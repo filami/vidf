@@ -318,14 +318,16 @@ private:
 
 void TestGM()
 {
+	SetCurrentDirectory("../../");
+
 	ProtoGL protoGL;
 	protoGL.Initialize(ProtoGLDesc());
 
 	DebugDraw debugDraw;
 	gDebugDraw = &debugDraw;
 
-	ScriptReload scriptReload("scripts/main.gm");
-	fileChangeNotificationSystem.AddFileNotification(L"scripts\\main.gm", &scriptReload);
+	ScriptReload scriptReload("data/scripts/main.gm");
+	fileChangeNotificationSystem.AddFileNotification(L"data\\scripts\\main.gm", &scriptReload);
 	fileChangeNotificationSystem.StartNotificationListener();
 	scriptReload.ReloadScript();
 

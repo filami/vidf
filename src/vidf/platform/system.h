@@ -26,6 +26,7 @@ namespace vidf
 
 
 	SystemMessageResult UpdateSystemMessages();
+	void SetCurrentDirectory(const char* currentDir);
 
 
 }
