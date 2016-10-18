@@ -15,7 +15,7 @@ namespace vidf
 
 	struct CanvasDesc
 	{
-		CanvasDesc(int _width=800, int _height=600, const std::string& _caption="vidf")
+		CanvasDesc(int _width= 1280, int _height=720, const std::string& _caption="vidf")
 			:	width(_width)
 			,	height(_height)
 			,	caption(_caption)

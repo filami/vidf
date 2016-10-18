@@ -15,7 +15,7 @@ namespace vidf { namespace proto {
 		public:
 			virtual void Close()
 			{
-				PostQuitMessage(0);
+				PostQuitMessage();
 			}
 		};
 

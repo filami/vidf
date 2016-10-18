@@ -5,26 +5,26 @@ namespace vidf
 {
 
 
-	enum SystemMessageResult
+	enum class SystemMessageResult
 	{
-		SMR_Continue,
-		SMR_PostQuit,
+		Continue,
+		Quit,
 	};
 
 
 # ifdef WIN32
 
-	enum KeyCode
+	enum class KeyCode
 	{
-		KC_ESCAPE = VK_ESCAPE,
-		KC_RETURN = VK_RETURN,
+		Escape = VK_ESCAPE,
+		Return = VK_RETURN,
 		// ... //
 	};
 
 #endif
 
 
-
+	void PostQuitMessage();
 	SystemMessageResult UpdateSystemMessages();
 
 

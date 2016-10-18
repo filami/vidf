@@ -8,6 +8,21 @@
 using namespace vidf;
 
 
+class VulkanCanvasListener : public CanvasListener
+{
+public:
+	virtual void Close()
+	{
+		PostQuitMessage();
+	}
+	virtual void KeyDown(KeyCode keyCode)
+	{
+		if (keyCode == KeyCode::Escape)
+			PostQuitMessage();
+	}
+};
+
+
 class SimplePass : public BaseRenderPass
 {
 public:
@@ -45,8 +60,10 @@ bool TestVulkan()
 	if (!device)
 		return false;
 
+	VulkanCanvasListener canvasListener;
 	CanvasDesc canvasDesc;
 	CanvasPtr canvas = Canvas::Create(canvasDesc);
+	canvas->AddListener(&canvasListener);
 	if (!canvas)
 		return false;
 
@@ -66,7 +83,7 @@ bool TestVulkan()
 		return false;
 
 	// loop
-	while (UpdateSystemMessages() == SMR_Continue)
+	while (UpdateSystemMessages() == SystemMessageResult::Continue)
 	{
 		context->Begin();
 

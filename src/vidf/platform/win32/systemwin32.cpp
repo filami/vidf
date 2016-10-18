@@ -5,15 +5,21 @@ namespace vidf
 {
 
 
+	void PostQuitMessage()
+	{
+		::PostQuitMessage(0);
+	}
+
+
 
 	SystemMessageResult UpdateSystemMessages()
 	{
-		SystemMessageResult result = SMR_Continue;
+		SystemMessageResult result = SystemMessageResult::Continue;
 
 		MSG msg;
 		while(PeekMessage(&msg, 0, 0, 0, PM_REMOVE)){
 			if(msg.message == WM_QUIT)
-				result = SMR_PostQuit;
+				result = SystemMessageResult::Quit;
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
