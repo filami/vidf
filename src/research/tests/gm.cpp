@@ -318,8 +318,6 @@ private:
 
 void TestGM()
 {
-	SetCurrentDirectory("../../");
-
 	ProtoGL protoGL;
 	protoGL.Initialize(ProtoGLDesc());
 
