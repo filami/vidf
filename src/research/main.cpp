@@ -7,7 +7,8 @@ void TestGM();
 
 int main()
 {
-	TestVulkan();
-	// TestGM();
+	vidf::SetCurrentDirectory("../../");
+	// TestVulkan();
+	TestGM();
 	return 0;
 }

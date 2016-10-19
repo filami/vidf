@@ -30,6 +30,8 @@
 # undef DrawText
 # undef min
 # undef max
+# undef GetCurrentDirectory
+# undef SetCurrentDirectory
 
 #include <gl/GL.H>
 #include <gl/GLU.H>

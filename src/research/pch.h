@@ -8,6 +8,7 @@
 #include <vidf/platform/time.h>
 #include <vidf/platform/taskmanager.h>
 #include <vidf/platform/filechangenotification.h>
+#include <vidf/platform/system.h>
 
 extern vidf::TaskManager taskManager;
 extern vidf::FileChangeNotificationSystem fileChangeNotificationSystem;

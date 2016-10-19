@@ -17,7 +17,7 @@ AddFilesToProject
 	
 	["tests"] =
 	{
-		"tests/vulkan.cpp",
+	--	"tests/vulkan.cpp",
 		"tests/gm.cpp",
 	},
 }
