@@ -65,11 +65,11 @@ struct SparceMap
 	std::array<std::array<std::array<T, size>, size>, size> dataBrick;
 };
 
-const float voxelSize = 2.0f;
+const float voxelSize = 1.0f;
 typedef uint8 SparceMapData;
 const uint sparceMapSize = 8;
-const uint sparceMapLevels = 3;
-const float sparceMapDimension = voxelSize * float(std::pow(sparceMapLevels, sparceMapSize));
+const uint sparceMapLevels = 4;
+const float sparceMapDimension = std::pow(sparceMapSize, sparceMapLevels) * voxelSize;
 const Boxf sparceMapBox = Boxf(
 	Vector3f(-sparceMapDimension, -sparceMapDimension, -sparceMapDimension) * 0.5f,
 	Vector3f( sparceMapDimension,  sparceMapDimension,  sparceMapDimension) * 0.5f);
@@ -135,6 +135,27 @@ void RasterizeModel(RasterData* raster, const Module& model)
 }
 
 //////////////////////////////////////////////////////////////////////////
+
+void SparceTreeInsertPoint(SparceMap<SparceMapData, sparceMapSize>* map, Boxf box, Vector3f point, uint level)
+{
+	const Vector3i mappedPoint = Vector3i((point - box.min) / (box.max - box.min) * sparceMapSize);
+
+	const Vector3f voxelSize = (box.max - box.min) / sparceMapSize;
+	if (level <= 1)
+	{
+		map->dataBrick[mappedPoint.x][mappedPoint.y][mappedPoint.z] = 1;
+	}
+	else
+	{
+		Boxf subBox;
+		subBox.min = box.min + Vector3f(mappedPoint) * voxelSize;
+		subBox.max = subBox.min + voxelSize;
+		auto& subMap = map->subMapBrick[mappedPoint.x][mappedPoint.y][mappedPoint.z];
+		if (!subMap)
+			subMap = std::make_unique<SparceMap<SparceMapData, sparceMapSize>>();
+		SparceTreeInsertPoint(subMap.get(), subBox, point, level - 1);
+	}
+}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -252,7 +273,6 @@ void DrawSparceMap(const SparceMap<SparceMapData, sparceMapSize>& map, Boxf box)
 	glColor4ub(255, 0, 0, 255);
 	DrawBoxWireframe(box);
 
-	const float invBoxSize = 1.0f / sparceMapSize;
 	const Vector3f voxelSize = (box.max - box.min) / sparceMapSize;
 	for (uint z = 0; z < sparceMapSize; ++z)
 	{
@@ -267,7 +287,12 @@ void DrawSparceMap(const SparceMap<SparceMapData, sparceMapSize>& map, Boxf box)
 				if (map.subMapBrick[x][y][z])
 					DrawSparceMap(*map.subMapBrick[x][y][z], subBox);
 				else if (map.dataBrick[x][y][z] != 0)
-					DrawBoxFilled(box);
+				{
+					Vector3f center = (subBox.min + subBox.max) * 0.5f;
+					subBox.min = center - voxelSize * 0.45f;
+					subBox.max = center + voxelSize * 0.45f;
+					DrawBoxFilled(subBox);
+				}
 			}
 		}
 	}
@@ -282,13 +307,16 @@ void Voxelizer()
 	auto model = LoadObjModuleFromFile("data/leather_chair/leather_chair.obj");
 	std::cout << "DONE" << std::endl;
 
-	std::cout << "Voxelizing . . . ";
+	std::cout << "Rasterizing . . . ";
 	RasterData raster;
 	raster.voxelSize = voxelSize;
 	RasterizeModel(&raster, *model);
+	std::cout << "DONE" << std::endl;
 
+	std::cout << "Generating Sparce Map . . . ";
 	SparceMap<SparceMapData, sparceMapSize> sparceMap;
-
+	for (auto fragment : raster.fragments)
+		SparceTreeInsertPoint(&sparceMap, sparceMapBox, fragment.position, sparceMapLevels);
 	std::cout << "DONE" << std::endl;
 
 	Vector3f center = Vector3f(raster.fragments[0].position);
@@ -321,7 +349,6 @@ void Voxelizer()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		DrawModel(*model);
-		DrawFragments(raster);
 		DrawSparceMap(sparceMap, sparceMapBox);
 
 		protoGL.Swap();
