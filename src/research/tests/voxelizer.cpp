@@ -1,52 +1,10 @@
 #include "pch.h"
-#include "gmMachine.h"
-#include "gmArrayLib.h"
-#include "gmCall.h"
-#include "gmGCRoot.h"
-#include "gmGCRootUtil.h"
-#include "gmHelpers.h"
-#include "gmMathLib.h"
-#include "gmStringLib.h"
-#include "gmSystemLib.h"
-#include "gmVector3Lib.h"
 #include "proto/mesh.h"
 #include "common/plane.h"
+#include "common/intersect.h"
 
 using namespace vidf;
 using namespace proto;
-
-struct Triangle
-{
-	Vector3f v0, v1, v2;
-	Vector3f operator[] (uint idx) const { return static_cast<const Vector3f*>(&v0)[idx]; }
-	Vector3f& operator[] (uint idx) { return static_cast<Vector3f*>(&v0)[idx]; }
-};
-
-bool BoxTriangleIntersect(const Boxf& box, const Triangle& triangle)
-{
-	const Planef planes[6] =
-	{
-		Planef(Vector3f(1.0f, 0.0f, 0.0f),  box.min.x),
-		Planef(Vector3f(-1.0f, 0.0f, 0.0f), -box.max.x),
-		Planef(Vector3f(0.0f, 1.0f, 0.0f),  box.min.y),
-		Planef(Vector3f(0.0f,-1.0f, 0.0f), -box.max.y),
-		Planef(Vector3f(0.0f, 0.0f, 1.0f),  box.min.z),
-		Planef(Vector3f(0.0f, 0.0f,-1.0f), -box.max.z),
-	};
-	uint flags[3] = {};
-	for (uint i = 0; i < 6; ++i)
-	{
-		const Planef plane = planes[i];
-		uint planeFlags = 1 << i;
-		for (uint j = 0; j < 3; ++j)
-		{
-			const Vector3f vertex = triangle[j];
-			if (Distance(plane, vertex) >= 0.0f)
-				flags[j] |= planeFlags;
-		}
-	}
-	return (flags[0] | flags[1] | flags[2]) == 0x3f;
-}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -94,7 +52,7 @@ struct RasterData
 	float voxelSize;
 };
 
-void RasterizeTriangle(RasterData* raster, Triangle triangle)
+void RasterizeTriangle(RasterData* raster, Trianglef triangle)
 {
 	const float voxelSize = raster->voxelSize;
 	const float invVoxelSize = 1.0f / voxelSize;
@@ -135,7 +93,7 @@ void RasterizeModelGeometry(RasterData* raster, const Module& model, uint geomId
 	{
 		const uint numVertices = model.GetPolygonNumVertices(polyIdx);
 
-		Triangle triangle;
+		Trianglef triangle;
 		triangle.v0 = model.GetVertex(model.GetPolygonVertexIndex(polyIdx, 0));
 		triangle.v1 = model.GetVertex(model.GetPolygonVertexIndex(polyIdx, 1));
 

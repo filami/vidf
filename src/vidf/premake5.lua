@@ -47,6 +47,7 @@ AddFilesToProject
 		"common/sphericalharmonics.cpp",
 		"common/sphericalharmonics.h",
 		"common/transformations.h",
+		"common/triangle.h",
 		"common/types.h",
 		"common/utils.h",
 		"common/vector2.h",
