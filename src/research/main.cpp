@@ -3,12 +3,14 @@
 
 bool TestVulkan();
 void TestGM();
+void Voxelizer();
 
 
 int main()
 {
 	vidf::SetCurrentDirectory("../../");
 	// TestVulkan();
-	TestGM();
+	// TestGM();
+	Voxelizer();
 	return 0;
 }

@@ -19,5 +19,6 @@ AddFilesToProject
 	{
 	--	"tests/vulkan.cpp",
 		"tests/gm.cpp",
+		"tests/voxelizer.cpp",
 	},
 }

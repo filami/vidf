@@ -19,20 +19,15 @@ namespace vidf
 			:	x(0), y(0), z(0) {}
 
 		template<typename U>
-		explicit Vector3(U _x, U _y, U _z)
-			:	x((T)_x), y((T)_y), z((T)_z)
-		{
-		/*	assert(IsNumber(_x));
-			assert(IsNumber(_y));
-			assert(IsNumber(_z));*/
-		}
+		Vector3(U _x, U _y, U _z)
+			:	x((T)_x), y((T)_y), z((T)_z) { }
 
 		template<typename U>
 		explicit Vector3(const Vector3<U>& v)
 			:	x((T)v.x), y((T)v.y), z((T)v.z) {}
 
-		T& operator[] (int idx) {return (&x)[idx];}
-		T operator[] (int idx) const {return (&x)[idx];}
+		T& operator[] (uint idx) { assert(idx < 3);  return (&x)[idx]; }
+		T operator[] (uint idx) const { assert(idx < 3); return (&x)[idx]; }
 
 		T x, y, z;
 	};

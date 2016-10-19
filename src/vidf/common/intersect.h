@@ -2,6 +2,7 @@
 #include "sphere.h"
 #include "plane.h"
 #include "ray.h"
+#include "triangle.h"
 
 
 namespace vidf
@@ -150,6 +151,35 @@ namespace vidf
 		bool collided = (t0 >= 0.0f && t0 <= 1.0f) || (t1 >= 0.0f && t1 <= 1.0f);
 
 		return collided;
+	}
+
+
+
+	template<typename T>
+	inline bool BoxTriangleIntersect(const Box<T>& box, const Triangle<T>& triangle)
+	{
+		const Plane<T> planes[6] =
+		{
+			Plane<T>(Vector3f(T(1), T(0), T(0)),  box.min.x),
+			Plane<T>(Vector3f(T(-1), T(0), T(0)), -box.max.x),
+			Plane<T>(Vector3f(T(0), T(1), T(0)),  box.min.y),
+			Plane<T>(Vector3f(T(0), T(-1), T(0)), -box.max.y),
+			Plane<T>(Vector3f(T(0), T(0), T(1)),  box.min.z),
+			Plane<T>(Vector3f(T(0), T(0), T(-1)), -box.max.z),
+		};
+		uint flags[3] = {};
+		for (uint i = 0; i < 6; ++i)
+		{
+			const Plane<T> plane = planes[i];
+			uint planeFlags = 1 << i;
+			for (uint j = 0; j < 3; ++j)
+			{
+				const Vector3<T> vertex = triangle[j];
+				if (Distance(plane, vertex) >= 0.0f)
+					flags[j] |= planeFlags;
+			}
+		}
+		return (flags[0] | flags[1] | flags[2]) == 0x3f;
 	}
 
 
