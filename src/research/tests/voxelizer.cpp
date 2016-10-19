@@ -43,7 +43,7 @@ void DrawModel(const Module& model)
 
 struct Fragment
 {
-	Vector3i position;
+	Vector3f position;
 };
 
 struct RasterData
@@ -52,10 +52,31 @@ struct RasterData
 	float voxelSize;
 };
 
+template<typename T, uint size>
+struct SparceMap
+{
+	SparceMap()
+	{
+		memset(dataBrick.data(), 0, sizeof(dataBrick));
+	}
+
+	typedef std::unique_ptr<SparceMap<T, size>> SubMapPtr;
+	std::array<std::array<std::array<SubMapPtr, size>, size>, size> subMapBrick;
+	std::array<std::array<std::array<T, size>, size>, size> dataBrick;
+};
+
+const float voxelSize = 2.0f;
+typedef uint8 SparceMapData;
+const uint sparceMapSize = 8;
+const uint sparceMapLevels = 3;
+const float sparceMapDimension = voxelSize * float(std::pow(sparceMapLevels, sparceMapSize));
+const Boxf sparceMapBox = Boxf(
+	Vector3f(-sparceMapDimension, -sparceMapDimension, -sparceMapDimension) * 0.5f,
+	Vector3f( sparceMapDimension,  sparceMapDimension,  sparceMapDimension) * 0.5f);
+
 void RasterizeTriangle(RasterData* raster, Trianglef triangle)
 {
 	const float voxelSize = raster->voxelSize;
-	const float invVoxelSize = 1.0f / voxelSize;
 	const Vector3f voxelSize3 = Vector3f(voxelSize, voxelSize, voxelSize);
 
 	Boxf box;
@@ -77,7 +98,7 @@ void RasterizeTriangle(RasterData* raster, Trianglef triangle)
 				if (!BoxTriangleIntersect(voxel, triangle))
 					continue;
 				Fragment fragment;
-				fragment.position = Vector3i(voxel.min * invVoxelSize);
+				fragment.position = Vector3f((voxel.max + voxel.min) * 0.5f);
 				raster->fragments.push_back(fragment);
 			}
 		}
@@ -115,90 +136,141 @@ void RasterizeModel(RasterData* raster, const Module& model)
 
 //////////////////////////////////////////////////////////////////////////
 
+//////////////////////////////////////////////////////////////////////////
+
+void DrawBoxWireframe(Boxf box)
+{
+	glBegin(GL_LINES);
+
+	glVertex3f(box.min.x, box.min.y, box.min.z);
+	glVertex3f(box.max.x, box.min.y, box.min.z);
+	glVertex3f(box.min.x, box.max.y, box.min.z);
+	glVertex3f(box.max.x, box.max.y, box.min.z);
+	glVertex3f(box.min.x, box.max.y, box.max.z);
+	glVertex3f(box.max.x, box.max.y, box.max.z);
+	glVertex3f(box.min.x, box.min.y, box.max.z);
+	glVertex3f(box.max.x, box.min.y, box.max.z);
+
+	glVertex3f(box.min.x, box.min.y, box.min.z);
+	glVertex3f(box.min.x, box.max.y, box.min.z);
+	glVertex3f(box.max.x, box.min.y, box.min.z);
+	glVertex3f(box.max.x, box.max.y, box.min.z);
+	glVertex3f(box.max.x, box.min.y, box.max.z);
+	glVertex3f(box.max.x, box.max.y, box.max.z);
+	glVertex3f(box.min.x, box.min.y, box.max.z);
+	glVertex3f(box.min.x, box.max.y, box.max.z);
+
+	glVertex3f(box.min.x, box.min.y, box.min.z);
+	glVertex3f(box.min.x, box.min.y, box.max.z);
+	glVertex3f(box.max.x, box.min.y, box.min.z);
+	glVertex3f(box.max.x, box.min.y, box.max.z);
+	glVertex3f(box.max.x, box.max.y, box.min.z);
+	glVertex3f(box.max.x, box.max.y, box.max.z);
+	glVertex3f(box.min.x, box.max.y, box.min.z);
+	glVertex3f(box.min.x, box.max.y, box.max.z);
+
+	glEnd();
+}
+
+void DrawBoxFilled(Boxf box)
+{
+	const auto glVertex = [](Vector3f v)
+	{
+		glVertex3f(v.x, v.y, v.z);
+	};
+
+	const Vector3f vertices[] =
+	{
+		{ box.min.x, box.min.y, box.min.z },
+		{ box.max.x, box.min.y, box.min.z },
+		{ box.min.x, box.max.y, box.min.z },
+		{ box.max.x, box.max.y, box.min.z },
+		{ box.min.x, box.min.y, box.max.z },
+		{ box.max.x, box.min.y, box.max.z },
+		{ box.min.x, box.max.y, box.max.z },
+		{ box.max.x, box.max.y, box.max.z },
+	};
+
+	glBegin(GL_QUADS);
+
+	glColor4ub(255, 128, 0, 255);
+	glVertex(vertices[0]);
+	glVertex(vertices[2]);
+	glVertex(vertices[3]);
+	glVertex(vertices[1]);
+
+	glColor4ub(0, 128, 255, 255);
+	glVertex(vertices[4]);
+	glVertex(vertices[5]);
+	glVertex(vertices[7]);
+	glVertex(vertices[6]);
+
+	glColor4ub(128, 255, 0, 255);
+	glVertex(vertices[0]);
+	glVertex(vertices[4]);
+	glVertex(vertices[6]);
+	glVertex(vertices[2]);
+
+	glColor4ub(128, 0, 255, 255);
+	glVertex(vertices[1]);
+	glVertex(vertices[3]);
+	glVertex(vertices[7]);
+	glVertex(vertices[5]);
+
+	glColor4ub(0, 255, 128, 255);
+	glVertex(vertices[0]);
+	glVertex(vertices[1]);
+	glVertex(vertices[5]);
+	glVertex(vertices[4]);
+
+	glColor4ub(255, 0, 128, 255);
+	glVertex(vertices[2]);
+	glVertex(vertices[6]);
+	glVertex(vertices[7]);
+	glVertex(vertices[3]);
+
+	glEnd();
+}
+
 void DrawFragments(const RasterData& raster)
 {
 	const float voxelSz = raster.voxelSize;
-	const Vector3f voxelSizeHalf = Vector3f(voxelSz, voxelSz, voxelSz) * 0.5f;
+	const Vector3f voxelSize = Vector3f(voxelSz, voxelSz, voxelSz);
 
-	/*/
 	glColor4ub(255, 128, 64, 255);
-	glBegin(GL_LINES);
 	for (const Fragment frag : raster.fragments)
 	{
-	Vector3f vert = Vector3f(frag.position) * voxelSz + voxelSizeHalf;
-
-	glVertex3f(vert.x           , vert.y           , vert.z           );
-	glVertex3f(vert.x + voxelSz , vert.y           , vert.z           );
-	glVertex3f(vert.x           , vert.y + voxelSz , vert.z           );
-	glVertex3f(vert.x + voxelSz , vert.y + voxelSz , vert.z           );
-	glVertex3f(vert.x           , vert.y + voxelSz , vert.z + voxelSz );
-	glVertex3f(vert.x + voxelSz , vert.y + voxelSz , vert.z + voxelSz );
-	glVertex3f(vert.x           , vert.y           , vert.z + voxelSz );
-	glVertex3f(vert.x + voxelSz , vert.y           , vert.z + voxelSz );
-
-	glVertex3f(vert.x           , vert.y           , vert.z           );
-	glVertex3f(vert.x           , vert.y + voxelSz , vert.z           );
-	glVertex3f(vert.x + voxelSz , vert.y           , vert.z           );
-	glVertex3f(vert.x + voxelSz , vert.y + voxelSz , vert.z           );
-	glVertex3f(vert.x + voxelSz , vert.y           , vert.z + voxelSz );
-	glVertex3f(vert.x + voxelSz , vert.y + voxelSz , vert.z + voxelSz );
-	glVertex3f(vert.x           , vert.y           , vert.z + voxelSz );
-	glVertex3f(vert.x           , vert.y + voxelSz , vert.z + voxelSz );
-
-	glVertex3f(vert.x           , vert.y           , vert.z           );
-	glVertex3f(vert.x           , vert.y           , vert.z + voxelSz );
-	glVertex3f(vert.x + voxelSz , vert.y           , vert.z           );
-	glVertex3f(vert.x + voxelSz , vert.y           , vert.z + voxelSz );
-	glVertex3f(vert.x + voxelSz , vert.y + voxelSz , vert.z           );
-	glVertex3f(vert.x + voxelSz , vert.y + voxelSz , vert.z + voxelSz );
-	glVertex3f(vert.x           , vert.y + voxelSz , vert.z           );
-	glVertex3f(vert.x           , vert.y + voxelSz , vert.z + voxelSz );
+		Vector3f vertex = Vector3f(frag.position);
+		Boxf box = Boxf(vertex, vertex + voxelSize);
+		// DrawBoxWireframe(box);
+		DrawBoxFilled(box);
 	}
-	glEnd();
-	/**/
+}
 
-	glBegin(GL_QUADS);
-	for (const Fragment frag : raster.fragments)
+void DrawSparceMap(const SparceMap<SparceMapData, sparceMapSize>& map, Boxf box)
+{
+	glColor4ub(255, 0, 0, 255);
+	DrawBoxWireframe(box);
+
+	const float invBoxSize = 1.0f / sparceMapSize;
+	const Vector3f voxelSize = (box.max - box.min) / sparceMapSize;
+	for (uint z = 0; z < sparceMapSize; ++z)
 	{
-		Vector3f vert = Vector3f(frag.position) * voxelSz;
+		for (uint y = 0; y < sparceMapSize; ++y)
+		{
+			for (uint x = 0; x < sparceMapSize; ++x)
+			{
+				Boxf subBox;
+				subBox.min = box.min + Vector3f(x, y, z) * voxelSize;
+				subBox.max = subBox.min + voxelSize;
 
-		glColor4ub(255, 128, 0, 255);
-		glVertex3f(vert.x, vert.y, vert.z);
-		glVertex3f(vert.x + voxelSz, vert.y, vert.z);
-		glVertex3f(vert.x + voxelSz, vert.y + voxelSz, vert.z);
-		glVertex3f(vert.x, vert.y + voxelSz, vert.z);
-
-		glColor4ub(0, 128, 255, 255);
-		glVertex3f(vert.x, vert.y, vert.z + voxelSz);
-		glVertex3f(vert.x + voxelSz, vert.y, vert.z + voxelSz);
-		glVertex3f(vert.x + voxelSz, vert.y + voxelSz, vert.z + voxelSz);
-		glVertex3f(vert.x, vert.y + voxelSz, vert.z + voxelSz);
-
-		glColor4ub(128, 255, 0, 255);
-		glVertex3f(vert.x, vert.y, vert.z);
-		glVertex3f(vert.x + voxelSz, vert.y, vert.z);
-		glVertex3f(vert.x + voxelSz, vert.y, vert.z + voxelSz);
-		glVertex3f(vert.x, vert.y, vert.z + voxelSz);
-
-		glColor4ub(128, 0, 255, 255);
-		glVertex3f(vert.x, vert.y + voxelSz, vert.z);
-		glVertex3f(vert.x + voxelSz, vert.y + voxelSz, vert.z);
-		glVertex3f(vert.x + voxelSz, vert.y + voxelSz, vert.z + voxelSz);
-		glVertex3f(vert.x, vert.y + voxelSz, vert.z + voxelSz);
-
-		glColor4ub(0, 255, 128, 255);
-		glVertex3f(vert.x, vert.y, vert.z);
-		glVertex3f(vert.x, vert.y + voxelSz, vert.z);
-		glVertex3f(vert.x, vert.y + voxelSz, vert.z + voxelSz);
-		glVertex3f(vert.x, vert.y, vert.z + voxelSz);
-
-		glColor4ub(255, 0, 128, 255);
-		glVertex3f(vert.x + voxelSz, vert.y, vert.z);
-		glVertex3f(vert.x + voxelSz, vert.y + voxelSz, vert.z);
-		glVertex3f(vert.x + voxelSz, vert.y + voxelSz, vert.z + voxelSz);
-		glVertex3f(vert.x + voxelSz, vert.y, vert.z + voxelSz);
+				if (map.subMapBrick[x][y][z])
+					DrawSparceMap(*map.subMapBrick[x][y][z], subBox);
+				else if (map.dataBrick[x][y][z] != 0)
+					DrawBoxFilled(box);
+			}
+		}
 	}
-	glEnd();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -212,28 +284,30 @@ void Voxelizer()
 
 	std::cout << "Voxelizing . . . ";
 	RasterData raster;
-	// raster.voxelSize = 20.0f;
-	raster.voxelSize = 2.0f;
-	// raster.voxelSize = 0.5f;
+	raster.voxelSize = voxelSize;
 	RasterizeModel(&raster, *model);
+
+	SparceMap<SparceMapData, sparceMapSize> sparceMap;
+
 	std::cout << "DONE" << std::endl;
 
 	Vector3f center = Vector3f(raster.fragments[0].position);
 	float dist = 0.0f;
 	for (auto fragment : raster.fragments)
-		center = center + Vector3f(fragment.position);
-	center = center * (1.0f / raster.fragments.size()) * raster.voxelSize;
+		center = center + fragment.position;
+	center = center * (1.0f / raster.fragments.size());
 	for (auto fragment : raster.fragments)
-		dist = Max(dist, Distance(center, Vector3f(fragment.position) * raster.voxelSize));
+		dist = Max(dist, Distance(center, fragment.position));
 
 	ProtoGL protoGL;
 	protoGL.Initialize(ProtoGLDesc());
 
 	OrbitalCamera camera(protoGL.GetCanvas());
-	camera.SetPerspective(1.4f, 1.0f, dist * 10.0f);
+	camera.SetPerspective(1.4f, 1.0f, sparceMapDimension * 2.0f);
 	camera.SetCamera(center, Quaternionf(zero), dist * 2.0f);
 
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
 
 	TimeCounter counter;
 	while (protoGL.Update())
@@ -248,6 +322,7 @@ void Voxelizer()
 
 		DrawModel(*model);
 		DrawFragments(raster);
+		DrawSparceMap(sparceMap, sparceMapBox);
 
 		protoGL.Swap();
 	}

@@ -4,15 +4,19 @@
 
 
 
-namespace vidf {
+namespace vidf
+{
 
 
 	template<class T>
-	class Box {
+	class Box
+	{
 	public:
-		Box() {}
+		Box() = default;
 		Box(T width, T height, T depth)
 			: min(0, 0, 0), max(width, height, depth) {}
+		Box(Vector3<T> _min, Vector3<T> _max)
+			: min(_min), max(_max) {}
 
 		Vector3<T> min, max;
 	};
@@ -20,7 +24,8 @@ namespace vidf {
 
 
 	template<class T>
-	inline Box<T> Union(const Box<T>& b, const Vector3<T>& p) {
+	inline Box<T> Union(const Box<T>& b, const Vector3<T>& p)
+	{
 		Box<T> ret = b;
 
 		ret.min.x = std::min(b.min.x, p.x);
@@ -36,7 +41,8 @@ namespace vidf {
 
 
 	template<class T>
-	inline Box<T> Union(const Box<T>& b, const Box<T>& b2) {
+	inline Box<T> Union(const Box<T>& b, const Box<T>& b2)
+	{
 		Box<T> ret = b;
 
 		ret.min.x = std::min(b.min.x, b2.min.x);
