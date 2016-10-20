@@ -8,6 +8,18 @@ using namespace proto;
 
 //////////////////////////////////////////////////////////////////////////
 
+// const float voxelSize = 50.0f;
+const float voxelSize = 2.0f;
+typedef uint8 SparceMapData;
+const uint sparceMapSize = 8;
+const uint sparceMapLevels = 3;
+const float sparceMapDimension = std::pow(sparceMapSize, sparceMapLevels) * voxelSize;
+const Boxf sparceMapBox = Boxf(
+	Vector3f(-sparceMapDimension, -sparceMapDimension, -sparceMapDimension) * 0.5f,
+	Vector3f(sparceMapDimension, sparceMapDimension, sparceMapDimension) * 0.5f);
+
+//////////////////////////////////////////////////////////////////////////
+
 void DrawModelGeometry(const Module& model, uint geomIdx)
 {
 	const Module::Geometry& geometry = model.GetGeometry(geomIdx);
@@ -65,15 +77,6 @@ struct SparceMap
 	std::array<std::array<std::array<T, size>, size>, size> dataBrick;
 };
 
-const float voxelSize = 1.0f;
-typedef uint8 SparceMapData;
-const uint sparceMapSize = 8;
-const uint sparceMapLevels = 4;
-const float sparceMapDimension = std::pow(sparceMapSize, sparceMapLevels) * voxelSize;
-const Boxf sparceMapBox = Boxf(
-	Vector3f(-sparceMapDimension, -sparceMapDimension, -sparceMapDimension) * 0.5f,
-	Vector3f( sparceMapDimension,  sparceMapDimension,  sparceMapDimension) * 0.5f);
-
 void RasterizeTriangle(RasterData* raster, Trianglef triangle)
 {
 	const float voxelSize = raster->voxelSize;
@@ -105,7 +108,7 @@ void RasterizeTriangle(RasterData* raster, Trianglef triangle)
 	}
 }
 
-void RasterizeModelGeometry(RasterData* raster, const Module& model, uint geomIdx)
+void RasterizeModelGeometry(RasterData* raster, const Module& model, const Matrix44f& objectTM, uint geomIdx)
 {
 	const Module::Geometry& geometry = model.GetGeometry(geomIdx);
 
@@ -121,17 +124,21 @@ void RasterizeModelGeometry(RasterData* raster, const Module& model, uint geomId
 		for (uint vertIdx = 2; vertIdx < numVertices; ++vertIdx)
 		{
 			triangle.v2 = model.GetVertex(model.GetPolygonVertexIndex(polyIdx, vertIdx));
-			RasterizeTriangle(raster, triangle);
+			Trianglef transTriangle = triangle;
+			transTriangle.v0 = Mul(triangle.v0, objectTM);
+			transTriangle.v1 = Mul(triangle.v1, objectTM);
+			transTriangle.v2 = Mul(triangle.v2, objectTM);
+			RasterizeTriangle(raster, transTriangle);
 			triangle.v1 = triangle.v2;
 		}
 	}
 }
 
-void RasterizeModel(RasterData* raster, const Module& model)
+void RasterizeModel(RasterData* raster, const Module& model, const Matrix44f& objectTM)
 {
 	const uint numGeoms = model.GetNumGeometries();
 	for (uint geomIdx = 0; geomIdx < numGeoms; ++geomIdx)
-		RasterizeModelGeometry(raster, model, geomIdx);
+		RasterizeModelGeometry(raster, model, objectTM, geomIdx);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -153,7 +160,24 @@ void SparceTreeInsertPoint(SparceMap<SparceMapData, sparceMapSize>* map, Boxf bo
 		auto& subMap = map->subMapBrick[mappedPoint.x][mappedPoint.y][mappedPoint.z];
 		if (!subMap)
 			subMap = std::make_unique<SparceMap<SparceMapData, sparceMapSize>>();
+		map->dataBrick[mappedPoint.x][mappedPoint.y][mappedPoint.z] = 2;
 		SparceTreeInsertPoint(subMap.get(), subBox, point, level - 1);
+	}
+}
+
+void SparceTreeClearData(SparceMap<SparceMapData, sparceMapSize>* map)
+{
+	std::memset(map->dataBrick.data(), 0, sizeof(map->dataBrick));
+	for (uint z = 0; z < sparceMapSize; ++z)
+	{
+		for (uint y = 0; y < sparceMapSize; ++y)
+		{
+			for (uint x = 0; x < sparceMapSize; ++x)
+			{
+				if (map->subMapBrick[x][y][z])
+					SparceTreeClearData(map->subMapBrick[x][y][z].get());
+			}
+		}
 	}
 }
 
@@ -253,21 +277,6 @@ void DrawBoxFilled(Boxf box)
 	glEnd();
 }
 
-void DrawFragments(const RasterData& raster)
-{
-	const float voxelSz = raster.voxelSize;
-	const Vector3f voxelSize = Vector3f(voxelSz, voxelSz, voxelSz);
-
-	glColor4ub(255, 128, 64, 255);
-	for (const Fragment frag : raster.fragments)
-	{
-		Vector3f vertex = Vector3f(frag.position);
-		Boxf box = Boxf(vertex, vertex + voxelSize);
-		// DrawBoxWireframe(box);
-		DrawBoxFilled(box);
-	}
-}
-
 void DrawSparceMap(const SparceMap<SparceMapData, sparceMapSize>& map, Boxf box)
 {
 	glColor4ub(255, 0, 0, 255);
@@ -284,9 +293,9 @@ void DrawSparceMap(const SparceMap<SparceMapData, sparceMapSize>& map, Boxf box)
 				subBox.min = box.min + Vector3f(x, y, z) * voxelSize;
 				subBox.max = subBox.min + voxelSize;
 
-				if (map.subMapBrick[x][y][z])
+				if (map.dataBrick[x][y][z] == 2)
 					DrawSparceMap(*map.subMapBrick[x][y][z], subBox);
-				else if (map.dataBrick[x][y][z] != 0)
+				else if (map.dataBrick[x][y][z] == 1)
 				{
 					Vector3f center = (subBox.min + subBox.max) * 0.5f;
 					subBox.min = center - voxelSize * 0.45f;
@@ -303,14 +312,14 @@ void DrawSparceMap(const SparceMap<SparceMapData, sparceMapSize>& map, Boxf box)
 void Voxelizer()
 {
 	std::cout << "Loading Model . . . ";
-	// auto model = LoadObjModuleFromFile("sponza/sponza.obj");
+	// auto model = LoadObjModuleFromFile("data/sponza/sponza.obj");
 	auto model = LoadObjModuleFromFile("data/leather_chair/leather_chair.obj");
 	std::cout << "DONE" << std::endl;
 
 	std::cout << "Rasterizing . . . ";
 	RasterData raster;
 	raster.voxelSize = voxelSize;
-	RasterizeModel(&raster, *model);
+	RasterizeModel(&raster, *model, Matrix44f(zero));
 	std::cout << "DONE" << std::endl;
 
 	std::cout << "Generating Sparce Map . . . ";
@@ -348,7 +357,19 @@ void Voxelizer()
 		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		Time time = GetTime();
+		Matrix44f objectTM = ToMatrix44(QuaternionAxisAngle(Vector3f(0.0f, 1.0f, 0.0f), time.AsFloat()*0.15f));
+		
+		raster.fragments.clear();
+		SparceTreeClearData(&sparceMap);
+		RasterizeModel(&raster, *model, objectTM);
+		for (auto fragment : raster.fragments)
+			SparceTreeInsertPoint(&sparceMap, sparceMapBox, fragment.position, sparceMapLevels);
+
+		glPushMatrix();
+		glMultMatrixf(&objectTM[0]);
 		DrawModel(*model);
+		glPopMatrix();
 		DrawSparceMap(sparceMap, sparceMapBox);
 
 		protoGL.Swap();
