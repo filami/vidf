@@ -313,7 +313,8 @@ void Voxelizer()
 {
 	std::cout << "Loading Model . . . ";
 	// auto model = LoadObjModuleFromFile("data/sponza/sponza.obj");
-	auto model = LoadObjModuleFromFile("data/leather_chair/leather_chair.obj");
+	// auto model = LoadObjModuleFromFile("data/leather_chair/leather_chair.obj");
+	auto model = LoadObjModuleFromFile("data/primitives/box.obj");
 	std::cout << "DONE" << std::endl;
 
 	std::cout << "Rasterizing . . . ";
@@ -327,14 +328,18 @@ void Voxelizer()
 	for (auto fragment : raster.fragments)
 		SparceTreeInsertPoint(&sparceMap, sparceMapBox, fragment.position, sparceMapLevels);
 	std::cout << "DONE" << std::endl;
-
-	Vector3f center = Vector3f(raster.fragments[0].position);
-	float dist = 0.0f;
-	for (auto fragment : raster.fragments)
-		center = center + fragment.position;
-	center = center * (1.0f / raster.fragments.size());
-	for (auto fragment : raster.fragments)
-		dist = Max(dist, Distance(center, fragment.position));
+	
+	Vector3f center = Vector3f(zero);
+	float dist = 10.0f;
+	if (!raster.fragments.empty())
+	{
+		for (auto fragment : raster.fragments)
+			center = center + fragment.position;
+		center = center * (1.0f / raster.fragments.size());
+		dist = 0.0f;
+		for (auto fragment : raster.fragments)
+			dist = Max(dist, Distance(center, fragment.position));
+	}
 
 	ProtoGL protoGL;
 	protoGL.Initialize(ProtoGLDesc());
