@@ -161,6 +161,8 @@ namespace vidf
 		const auto Project = [](const Vector3<T>* points, uint numPoints, Vector3<T> axis)
 		{
 			std::pair<T, T> range(
+				std::numeric_limits<T>::max(),
+				-std::numeric_limits<T>::max());
 			for (uint i = 0; i < numPoints; ++i)
 			{
 				T value = Dot(axis, points[i]);
