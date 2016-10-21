@@ -155,77 +155,72 @@ namespace vidf
 
 
 
-	void Project(const Vector3f* points, uint numPoints, Vector3f axis,
-		double& min, double& max)
-	{
-		min = std::numeric_limits<float>::max();
-		max = -std::numeric_limits<float>::max();
-		for (uint i = 0; i < numPoints; ++i)
-		{
-			double val = Dot(axis, points[i]);
-			if (val < min) min = val;
-			if (val > max) max = val;
-		}
-	}
-
 	template<typename T>
 	inline bool BoxTriangleIntersect(const Box<T>& box, const Triangle<T>& triangle)
 	{
-		double triangleMin, triangleMax;
-		double boxMin, boxMax;
-
-		// Test the box normals (x-, y- and z-axes)
-		Vector3f boxNormals[] =
+		const auto Project = [](const Vector3<T>* points, uint numPoints, Vector3<T> axis)
 		{
-			Vector3f(1,0,0),
-			Vector3f(0,1,0),
-			Vector3f(0,0,1),
+			std::pair<T, T> range(
+			for (uint i = 0; i < numPoints; ++i)
+			{
+				T value = Dot(axis, points[i]);
+				range.first = Min(range.first, value);
+				range.second = Max(range.second, value);
+			}
+			return range;
 		};
+
+		const Vector3<T> boxNormals[] =
+		{
+			Vector3<T>(T(1), T(0), T(0)),
+			Vector3<T>(T(0), T(1), T(0)),
+			Vector3<T>(T(0), T(0), T(1)),
+		};
+
 		for (int i = 0; i < 3; i++)
 		{
-			Vector3f n = boxNormals[i];
-			Project(&triangle.v0, 3, boxNormals[i], triangleMin, triangleMax);
-			if (triangleMax < box.min[i] || triangleMin > box.max[i])
-				return false; // No intersection possible.
+			const Vector3f n = boxNormals[i];
+			const auto triangleRange = Project(&triangle.v0, 3, boxNormals[i]);
+			if (triangleRange.second < box.min[i] || triangleRange.first > box.max[i])
+				return false;
 		}
 
-		// Test the triangle normal
-		Vector3f normal = Normalize(Cross((triangle.v1 - triangle.v0), (triangle.v2 - triangle.v0)));
-		double triangleOffset = Dot(normal, triangle.v0);
-		Project(&triangle.v0, 3, normal, boxMin, boxMax);
-		if (boxMax < triangleOffset || boxMin > triangleOffset)
-			return false; // No intersection possible.
+		const Vector3<T> normal = Normal(triangle);
+		const T triangleOffset = Dot(normal, triangle.v0);
+		const auto boxRange = Project(&triangle.v0, 3, normal);
+		if (boxRange.second < triangleOffset || boxRange.first > triangleOffset)
+			return false;
 
-										// Test the nine edge cross-products
-		Vector3f boxVertices[] =
+		const Vector3<T> boxVertices[] =
 		{
-			Vector3f(box.min.x, box.min.y, box.min.z),
-			Vector3f(box.max.x, box.min.y, box.min.z),
-			Vector3f(box.min.x, box.max.y, box.min.z),
-			Vector3f(box.max.x, box.max.y, box.min.z),
-			Vector3f(box.min.x, box.min.y, box.max.z),
-			Vector3f(box.max.x, box.min.y, box.max.z),
-			Vector3f(box.min.x, box.max.y, box.max.z),
-			Vector3f(box.max.x, box.max.y, box.max.z),
+			Vector3<T>(box.min.x, box.min.y, box.min.z),
+			Vector3<T>(box.max.x, box.min.y, box.min.z),
+			Vector3<T>(box.min.x, box.max.y, box.min.z),
+			Vector3<T>(box.max.x, box.max.y, box.min.z),
+			Vector3<T>(box.min.x, box.min.y, box.max.z),
+			Vector3<T>(box.max.x, box.min.y, box.max.z),
+			Vector3<T>(box.min.x, box.max.y, box.max.z),
+			Vector3<T>(box.max.x, box.max.y, box.max.z),
 		};
-		Vector3f triangleEdges[] =
+		const Vector3<T> triangleEdges[] =
 		{
 			triangle.v0 - triangle.v1,
 			triangle.v1 - triangle.v2,
 			triangle.v2 - triangle.v0,
 		};
+
 		for (int i = 0; i < 3; i++)
+		{
 			for (int j = 0; j < 3; j++)
 			{
-				// The box normals are the same as it's edge tangents
-				Vector3f axis = Cross(triangleEdges[i], boxNormals[j]);
-				Project(boxVertices, 8, axis, boxMin, boxMax);
-				Project(&triangle.v0, 3, axis, triangleMin, triangleMax);
-				if (boxMax < triangleMin || boxMin > triangleMax)
-					return false; // No intersection possible
+				Vector3<T> axis = Cross(triangleEdges[i], boxNormals[j]);
+				const auto boxRange = Project(boxVertices, 8, axis);
+				const auto triangleRange = Project(&triangle.v0, 3, axis);
+				if (boxRange.second < triangleRange.first || boxRange.first > triangleRange.second)
+					return false;
 			}
+		}
 
-		// No separating axis found.
 		return true;
 	}
 
