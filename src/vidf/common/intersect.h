@@ -158,28 +158,72 @@ namespace vidf
 	template<typename T>
 	inline bool BoxTriangleIntersect(const Box<T>& box, const Triangle<T>& triangle)
 	{
-		const Plane<T> planes[6] =
+		const auto Project = [](const Vector3<T>* points, uint numPoints, Vector3<T> axis)
 		{
-			Plane<T>(Vector3f(T(1), T(0), T(0)),  box.min.x),
-			Plane<T>(Vector3f(T(-1), T(0), T(0)), -box.max.x),
-			Plane<T>(Vector3f(T(0), T(1), T(0)),  box.min.y),
-			Plane<T>(Vector3f(T(0), T(-1), T(0)), -box.max.y),
-			Plane<T>(Vector3f(T(0), T(0), T(1)),  box.min.z),
-			Plane<T>(Vector3f(T(0), T(0), T(-1)), -box.max.z),
-		};
-		uint flags[3] = {};
-		for (uint i = 0; i < 6; ++i)
-		{
-			const Plane<T> plane = planes[i];
-			uint planeFlags = 1 << i;
-			for (uint j = 0; j < 3; ++j)
+			std::pair<T, T> range(
+				std::numeric_limits<T>::max(),
+				-std::numeric_limits<T>::max());
+			for (uint i = 0; i < numPoints; ++i)
 			{
-				const Vector3<T> vertex = triangle[j];
-				if (Distance(plane, vertex) >= 0.0f)
-					flags[j] |= planeFlags;
+				T value = Dot(axis, points[i]);
+				range.first = Min(range.first, value);
+				range.second = Max(range.second, value);
+			}
+			return range;
+		};
+
+		const Vector3<T> boxNormals[] =
+		{
+			Vector3<T>(T(1), T(0), T(0)),
+			Vector3<T>(T(0), T(1), T(0)),
+			Vector3<T>(T(0), T(0), T(1)),
+		};
+
+		for (int i = 0; i < 3; i++)
+		{
+			const Vector3f n = boxNormals[i];
+			const auto triangleRange = Project(&triangle.v0, 3, boxNormals[i]);
+			if (triangleRange.second < box.min[i] || triangleRange.first > box.max[i])
+				return false;
+		}
+
+		const Vector3<T> normal = Normal(triangle);
+		const T triangleOffset = Dot(normal, triangle.v0);
+		const auto boxRange = Project(&triangle.v0, 3, normal);
+		if (boxRange.second < triangleOffset || boxRange.first > triangleOffset)
+			return false;
+
+		const Vector3<T> boxVertices[] =
+		{
+			Vector3<T>(box.min.x, box.min.y, box.min.z),
+			Vector3<T>(box.max.x, box.min.y, box.min.z),
+			Vector3<T>(box.min.x, box.max.y, box.min.z),
+			Vector3<T>(box.max.x, box.max.y, box.min.z),
+			Vector3<T>(box.min.x, box.min.y, box.max.z),
+			Vector3<T>(box.max.x, box.min.y, box.max.z),
+			Vector3<T>(box.min.x, box.max.y, box.max.z),
+			Vector3<T>(box.max.x, box.max.y, box.max.z),
+		};
+		const Vector3<T> triangleEdges[] =
+		{
+			triangle.v0 - triangle.v1,
+			triangle.v1 - triangle.v2,
+			triangle.v2 - triangle.v0,
+		};
+
+		for (int i = 0; i < 3; i++)
+		{
+			for (int j = 0; j < 3; j++)
+			{
+				Vector3<T> axis = Cross(triangleEdges[i], boxNormals[j]);
+				const auto boxRange = Project(boxVertices, 8, axis);
+				const auto triangleRange = Project(&triangle.v0, 3, axis);
+				if (boxRange.second < triangleRange.first || boxRange.first > triangleRange.second)
+					return false;
 			}
 		}
-		return (flags[0] | flags[1] | flags[2]) == 0x3f;
+
+		return true;
 	}
 
 

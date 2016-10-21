@@ -19,6 +19,15 @@ namespace vidf
 
 
 
+	template<typename T>
+	Vector3<T> Normal(Triangle<T> triangle)
+	{
+		const Vector3<T> edge0 = triangle.v1 - triangle.v0;
+		const Vector3<T> edge1 = triangle.v2 - triangle.v0;
+		return Normalize(Cross(edge0, edge1));
+	}
+
+
 	typedef Triangle<float> Trianglef;
 	typedef Triangle<int> Trianglei;
 
