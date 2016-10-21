@@ -82,12 +82,25 @@ void RasterizeTriangle(RasterData* raster, Trianglef triangle)
 	const float voxelSize = raster->voxelSize;
 	const Vector3f voxelSize3 = Vector3f(voxelSize, voxelSize, voxelSize);
 
-	Boxf box;
+	const auto Floor = [](Vector3f v)
+	{
+		return Vector3f(std::floor(v.x), std::floor(v.y), std::floor(v.z));
+	};
+	const auto Ceil = [](Vector3f v)
+	{
+		return Vector3f(std::ceil(v.x), std::ceil(v.y), std::ceil(v.z));
+	};
+
+	Boxf box = Boxf(
+		Floor(Min(Min(triangle.v0, triangle.v1), triangle.v2)/voxelSize)*voxelSize,
+		Ceil(Max(Max(triangle.v0+Vector3f(voxelSize, voxelSize, voxelSize), triangle.v1), triangle.v2)/voxelSize)*voxelSize);
+	/*
 	box.min = Min(Min(triangle.v0, triangle.v1), triangle.v2);
 	box.max = Max(Max(triangle.v0, triangle.v1), triangle.v2);
 	box.min.x = std::floor(box.min.x);
 	box.min.y = std::floor(box.min.y);
 	box.min.z = std::floor(box.min.z);
+	*/
 
 	for (float z = box.min.z; z < box.max.z; z += voxelSize)
 	{
