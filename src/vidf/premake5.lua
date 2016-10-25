@@ -75,7 +75,6 @@ AddFilesToProject
 		"platform/win32/timewin32.cpp",
 	},
 
-	--[[
 	["Renderer"] =
 	{
 		"renderer/common.h",
@@ -95,7 +94,6 @@ AddFilesToProject
 		"renderer/vulkanwin32/renderdevicevkwin32.cpp",
 		"renderer/vulkanwin32/swapchainvkwin32.cpp",
 	},
-	]]
 
 	["Proto"] =
 	{

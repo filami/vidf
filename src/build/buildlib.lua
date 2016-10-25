@@ -99,7 +99,7 @@ function ConfigVIDFDependencies()
 	
 	links
 	{
-	--	"vulkan-1",
+		"vulkan-1",
 		"viext",
 	}
 	

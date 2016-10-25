@@ -9,8 +9,8 @@ void Voxelizer();
 int main()
 {
 	vidf::SetCurrentDirectory("../../");
-	// TestVulkan();
+	TestVulkan();
 	// TestGM();
-	Voxelizer();
+	// Voxelizer();
 	return 0;
 }
