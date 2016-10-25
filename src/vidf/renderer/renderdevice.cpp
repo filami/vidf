@@ -21,6 +21,9 @@ namespace vidf
 
 	RenderDevicePtr RenderDevice::Create(const RenderDeviceDesc& desc)
 	{
+		if (!BindToVulkanLib())
+			return RenderDevicePtr();
+
 		RenderDevicePtr device = RenderDevicePtr(new RenderDevice());
 
 		device->QueryLayers();

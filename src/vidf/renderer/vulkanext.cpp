@@ -13,8 +13,34 @@
 }
 
 
+#define VK_INITIALIZE_FUNCTIONS(ENTRYPOINT, NULLFN) PFN_##ENTRYPOINT ENTRYPOINT = (PFN_##ENTRYPOINT)NULLFN;
+VK_FUNCTIONS(VK_INITIALIZE_FUNCTIONS);
+VK_FUNCTIONS_WIN32(VK_INITIALIZE_FUNCTIONS);
+
+
 namespace vidf
 {
+
+	bool BindToVulkanLib()
+	{
+		static bool done = false;
+		static bool success = false;
+		if (done)
+			return success;
+		HMODULE vulkanLib = LoadLibraryA("vulkan-1.dll");
+		if (!vulkanLib)
+		{
+			success = false;
+			return success;
+		}
+#		define VK_LOAD_FUNCTIONS(ENTRYPOINT, NULLFN) ENTRYPOINT = (PFN_##ENTRYPOINT)GetProcAddress(vulkanLib, #ENTRYPOINT);
+		VK_FUNCTIONS(VK_LOAD_FUNCTIONS);
+		VK_FUNCTIONS_WIN32(VK_LOAD_FUNCTIONS);
+		done = true;
+		success = true;
+		return success;
+	}
+
 
 
 	VkResult VkNullPtrSuccess()
@@ -22,11 +48,14 @@ namespace vidf
 		return VK_SUCCESS;
 	}
 
+
+
 	VkResult VkNullPtrBreakpoint()
 	{
-		__debugbreak();
+	//	__debugbreak();
 		return VK_ERROR_FEATURE_NOT_PRESENT;
 	}
+
 
 
 	const VkExtDebugMarker& GetVkExtDebugMarker()
@@ -34,6 +63,8 @@ namespace vidf
 		static VkExtDebugMarker ext;
 		return ext;
 	}
+
+
 
 	const VkExtDebugMarker& GetVkExtDebugMarker(RenderDevicePtr device)
 	{
