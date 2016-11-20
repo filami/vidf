@@ -21,4 +21,9 @@ AddFilesToProject
 		"tests/gm.cpp",
 		"tests/voxelizer.cpp",
 	},
+	
+	["Gomoku"] =
+	{
+		"gomoku/game.cpp",
+	},
 }
