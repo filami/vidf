@@ -174,7 +174,7 @@ namespace
 
 
 
-	// #TODO opy pasted of FinishedState. make it templated
+	// #TODO copy pasted of FinishedState. make it templated
 	State FinishedStateAndMArk(const TableState& tableState, TableMarks* tableMarks)
 	{
 		const uint minRowSize = 5;
@@ -336,14 +336,19 @@ namespace
 
 
 
-	AlphaBetaResult AlphaBeta(const TableState& tableState, uint depth, float alpha, float beta, State player, bool isMaximizing)
+	typedef std::array<Vector2i, tableSize*tableSize> AlphaBetaPoints;
+
+
+	AlphaBetaResult AlphaBeta(const AlphaBetaPoints& points, const TableState& tableState, uint depth, float alpha, float beta, State player, bool isMaximizing)
 	{
+		const State thisPlayer = isMaximizing ? player : OtherPlayer(player);
 		AlphaBetaResult result;
 		result.position = Vector2i(-1, -1);
+		result.bestValue = isMaximizing ? -infinity : infinity;
 
 		if (FinishedState(tableState) != State::Empty)
 		{
-			result.bestValue = infinity;
+			result.bestValue *= 0.5f;
 			return result;
 		}
 		if (depth == 0)
@@ -352,36 +357,31 @@ namespace
 			return result;
 		}
 
-		State thisPlayer = isMaximizing ? player : OtherPlayer(player);
-		result.bestValue = isMaximizing ? -infinity : infinity;
-
-		for (uint y = 0; y < tableSize; ++y)
+		for (uint i = 0; i < points.size(); ++i)
 		{
-			for (uint x = 0; x < tableSize; ++x)
+			const auto point = points[i];
+			const auto state = tableState[point.x + point.y*tableSize];
+			if (state != State::Empty)
+				continue;
+			TableState newTable = tableState;
+			newTable[point.x + point.y*tableSize] = thisPlayer;
+
+			const float newValue = AlphaBeta(points, newTable, depth - 1, alpha, beta, player, !isMaximizing).bestValue;
+
+			if (isMaximizing && result.bestValue < newValue)
 			{
-				const auto state = tableState[x + y*tableSize];
-				if (state != State::Empty)
-					continue;
-				TableState newTable = tableState;
-				newTable[x + y*tableSize] = thisPlayer;
-
-				const float newValue = AlphaBeta(newTable, depth - 1, alpha, beta, player, !isMaximizing).bestValue;
-
-				if (isMaximizing && result.bestValue < newValue)
-				{
-					result.bestValue = newValue;
-					alpha = Max(alpha, result.bestValue);
-					result.position = Vector2i(x, y);
-				}
-				else if (!isMaximizing && result.bestValue > newValue)
-				{
-					result.bestValue = newValue;
-					beta = Min(beta, result.bestValue);
-					result.position = Vector2i(x, y);
-				}
-				if (beta <= alpha)
-					break;
+				result.bestValue = newValue;
+				alpha = Max(alpha, result.bestValue);
+				result.position = point;
 			}
+			else if (!isMaximizing && result.bestValue > newValue)
+			{
+				result.bestValue = newValue;
+				beta = Min(beta, result.bestValue);
+				result.position = point;
+			}
+			if (beta <= alpha)
+				break;
 		}
 		return result;
 	}
@@ -392,14 +392,42 @@ namespace
 
 void Gomoku()
 {
-	TableState tableTest;
+/*	TableState tableTest;
 	tableTest.fill(State::Empty);
 	tableTest[0] = State::White;
 	tableTest[1] = State::White;
+	tableTest[2] = State::White;
 	tableTest[15] = State::Black;
 	tableTest[16] = State::Black;
 	tableTest[17] = State::Black;
-	Heuristic(tableTest, State::White);
+	tableTest[18] = State::Black;
+	*/
+	// const auto testPlay = AlphaBeta(tableTest, 2, -infinity, infinity, State::White, true);
+
+	AlphaBetaPoints alphaBetaPoints;
+/*	for (uint y = 0; y < tableSize; ++y)
+	{
+		for (uint x = 0; x < tableSize; ++x)
+		{
+			alphaBetaPoints[x + y*tableSize] = Vector2i(x, y);
+		}
+	}*/
+	{
+		Vector2i center = Vector2i(tableSize / 2, tableSize / 2);
+		alphaBetaPoints[0] = center;
+		uint idx = 1;
+		for (int i = 1; i <= center.x; ++i)
+		{
+			for (int j = -i; j < i; ++j)
+				alphaBetaPoints[idx++] = center + Vector2i(j, i);
+			for (int j = i; j > -i; --j)
+				alphaBetaPoints[idx++] = center + Vector2i(i, j);
+			for (int j = i; j > -i; --j)
+				alphaBetaPoints[idx++] = center + Vector2i(j, -i);
+			for (int j = -i; j < i; ++j)
+				alphaBetaPoints[idx++] = center + Vector2i(-i, j);
+		}
+	}
 
 	ProtoGL protoGL;
 	protoGL.Initialize(ProtoGLDesc(1280, 720));
@@ -447,7 +475,7 @@ void Gomoku()
 		if (isPlayer)
 		{
 			const Vector2f mousePos = camera.CursorPosition();
-			Vector2i cursorPos = Vector2i(uint(mousePos.x + 0.5f), uint(mousePos.y + 0.5f));
+			cursorPos = Vector2i(uint(mousePos.x + 0.5f), uint(mousePos.y + 0.5f));
 			isValidSpot = (finishedState == State::Empty) && IsValidSpot(tableState, cursorPos);
 
 			const bool lbuttonDown = GetAsyncKeyState(VK_LBUTTON) & 0x8000;
@@ -467,7 +495,9 @@ void Gomoku()
 		}
 		else if (isAI)
 		{
-			const auto play = AlphaBeta(tableState, 3, -infinity, infinity, currentPlayer, true);
+			const auto play = AlphaBeta(alphaBetaPoints, tableState, 3, -infinity, infinity, currentPlayer, true);
+			if (!(play.position != Vector2i(-1, -1)))
+				__debugbreak();
 			tableState[play.position.x + play.position.y*tableSize] = currentPlayer;
 			currentPlayer = OtherPlayer(currentPlayer);
 		}
