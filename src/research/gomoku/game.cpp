@@ -496,8 +496,6 @@ void Gomoku()
 		else if (isAI)
 		{
 			const auto play = AlphaBeta(alphaBetaPoints, tableState, 3, -infinity, infinity, currentPlayer, true);
-			if (!(play.position != Vector2i(-1, -1)))
-				__debugbreak();
 			tableState[play.position.x + play.position.y*tableSize] = currentPlayer;
 			currentPlayer = OtherPlayer(currentPlayer);
 		}
