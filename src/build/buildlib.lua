@@ -70,19 +70,22 @@ function ConfigCommon(projName, targetLoc)
 		_WORKING_DIR.."/ext/include/",
 	}
 	defines {"VK_USE_PLATFORM_WIN32_KHR", "WIN64"}
-	flags {"NoManifest", "NoRTTI"}
+	flags {"NoManifest"}
+	rtti "off"
+	symbols "on"
+
+	systemversion "10.0.15063.0"
 	
 	-- debug
 	configuration(debugConfig)
 	defines {"DEBUG"}
-	flags {"Symbols"}
 	ConfigPaths(projName, debugConfig, targetLoc)
 	
 	-- profile
 	configuration(profileConfig)
 	defines {"NDEBUG", "PROFILE"}
 	flags {
-		"Symbols", "FloatFast",
+		"FloatFast",
 		"NoFramePointer", "Optimize", "OptimizeSpeed" }
 	ConfigPaths(projName, profileConfig, targetLoc)
 end
@@ -96,10 +99,10 @@ function ConfigVIDFDependencies()
 		_WORKING_DIR.."/lib/",
 		_WORKING_DIR.."/ext/lib/vulkan/",
 	}
-	
+
 	links
 	{
-		"viext",
+		-- "viext",
 	}
 	
 	configuration(debugConfig)

@@ -10,9 +10,9 @@ void Gomoku();
 int main()
 {
 	vidf::SetCurrentDirectory("../../");
-	// TestVulkan();
+	TestVulkan();
 	// TestGM();
 	// Voxelizer();
-	Gomoku();
+	// Gomoku();
 	return 0;
 }

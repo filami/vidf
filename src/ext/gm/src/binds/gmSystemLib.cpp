@@ -343,7 +343,7 @@ static gmType s_gmFileFindType = GM_NULL;
 
 struct gmFileFindUser
 {
-  WIN32_FIND_DATA m_findData;
+  WIN32_FIND_DATAA m_findData;
   HANDLE m_iterator;
 };
 
@@ -375,7 +375,7 @@ static int GM_CDECL gmfFindFirstFile(gmThread * a_thread)
   GM_CHECK_STRING_PARAM(filename, 0);
 
   gmFileFindUser * fileFind = (gmFileFindUser *) a_thread->GetMachine()->Sys_Alloc(sizeof(gmFileFindUser));
-  fileFind->m_iterator = FindFirstFile(filename, &fileFind->m_findData);
+  fileFind->m_iterator = FindFirstFileA(filename, &fileFind->m_findData);
 
   if(fileFind->m_iterator == INVALID_HANDLE_VALUE)
   {
@@ -455,7 +455,7 @@ static int GM_CDECL gmfCreateFolder(gmThread * a_thread)
 {
   GM_CHECK_NUM_PARAMS(1);
   GM_CHECK_STRING_PARAM(path, 0);
-  BOOL result = CreateDirectory(path, NULL);
+  BOOL result = CreateDirectoryA(path, NULL);
   if(result)
   {
     a_thread->PushInt(1);
@@ -463,7 +463,7 @@ static int GM_CDECL gmfCreateFolder(gmThread * a_thread)
   else
   {
     WIN32_FIND_DATA findData;
-    HANDLE handle = FindFirstFile(path, &findData);
+    HANDLE handle = FindFirstFileA(path, &findData);
     if(handle == INVALID_HANDLE_VALUE)
     {
       a_thread->PushInt(0);
@@ -500,7 +500,7 @@ bool RecurseDeletePath(const char * a_path)
   }
 
   // is path valid
-  HANDLE h = FindFirstFile(path,&findData);
+  HANDLE h = FindFirstFileA(path,&findData);
 
   // path not could not be found OR path is a file, not a folder
   if((h == INVALID_HANDLE_VALUE) || (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)))
@@ -513,11 +513,11 @@ bool RecurseDeletePath(const char * a_path)
 
   // push current working directory
   char currDir[MAX_PATH + 1] = "";
-  GetCurrentDirectory(MAX_PATH,currDir);
-  SetCurrentDirectory(path);
+  GetCurrentDirectoryA(MAX_PATH,currDir);
+  SetCurrentDirectoryA(path);
 
   // iterate over contents of folder
-  h = FindFirstFile("*",&findData);
+  h = FindFirstFileA("*",&findData);
 
   if(h != INVALID_HANDLE_VALUE)
   {
