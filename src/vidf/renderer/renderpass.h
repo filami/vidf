@@ -20,6 +20,8 @@ namespace vidf
 		void Begin(RenderContextPtr context, SwapChainPtr swapChain);
 		void End(RenderContextPtr context);
 
+		VkRenderPass GetRenderPass() { return renderPass; }
+
 	private:
 		void Begin(RenderContextPtr context, uint frameBufferIdx);
 
