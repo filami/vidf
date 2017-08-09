@@ -192,6 +192,9 @@ typedef Pointer<ID3D11Buffer>              PD3D11Buffer;
 typedef Pointer<ID3D11VertexShader>        PD3D11VertexShader;
 typedef Pointer<ID3D11PixelShader>         PD3D11PixelShader;
 typedef Pointer<ID3D11InputLayout>         PD3D11InputLayout;
+typedef Pointer<ID3D11RasterizerState>     PD3D11RasterizerState;
+typedef Pointer<ID3D11RasterizerState1>    PD3D11RasterizerState1;
+typedef Pointer<ID3D11DepthStencilState>   PD3D11DepthStencilState;
 typedef Pointer<ID3DBlob>                  PD3DBlob;
 
 
@@ -277,7 +280,7 @@ bool TestVulkan()
 		};
 		Vertex vertices[] =
 		{
-			{ Vector2f(0.0f, 0.0f), 0xffff0000 },
+			{ Vector2f(-0.05f, 0.0f), 0xffff0000 },
 			{ Vector2f(0.0f, 0.5f), 0xff00ff00 },
 			{ Vector2f(0.5f, 0.0f), 0xff0000ff },
 		};
@@ -375,6 +378,24 @@ bool TestVulkan()
 		PD3D11UnorderedAccessView rovTestUAV;
 		device->CreateUnorderedAccessView(rovTest, &rovTestUAVDesc, &rovTestUAV.Get());
 
+		D3D11_RASTERIZER_DESC defaultRSDesc{};
+		defaultRSDesc.CullMode = D3D11_CULL_NONE;
+		defaultRSDesc.FillMode = D3D11_FILL_SOLID;
+		PD3D11RasterizerState defaultRS;
+		device->CreateRasterizerState(&defaultRSDesc, &defaultRS.Get());
+		
+		D3D11_RASTERIZER_DESC1 msaaRSDesc{};
+		msaaRSDesc.CullMode = D3D11_CULL_NONE;
+		msaaRSDesc.FillMode = D3D11_FILL_SOLID;
+		msaaRSDesc.MultisampleEnable = true;
+		msaaRSDesc.ForcedSampleCount = 16;
+		PD3D11RasterizerState1 msaaRS;
+		device3->CreateRasterizerState1(&msaaRSDesc, &msaaRS.Get());
+
+		D3D11_DEPTH_STENCIL_DESC defaultDSDesc{};
+		PD3D11DepthStencilState defaultDS;
+		device->CreateDepthStencilState(&defaultDSDesc, &defaultDS.Get());
+
 		while (UpdateSystemMessages() == SystemMessageResult::Continue)
 		{
 			userAnnotations->BeginEvent(L"Frame");
@@ -402,6 +423,8 @@ bool TestVulkan()
 			context->IASetVertexBuffers(0, 1, vertexStreams, &vertexStride, vertexOffsets);
 			context->VSSetShader(vertexShader, nullptr, 0);
 			context->PSSetShader(pixelShader, nullptr, 0);
+			context->OMSetDepthStencilState(defaultDS, 0);
+			context->RSSetState(msaaRS);
 			userAnnotations->SetMarker(L"{Draw \"vertexBuffer\"}");
 			context->Draw(3, 0);
 			context->ClearState();
@@ -415,6 +438,8 @@ bool TestVulkan()
 			context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			context->VSSetShader(finalVertexShader, nullptr, 0);
 			context->PSSetShader(finalPixelShader, nullptr, 0);
+			context->OMSetDepthStencilState(defaultDS, 0);
+			context->RSSetState(defaultRS);
 			context->PSSetShaderResources(0, 1, &robTestSRV.Get());
 			context->Draw(3, 0);
 			context->ClearState();

@@ -1,3 +1,4 @@
+
 RasterizerOrderedTexture2D<float3> rovTestROV : register(u0);
 Texture2D<float3> rovTestSRV : register(t0);
 
@@ -24,18 +25,13 @@ Output vsMain(Input input)
 }
 
 
-/*
-float4 psMain(Output input) : SV_Target
-{
-	float pixelIn = testROV[input.hPosition.xy];
-	pixelIn += 0.2;
-	return 1.0;
-}
-*/
 
-void psMain(Output input)
+void psMain(Output input, uint coverage : SV_Coverage)
 {
-	rovTestROV[input.hPosition.xy] = input.color;
+	float aa = countbits(coverage) / 16.0;
+	float3 outColor = rovTestROV[input.hPosition.xy];
+	outColor = lerp(outColor, input.color, aa);
+	rovTestROV[input.hPosition.xy] = outColor;
 }
 
 
