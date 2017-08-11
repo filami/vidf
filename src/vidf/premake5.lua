@@ -78,6 +78,7 @@ AddFilesToProject
 	["Renderer Dx11"] =
 	{
 		"rendererdx11/common.h",
+		"rendererdx11/debug.h",
 		"rendererdx11/renderdevice.h",
 		"rendererdx11/renderdevice.cpp",
 		"rendererdx11/resources.h",

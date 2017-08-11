@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "vidf/rendererdx11/renderdevice.h"
+#include "vidf/rendererdx11/debug.h"
 
 
 using namespace vidf;
@@ -178,57 +179,60 @@ void TestDx11()
 
 	while (UpdateSystemMessages() == SystemMessageResult::Continue)
 	{
-		PD3D11DeviceContext context = renderDevice->GetContext();
-		PD3DUserDefinedAnnotation userAnnotations = renderDevice->GetUserAnnotations();
+		{
+			VIDF_GPU_EVENT(renderDevice, Frame);
 
-		userAnnotations->BeginEvent(L"Frame");
+			D3D11_VIEWPORT viewport{};
+			viewport.TopLeftX = 0;
+			viewport.TopLeftY = 0;
+			viewport.Width = canvasDesc.width;
+			viewport.Height = canvasDesc.height;
+			viewport.MinDepth = 0.0f;
+			viewport.MaxDepth = 1.0f;
+			PD3D11DeviceContext context = renderDevice->GetContext();
 
-		FLOAT gray[] = { 0.15f, 0.15f, 0.15f, 1.0f };
-		context->ClearUnorderedAccessViewFloat(rovTestUAV, gray);
+			FLOAT gray[] = { 0.15f, 0.15f, 0.15f, 1.0f };
+			context->ClearUnorderedAccessViewFloat(rovTestUAV, gray);
 
-		userAnnotations->BeginEvent(L"Render");
-		D3D11_VIEWPORT viewport{};
-		viewport.TopLeftX = 0;
-		viewport.TopLeftY = 0;
-		viewport.Width = canvasDesc.width;
-		viewport.Height = canvasDesc.height;
-		viewport.MinDepth = 0.0f;
-		viewport.MaxDepth = 1.0f;
-		ID3D11UnorderedAccessView* uavs[] = { rovTestUAV };
-		context->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, 0, 1, uavs, nullptr);
-		context->RSSetViewports(1, &viewport);
+			{
+				VIDF_GPU_EVENT(renderDevice, Render);
 
-		const UINT vertexStride = sizeof(Vertex);
-		ID3D11Buffer* vertexStreams[] = { vertexBuffer };
-		UINT vertexOffsets[] = { 0 };
-		context->IASetInputLayout(inputLayout);
-		context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		context->IASetVertexBuffers(0, 1, vertexStreams, &vertexStride, vertexOffsets);
-		context->VSSetShader(vertexShader, nullptr, 0);
-		context->PSSetShader(pixelShader, nullptr, 0);
-		context->OMSetDepthStencilState(defaultDS, 0);
-		context->RSSetState(msaaRS);
-		userAnnotations->SetMarker(L"{Draw \"vertexBuffer\"}");
-		context->Draw(ARRAYSIZE(vertices), 0);
-		context->ClearState();
-		userAnnotations->EndEvent();
+				ID3D11UnorderedAccessView* uavs[] = { rovTestUAV };
+				context->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, 0, 1, uavs, nullptr);
+				context->RSSetViewports(1, &viewport);
 
-		userAnnotations->BeginEvent(L"Finalize");
-		ID3D11RenderTargetView* rtvs[] = { swapChain->GetBackBufferRTV() };
-		context->OMSetRenderTargets(1, rtvs, nullptr);
-		context->RSSetViewports(1, &viewport);
-		context->IASetInputLayout(nullptr);
-		context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		context->VSSetShader(finalVertexShader, nullptr, 0);
-		context->PSSetShader(finalPixelShader, nullptr, 0);
-		context->OMSetDepthStencilState(defaultDS, 0);
-		context->RSSetState(defaultRS);
-		context->PSSetShaderResources(0, 1, &robTestSRV.Get());
-		context->Draw(3, 0);
-		context->ClearState();
-		userAnnotations->EndEvent();
+				const UINT vertexStride = sizeof(Vertex);
+				ID3D11Buffer* vertexStreams[] = { vertexBuffer };
+				UINT vertexOffsets[] = { 0 };
+				context->IASetInputLayout(inputLayout);
+				context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+				context->IASetVertexBuffers(0, 1, vertexStreams, &vertexStride, vertexOffsets);
+				context->VSSetShader(vertexShader, nullptr, 0);
+				context->PSSetShader(pixelShader, nullptr, 0);
+				context->OMSetDepthStencilState(defaultDS, 0);
+				context->RSSetState(msaaRS);
+				context->Draw(ARRAYSIZE(vertices), 0);
+				context->ClearState();
+			}
 
-		userAnnotations->EndEvent();
+			{
+				VIDF_GPU_EVENT(renderDevice, Finalize);
+
+				ID3D11RenderTargetView* rtvs[] = { swapChain->GetBackBufferRTV() };
+				context->OMSetRenderTargets(1, rtvs, nullptr);
+				context->RSSetViewports(1, &viewport);
+				context->IASetInputLayout(nullptr);
+				context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+				context->VSSetShader(finalVertexShader, nullptr, 0);
+				context->PSSetShader(finalPixelShader, nullptr, 0);
+				context->OMSetDepthStencilState(defaultDS, 0);
+				context->RSSetState(defaultRS);
+				context->PSSetShaderResources(0, 1, &robTestSRV.Get());
+				context->Draw(3, 0);
+				context->ClearState();
+			}
+		}
+
 		swapChain->Present();
 	}
 }

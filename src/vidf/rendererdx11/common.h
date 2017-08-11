@@ -30,6 +30,13 @@ namespace vidf { namespace dx11
 
 
 
+	class RenderDevice;
+	class SwapChain;
+	typedef std::shared_ptr<RenderDevice> RenderDevicePtr;
+	typedef std::shared_ptr<SwapChain>    SwapChainPtr;
+
+
+
 	template<typename OutInterface, typename InInterface>
 	Pointer<OutInterface> QueryInterface(Pointer<InInterface> inInterface)
 	{

@@ -1,13 +1,9 @@
+#pragma once
+
 #include "common.h"
 
 namespace vidf { namespace dx11
 {
-
-
-	class RenderDevice;
-	class SwapChain;
-	typedef std::shared_ptr<RenderDevice> RenderDevicePtr;
-	typedef std::shared_ptr<SwapChain>    SwapChainPtr;
 
 
 
