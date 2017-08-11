@@ -68,7 +68,7 @@ void TestDx11()
 	};
 	VertexBuffer vertexBuffer = VertexBuffer::Create(
 		renderDevice,
-		VertexBufferDesc(vertices, vertices + ARRAYSIZE(vertices), "vertexBuffer"));
+		VertexBufferDesc(vertices, ARRAYSIZE(vertices), "vertexBuffer"));
 
 	PD3DBlob output;
 	PD3DBlob vertexCode;

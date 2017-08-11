@@ -92,11 +92,11 @@ namespace vidf { namespace dx11 {
 
 		bool hasData = false;
 		D3D11_SUBRESOURCE_DATA vertexData{};
-		if (desc.dataBegin != nullptr && desc.dataEnd != nullptr)
+		if (desc.dataPtr != nullptr && desc.dataSize != 0)
 		{
 			hasData = true;
-			vertexData.pSysMem = desc.dataBegin;
-			vertexData.SysMemPitch = UINT((uint8*)(desc.dataEnd) - (uint8*)(desc.dataBegin));
+			vertexData.pSysMem = desc.dataPtr;
+			vertexData.SysMemPitch = UINT(desc.dataSize);
 		}
 		
 		renderDevice->GetDevice()->CreateBuffer(

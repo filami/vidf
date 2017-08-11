@@ -83,19 +83,19 @@ namespace vidf { namespace dx11 {
 			, count(_count)
 			, name(_name) {}
 
-		template<typename VertexIt>
-		VertexBufferDesc(VertexIt begin, VertexIt end, const char* _name)
-			: stride(sizeof(*begin))
-			, count(end - begin)
-			, dataBegin(begin)
-			, dataEnd(end)
+		template<typename VertexPtr>
+		VertexBufferDesc(VertexPtr _dataPtr, uint _dataSize, const char* _name)
+			: stride(sizeof(*_dataPtr))
+			, count(_dataSize)
+			, dataPtr(_dataPtr)
+			, dataSize(_dataSize)
 			, name(_name) {}
 
 		const char* name;
 		uint        stride;
 		uint        count;
-		void*       dataBegin = nullptr;
-		void*       dataEnd = nullptr;
+		void*       dataPtr = nullptr;
+		uint        dataSize = 0;
 	};
 
 	struct VertexBuffer
