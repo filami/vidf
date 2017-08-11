@@ -1,1 +1,114 @@
 #include "pch.h"
+#include "resources.h"
+#include "renderdevice.h"
+
+namespace vidf { namespace dx11 {
+
+
+
+	Texture2D Texture2D::Create(RenderDevicePtr renderDevice, const Texture2DDesc& desc)
+	{
+		Texture2D output;
+
+		D3D11_TEXTURE2D_DESC bufferDesc{};
+		bufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		bufferDesc.Format = desc.format;
+		bufferDesc.ArraySize = 1;
+		bufferDesc.Width = desc.width;
+		bufferDesc.Height = desc.heigh;
+		bufferDesc.MipLevels = desc.mipLevels;
+		bufferDesc.SampleDesc.Count = 1;
+		bufferDesc.Usage = D3D11_USAGE_DEFAULT;
+		renderDevice->GetDevice()->CreateTexture2D(&bufferDesc, nullptr, &output.buffer.Get());
+		if (desc.name)
+			NameObject(output.buffer, desc.name);
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = desc.mipLevels;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		renderDevice->GetDevice()->CreateShaderResourceView(output.buffer, &srvDesc, &output.srv.Get());
+
+		return output;
+	}
+
+
+
+	RWTexture2D RWTexture2D::Create(RenderDevicePtr renderDevice, const RWTexture2DDesc& desc)
+	{
+		RWTexture2D output;
+
+		D3D11_TEXTURE2D_DESC bufferDesc{};
+		bufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+		bufferDesc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
+		bufferDesc.ArraySize = 1;
+		bufferDesc.Width = desc.width;
+		bufferDesc.Height = desc.heigh;
+		bufferDesc.MipLevels = desc.mipLevels;
+		bufferDesc.SampleDesc.Count = 1;
+		bufferDesc.Usage = D3D11_USAGE_DEFAULT;
+		renderDevice->GetDevice()->CreateTexture2D(&bufferDesc, nullptr, &output.buffer.Get());
+		if (desc.name)
+			NameObject(output.buffer, desc.name);
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = desc.mipLevels;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		renderDevice->GetDevice()->CreateShaderResourceView(output.buffer, &srvDesc, &output.srv.Get());
+
+		D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+		uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+		uavDesc.Texture2D.MipSlice = 0;
+		renderDevice->GetDevice()->CreateUnorderedAccessView(output.buffer, &uavDesc, &output.uav.Get());
+
+		return output;
+	}
+
+
+
+	RenderTarget RenderTarget::Create(RenderDevicePtr device, const RenderTargetDesc& desc)
+	{
+		return RenderTarget();
+	}
+
+
+	DepthStencil DepthStencil::Create(RenderDevicePtr device, const DepthStencilDesc& desc)
+	{
+		return DepthStencil();
+	}
+
+
+
+	VertexBuffer VertexBuffer::Create(RenderDevicePtr renderDevice, const VertexBufferDesc& desc)
+	{
+		VertexBuffer output;
+
+		D3D11_BUFFER_DESC vertexBufferDesc{};
+		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		vertexBufferDesc.ByteWidth = desc.stride * desc.count;
+		vertexBufferDesc.StructureByteStride = desc.stride;
+		vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+
+		bool hasData = false;
+		D3D11_SUBRESOURCE_DATA vertexData{};
+		if (desc.dataBegin != nullptr && desc.dataEnd != nullptr)
+		{
+			hasData = true;
+			vertexData.pSysMem = desc.dataBegin;
+			vertexData.SysMemPitch = UINT((uint8*)(desc.dataEnd) - (uint8*)(desc.dataBegin));
+		}
+		
+		renderDevice->GetDevice()->CreateBuffer(
+			&vertexBufferDesc,
+			hasData ? &vertexData : nullptr,
+			&output.buffer.Get());
+		if (desc.name)
+			NameObject(output.buffer, desc.name);
+
+		return output;
+	}
+
+
+
+} }

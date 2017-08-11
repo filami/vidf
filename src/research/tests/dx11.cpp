@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "vidf/rendererdx11/renderdevice.h"
 #include "vidf/rendererdx11/debug.h"
+#include "vidf/rendererdx11/resources.h"
 
 
 using namespace vidf;
@@ -65,18 +66,9 @@ void TestDx11()
 		{ Vector2f(0.0f, 0.5f), 0xff00ff00 },
 		{ Vector2f(0.5f, 0.0f), 0xff0000ff },
 	};
-
-	D3D11_BUFFER_DESC vertexBufferDesc{};
-	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	vertexBufferDesc.ByteWidth = sizeof(vertices);
-	vertexBufferDesc.StructureByteStride = sizeof(Vertex);
-	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	D3D11_SUBRESOURCE_DATA vertexData{};
-	vertexData.pSysMem = vertices;
-	vertexData.SysMemPitch = sizeof(vertices);
-	PD3D11Buffer vertexBuffer;
-	renderDevice->GetDevice()->CreateBuffer(&vertexBufferDesc, &vertexData, &vertexBuffer.Get());
-	NameObject(vertexBuffer, "vertexBuffer");
+	VertexBuffer vertexBuffer = VertexBuffer::Create(
+		renderDevice,
+		VertexBufferDesc(vertices, vertices + ARRAYSIZE(vertices), "vertexBuffer"));
 
 	PD3DBlob output;
 	PD3DBlob vertexCode;
@@ -132,32 +124,12 @@ void TestDx11()
 	PD3D11InputLayout inputLayout;
 	renderDevice->GetDevice()->CreateInputLayout(elements, ARRAYSIZE(elements), vertexCode->GetBufferPointer(), vertexCode->GetBufferSize(), &inputLayout.Get());
 	NameObject(inputLayout, "inputLayout");
-
-	D3D11_TEXTURE2D_DESC rovTestDesc{};
-	rovTestDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
-	rovTestDesc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
-	rovTestDesc.ArraySize = 1;
-	rovTestDesc.Width = canvasDesc.width;
-	rovTestDesc.Height = canvasDesc.height;
-	rovTestDesc.MipLevels = 1;
-	rovTestDesc.SampleDesc.Count = 1;
-	rovTestDesc.Usage = D3D11_USAGE_DEFAULT;
-	PD3D11Texture2D rovTest;
-	renderDevice->GetDevice()->CreateTexture2D(&rovTestDesc, nullptr, &rovTest.Get());
-	NameObject(rovTest, "rovTest");
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC rovTestSRVDesc{};
-	rovTestSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	rovTestSRVDesc.Texture2D.MipLevels = 1;
-	rovTestSRVDesc.Texture2D.MostDetailedMip = 0;
-	PD3D11ShaderResourceView robTestSRV;
-	renderDevice->GetDevice()->CreateShaderResourceView(rovTest, &rovTestSRVDesc, &robTestSRV.Get());
-
-	D3D11_UNORDERED_ACCESS_VIEW_DESC rovTestUAVDesc{};
-	rovTestUAVDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
-	rovTestUAVDesc.Texture2D.MipSlice = 0;
-	PD3D11UnorderedAccessView rovTestUAV;
-	renderDevice->GetDevice()->CreateUnorderedAccessView(rovTest, &rovTestUAVDesc, &rovTestUAV.Get());
+		
+	RWTexture2DDesc rovTestDesc = RWTexture2DDesc(
+		DXGI_FORMAT_R11G11B10_FLOAT,
+		canvasDesc.width, canvasDesc.height,
+		"rovTest");
+	RWTexture2D rovTest = RWTexture2D::Create(renderDevice, rovTestDesc);
 
 	D3D11_RASTERIZER_DESC defaultRSDesc{};
 	defaultRSDesc.CullMode = D3D11_CULL_NONE;
@@ -192,17 +164,17 @@ void TestDx11()
 			PD3D11DeviceContext context = renderDevice->GetContext();
 
 			FLOAT gray[] = { 0.15f, 0.15f, 0.15f, 1.0f };
-			context->ClearUnorderedAccessViewFloat(rovTestUAV, gray);
+			context->ClearUnorderedAccessViewFloat(rovTest.uav, gray);
 
 			{
 				VIDF_GPU_EVENT(renderDevice, Render);
 
-				ID3D11UnorderedAccessView* uavs[] = { rovTestUAV };
+				ID3D11UnorderedAccessView* uavs[] = { rovTest.uav };
 				context->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, 0, 1, uavs, nullptr);
 				context->RSSetViewports(1, &viewport);
 
 				const UINT vertexStride = sizeof(Vertex);
-				ID3D11Buffer* vertexStreams[] = { vertexBuffer };
+				ID3D11Buffer* vertexStreams[] = { vertexBuffer.buffer };
 				UINT vertexOffsets[] = { 0 };
 				context->IASetInputLayout(inputLayout);
 				context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -227,7 +199,7 @@ void TestDx11()
 				context->PSSetShader(finalPixelShader, nullptr, 0);
 				context->OMSetDepthStencilState(defaultDS, 0);
 				context->RSSetState(defaultRS);
-				context->PSSetShaderResources(0, 1, &robTestSRV.Get());
+				context->PSSetShaderResources(0, 1, &rovTest.srv.Get());
 				context->Draw(3, 0);
 				context->ClearState();
 			}

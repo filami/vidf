@@ -18,6 +18,7 @@ namespace vidf { namespace dx11
 	typedef Pointer<ID3D11RenderTargetView>    PD3D11RenderTargetView;
 	typedef Pointer<ID3D11ShaderResourceView>  PD3D11ShaderResourceView;
 	typedef Pointer<ID3D11UnorderedAccessView> PD3D11UnorderedAccessView;
+	typedef Pointer<ID3D11DepthStencilView>    PD3D11DepthStencilView;
 	typedef Pointer<ID3D11Buffer>              PD3D11Buffer;
 	typedef Pointer<ID3D11VertexShader>        PD3D11VertexShader;
 	typedef Pointer<ID3D11PixelShader>         PD3D11PixelShader;
