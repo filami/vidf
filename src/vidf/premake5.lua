@@ -75,24 +75,33 @@ AddFilesToProject
 		"platform/win32/timewin32.cpp",
 	},
 
-	["Renderer"] =
+	["Renderer Dx11"] =
 	{
-		"renderer/common.h",
-		"renderer/rendercontext.cpp",
-		"renderer/rendercontext.h",
-		"renderer/renderdevice.cpp",
-		"renderer/renderdevice.h",
-		"renderer/renderpass.cpp",
-		"renderer/renderpass.h",
-		"renderer/swapchain.cpp",
-		"renderer/swapchain.h",
-		"renderer/vulkanext.cpp",
-		"renderer/vulkanext.h",
+		"rendererdx11/common.h",
+		"rendererdx11/renderdevice.h",
+		"rendererdx11/renderdevice.cpp",
+		"rendererdx11/resources.h",
+		"rendererdx11/resources.cpp",
 	},
-	["Renderer/VulkanWin32"] =
+
+	["Renderer Vulkan"] =
 	{
-		"renderer/vulkanwin32/renderdevicevkwin32.cpp",
-		"renderer/vulkanwin32/swapchainvkwin32.cpp",
+		"renderervulkan/common.h",
+		"renderervulkan/rendercontext.cpp",
+		"renderervulkan/rendercontext.h",
+		"renderervulkan/renderdevice.cpp",
+		"renderervulkan/renderdevice.h",
+		"renderervulkan/renderpass.cpp",
+		"renderervulkan/renderpass.h",
+		"renderervulkan/swapchain.cpp",
+		"renderervulkan/swapchain.h",
+		"renderervulkan/vulkanext.cpp",
+		"renderervulkan/vulkanext.h",
+	},
+	["Renderer Vulkan/Vulkan Win32"] =
+	{
+		"renderervulkan/vulkanwin32/renderdevicevkwin32.cpp",
+		"renderervulkan/vulkanwin32/swapchainvkwin32.cpp",
 	},
 
 	["Proto"] =

@@ -103,6 +103,9 @@ function ConfigVIDFDependencies()
 	links
 	{
 		-- "viext",
+		"d3d11.lib",
+		"D3DCompiler.lib",
+		"dxguid.lib",
 	}
 	
 	configuration(debugConfig)

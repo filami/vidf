@@ -17,6 +17,7 @@ AddFilesToProject
 	
 	["tests"] =
 	{
+		"tests/dx11.cpp",
 		"tests/vulkan.cpp",
 		-- "tests/gm.cpp",
 		"tests/voxelizer.cpp",

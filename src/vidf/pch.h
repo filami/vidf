@@ -36,6 +36,9 @@
 #include <gl/GL.H>
 #include <gl/GLU.H>
 
+#include <d3d11_3.h>
+#include <D3Dcompiler.h>
+
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 

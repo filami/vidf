@@ -30,7 +30,7 @@ void psMain(Output input, uint coverage : SV_Coverage)
 {
 	float aa = countbits(coverage) / 16.0;
 	float3 outColor = rovTestROV[input.hPosition.xy];
-	outColor = lerp(outColor, input.color, aa);
+	outColor = lerp(outColor, input.color, aa * 0.75);
 	rovTestROV[input.hPosition.xy] = outColor;
 }
 
