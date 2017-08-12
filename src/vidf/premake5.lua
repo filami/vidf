@@ -83,6 +83,8 @@ AddFilesToProject
 		"rendererdx11/renderdevice.cpp",
 		"rendererdx11/resources.h",
 		"rendererdx11/resources.cpp",
+		"rendererdx11/shaders.h",
+		"rendererdx11/shaders.cpp",
 	},
 
 	["Renderer Vulkan"] =

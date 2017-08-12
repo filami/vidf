@@ -2,6 +2,7 @@
 #include "vidf/rendererdx11/renderdevice.h"
 #include "vidf/rendererdx11/debug.h"
 #include "vidf/rendererdx11/resources.h"
+#include "vidf/rendererdx11/shaders.h"
 
 
 using namespace vidf;
@@ -32,6 +33,7 @@ void TestDx11()
 	RenderDevicePtr renderDevice = RenderDevice::Create(RenderDeviceDesc());
 	if (!renderDevice)
 		return;
+	ShaderManager shaderManager(renderDevice);
 
 	Dx11CanvasListener canvasListener;
 
@@ -69,50 +71,11 @@ void TestDx11()
 	VertexBuffer vertexBuffer = VertexBuffer::Create(
 		renderDevice,
 		VertexBufferDesc(vertices, ARRAYSIZE(vertices), "vertexBuffer"));
-
-	PD3DBlob output;
-	PD3DBlob vertexCode;
-	D3DCompileFromFile(
-		L"data/shaders/shader.hlsl", nullptr, nullptr, "vsMain", "vs_5_0",
-		D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_WARNINGS_ARE_ERRORS, 0,
-		&vertexCode.Get(), &output.Get());
-	if (output)
-		std::cout << (const char*)output->GetBufferPointer() << std::endl;
-	PD3D11VertexShader vertexShader;
-	renderDevice->GetDevice()->CreateVertexShader(vertexCode->GetBufferPointer(), vertexCode->GetBufferSize(), nullptr, &vertexShader.Get());
-	NameObject(vertexShader, "data/shaders/shader.hlsl : vsMain");
-
-	PD3DBlob pixelCode;
-	D3DCompileFromFile(
-		L"data/shaders/shader.hlsl", nullptr, nullptr, "psMain", "ps_5_0",
-		D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_WARNINGS_ARE_ERRORS, 0,
-		&pixelCode.Get(), &output.Get());
-	if (output)
-		std::cout << (const char*)output->GetBufferPointer() << std::endl;
-	PD3D11PixelShader pixelShader;
-	renderDevice->GetDevice()->CreatePixelShader(pixelCode->GetBufferPointer(), pixelCode->GetBufferSize(), nullptr, &pixelShader.Get());
-	NameObject(pixelShader, "data/shaders/shader.hlsl : psMain");
-
-	PD3DBlob _vertexCode;
-	D3DCompileFromFile(
-		L"data/shaders/shader.hlsl", nullptr, nullptr, "vsFinalMain", "vs_5_0",
-		D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_WARNINGS_ARE_ERRORS, 0,
-		&_vertexCode.Get(), &output.Get());
-	if (output)
-		std::cout << (const char*)output->GetBufferPointer() << std::endl;
-	PD3D11VertexShader finalVertexShader;
-	renderDevice->GetDevice()->CreateVertexShader(_vertexCode->GetBufferPointer(), _vertexCode->GetBufferSize(), nullptr, &finalVertexShader.Get());
-	NameObject(finalVertexShader, "data/shaders/shader.hlsl : vsFinalMain");
-
-	D3DCompileFromFile(
-		L"data/shaders/shader.hlsl", nullptr, nullptr, "psFinalMain", "ps_5_0",
-		D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_WARNINGS_ARE_ERRORS, 0,
-		&pixelCode.Get(), &output.Get());
-	if (output)
-		std::cout << (const char*)output->GetBufferPointer() << std::endl;
-	PD3D11PixelShader finalPixelShader;
-	renderDevice->GetDevice()->CreatePixelShader(pixelCode->GetBufferPointer(), pixelCode->GetBufferSize(), nullptr, &finalPixelShader.Get());
-	NameObject(finalPixelShader, "data/shaders/shader.hlsl : psFinalMain");
+	
+	ShaderPtr vertexShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "vsMain", ShaderType::VertexShader);
+	ShaderPtr pixelShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "psMain", ShaderType::PixelShader);
+	ShaderPtr finalVertexShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "vsFinalMain", ShaderType::VertexShader);
+	ShaderPtr finalPixelShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "psFinalMain", ShaderType::PixelShader);
 
 	D3D11_INPUT_ELEMENT_DESC elements[2]{};
 	elements[0].SemanticName = "POSITION";
@@ -122,7 +85,7 @@ void TestDx11()
 	elements[1].Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	elements[1].AlignedByteOffset = offsetof(Vertex, color);
 	PD3D11InputLayout inputLayout;
-	renderDevice->GetDevice()->CreateInputLayout(elements, ARRAYSIZE(elements), vertexCode->GetBufferPointer(), vertexCode->GetBufferSize(), &inputLayout.Get());
+	renderDevice->GetDevice()->CreateInputLayout(elements, ARRAYSIZE(elements), vertexShader->GetByteCode()->GetBufferPointer(), vertexShader->GetByteCode()->GetBufferSize(), &inputLayout.Get());
 	NameObject(inputLayout, "inputLayout");
 		
 	RWTexture2DDesc rovTestDesc = RWTexture2DDesc(
@@ -179,8 +142,8 @@ void TestDx11()
 				context->IASetInputLayout(inputLayout);
 				context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 				context->IASetVertexBuffers(0, 1, vertexStreams, &vertexStride, vertexOffsets);
-				context->VSSetShader(vertexShader, nullptr, 0);
-				context->PSSetShader(pixelShader, nullptr, 0);
+				context->VSSetShader(vertexShader->GetVertexShader(), nullptr, 0);
+				context->PSSetShader(pixelShader->GetPixelShader(), nullptr, 0);
 				context->OMSetDepthStencilState(defaultDS, 0);
 				context->RSSetState(msaaRS);
 				context->Draw(ARRAYSIZE(vertices), 0);
@@ -195,8 +158,8 @@ void TestDx11()
 				context->RSSetViewports(1, &viewport);
 				context->IASetInputLayout(nullptr);
 				context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-				context->VSSetShader(finalVertexShader, nullptr, 0);
-				context->PSSetShader(finalPixelShader, nullptr, 0);
+				context->VSSetShader(finalVertexShader->GetVertexShader(), nullptr, 0);
+				context->PSSetShader(finalPixelShader->GetPixelShader(), nullptr, 0);
 				context->OMSetDepthStencilState(defaultDS, 0);
 				context->RSSetState(defaultRS);
 				context->PSSetShaderResources(0, 1, &rovTest.srv.Get());

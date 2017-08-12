@@ -33,8 +33,10 @@ namespace vidf { namespace dx11
 
 	class RenderDevice;
 	class SwapChain;
+	class Shader;
 	typedef std::shared_ptr<RenderDevice> RenderDevicePtr;
 	typedef std::shared_ptr<SwapChain>    SwapChainPtr;
+	typedef std::shared_ptr<Shader>       ShaderPtr;
 
 
 
@@ -49,7 +51,7 @@ namespace vidf { namespace dx11
 
 
 	template<typename Object>
-	void NameObject(Pointer<Object> object, const char* name)
+	void NameObject(Object object, const char* name)
 	{
 		object->SetPrivateData(WKPDID_D3DDebugObjectName, strlen(name), name);
 	}
