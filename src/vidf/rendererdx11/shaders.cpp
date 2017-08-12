@@ -66,7 +66,6 @@ namespace vidf { namespace dx11 {
 
 		ShaderPtr shader = std::make_shared<Shader>();
 		shader->type = shaderType;
-		shader->byteCode = byteCode;
 
 		switch (shaderType)
 		{
@@ -75,6 +74,7 @@ namespace vidf { namespace dx11 {
 			ID3D11VertexShader* gpuShader{};
 			renderDevice->GetDevice()->CreateVertexShader(byteCode->GetBufferPointer(), byteCode->GetBufferSize(), nullptr, &gpuShader);
 			shader->shader = gpuShader;
+			shader->byteCode = byteCode;
 			break;
 		}
 		case ShaderType::PixelShader:
@@ -85,7 +85,7 @@ namespace vidf { namespace dx11 {
 			break;
 		}
 		};
-				
+		shader->state = ShaderState::Ready;
 		NameObject(shader->shader, nameBuffer);
 
 		std::cout << std::endl;

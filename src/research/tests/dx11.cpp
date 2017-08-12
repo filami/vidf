@@ -3,6 +3,7 @@
 #include "vidf/rendererdx11/debug.h"
 #include "vidf/rendererdx11/resources.h"
 #include "vidf/rendererdx11/shaders.h"
+#include "vidf/rendererdx11/pipeline.h"
 
 
 using namespace vidf;
@@ -34,6 +35,7 @@ void TestDx11()
 	if (!renderDevice)
 		return;
 	ShaderManager shaderManager(renderDevice);
+	CommandBuffer commandBuffer(renderDevice);
 
 	Dx11CanvasListener canvasListener;
 
@@ -84,9 +86,6 @@ void TestDx11()
 	elements[1].SemanticName = "COLOR";
 	elements[1].Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	elements[1].AlignedByteOffset = offsetof(Vertex, color);
-	PD3D11InputLayout inputLayout;
-	renderDevice->GetDevice()->CreateInputLayout(elements, ARRAYSIZE(elements), vertexShader->GetByteCode()->GetBufferPointer(), vertexShader->GetByteCode()->GetBufferSize(), &inputLayout.Get());
-	NameObject(inputLayout, "inputLayout");
 		
 	RWTexture2DDesc rovTestDesc = RWTexture2DDesc(
 		DXGI_FORMAT_R11G11B10_FLOAT,
@@ -94,23 +93,25 @@ void TestDx11()
 		"rovTest");
 	RWTexture2D rovTest = RWTexture2D::Create(renderDevice, rovTestDesc);
 
-	D3D11_RASTERIZER_DESC defaultRSDesc{};
-	defaultRSDesc.CullMode = D3D11_CULL_NONE;
-	defaultRSDesc.FillMode = D3D11_FILL_SOLID;
-	PD3D11RasterizerState defaultRS;
-	renderDevice->GetDevice()->CreateRasterizerState(&defaultRSDesc, &defaultRS.Get());
+	GraphicsPSODesc PSODesc;
+	PSODesc.geometryDesc = elements;
+	PSODesc.numGeomDesc = ARRAYSIZE(elements);
+	PSODesc.rasterizer.CullMode = D3D11_CULL_NONE;
+	PSODesc.rasterizer.FillMode = D3D11_FILL_SOLID;
+	PSODesc.rasterizer.MultisampleEnable = true;
+	PSODesc.rasterizer.ForcedSampleCount = 16;
+	PSODesc.topology = D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	PSODesc.vertexShader = vertexShader;
+	PSODesc.pixelShader = pixelShader;
+	GraphicsPSOPtr pso = GraphicsPSO::Create(renderDevice, PSODesc);
 
-	D3D11_RASTERIZER_DESC1 msaaRSDesc{};
-	msaaRSDesc.CullMode = D3D11_CULL_NONE;
-	msaaRSDesc.FillMode = D3D11_FILL_SOLID;
-	msaaRSDesc.MultisampleEnable = true;
-	msaaRSDesc.ForcedSampleCount = 16;
-	PD3D11RasterizerState1 msaaRS;
-	renderDevice->GetDevice3()->CreateRasterizerState1(&msaaRSDesc, &msaaRS.Get());
-
-	D3D11_DEPTH_STENCIL_DESC defaultDSDesc{};
-	PD3D11DepthStencilState defaultDS;
-	renderDevice->GetDevice()->CreateDepthStencilState(&defaultDSDesc, &defaultDS.Get());
+	GraphicsPSODesc finalPSODesc;
+	finalPSODesc.rasterizer.CullMode = D3D11_CULL_NONE;
+	finalPSODesc.rasterizer.FillMode = D3D11_FILL_SOLID;
+	finalPSODesc.topology = D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	finalPSODesc.vertexShader = finalVertexShader;
+	finalPSODesc.pixelShader = finalPixelShader;
+	GraphicsPSOPtr finalPSO = GraphicsPSO::Create(renderDevice, finalPSODesc);
 
 	while (UpdateSystemMessages() == SystemMessageResult::Continue)
 	{
@@ -136,18 +137,11 @@ void TestDx11()
 				context->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, 0, 1, uavs, nullptr);
 				context->RSSetViewports(1, &viewport);
 
-				const UINT vertexStride = sizeof(Vertex);
-				ID3D11Buffer* vertexStreams[] = { vertexBuffer.buffer };
-				UINT vertexOffsets[] = { 0 };
-				context->IASetInputLayout(inputLayout);
-				context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-				context->IASetVertexBuffers(0, 1, vertexStreams, &vertexStride, vertexOffsets);
-				context->VSSetShader(vertexShader->GetVertexShader(), nullptr, 0);
-				context->PSSetShader(pixelShader->GetPixelShader(), nullptr, 0);
-				context->OMSetDepthStencilState(defaultDS, 0);
-				context->RSSetState(msaaRS);
-				context->Draw(ARRAYSIZE(vertices), 0);
-				context->ClearState();
+				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
+				commandBuffer.SetGraphicsPSO(pso);
+				commandBuffer.Draw(ARRAYSIZE(vertices), 0);
+
+				commandBuffer.ClearState();
 			}
 
 			{
@@ -156,15 +150,12 @@ void TestDx11()
 				ID3D11RenderTargetView* rtvs[] = { swapChain->GetBackBufferRTV() };
 				context->OMSetRenderTargets(1, rtvs, nullptr);
 				context->RSSetViewports(1, &viewport);
-				context->IASetInputLayout(nullptr);
-				context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-				context->VSSetShader(finalVertexShader->GetVertexShader(), nullptr, 0);
-				context->PSSetShader(finalPixelShader->GetPixelShader(), nullptr, 0);
-				context->OMSetDepthStencilState(defaultDS, 0);
-				context->RSSetState(defaultRS);
-				context->PSSetShaderResources(0, 1, &rovTest.srv.Get());
-				context->Draw(3, 0);
-				context->ClearState();
+								
+				commandBuffer.SetSRV(0, rovTest.srv);
+				commandBuffer.SetGraphicsPSO(finalPSO);
+				commandBuffer.Draw(3, 0);
+
+				commandBuffer.ClearState();
 			}
 		}
 

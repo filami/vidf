@@ -79,6 +79,8 @@ AddFilesToProject
 	{
 		"rendererdx11/common.h",
 		"rendererdx11/debug.h",
+		"rendererdx11/pipeline.h",
+		"rendererdx11/pipeline.cpp",
 		"rendererdx11/renderdevice.h",
 		"rendererdx11/renderdevice.cpp",
 		"rendererdx11/resources.h",
