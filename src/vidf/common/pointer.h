@@ -61,7 +61,7 @@ namespace vidf
 		operator const SmartType*() const {return smartPointer;}
 
 		SmartType*& Get() {return smartPointer;}
-		const SmartType*& Get() const {return smartPointer;}
+		const SmartType* Get() const {return smartPointer;}
 
 		operator bool () const {return smartPointer != 0;}
 

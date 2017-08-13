@@ -26,6 +26,7 @@ namespace vidf { namespace dx11
 	typedef Pointer<ID3D11RasterizerState>     PD3D11RasterizerState;
 	typedef Pointer<ID3D11RasterizerState1>    PD3D11RasterizerState1;
 	typedef Pointer<ID3D11RasterizerState2>    PD3D11RasterizerState2;
+	typedef Pointer<ID3D11BlendState1>         PD3D11BlendState1;
 	typedef Pointer<ID3D11DepthStencilState>   PD3D11DepthStencilState;
 	typedef Pointer<ID3DBlob>                  PD3DBlob;
 
@@ -35,10 +36,12 @@ namespace vidf { namespace dx11
 	class SwapChain;
 	class Shader;
 	class GraphicsPSO;
+	class RenderPass;
 	typedef std::shared_ptr<RenderDevice>  RenderDevicePtr;
 	typedef std::shared_ptr<SwapChain>     SwapChainPtr;
 	typedef std::shared_ptr<Shader>        ShaderPtr;
 	typedef std::shared_ptr<GraphicsPSO>   GraphicsPSOPtr;
+	typedef std::shared_ptr<RenderPass>    RenderPassPtr;
 
 
 

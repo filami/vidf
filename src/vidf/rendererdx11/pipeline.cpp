@@ -26,6 +26,7 @@ namespace vidf { namespace dx11 {
 		}
 		device->CreateRasterizerState2(&desc.rasterizer, &pso->rasterizer.Get());
 		device->CreateDepthStencilState(&desc.depthStencil, &pso->depthStencil.Get());
+		device->CreateBlendState1(&desc.blend, &pso->blend.Get());
 		pso->vertexShader = desc.vertexShader->GetVertexShader();
 		pso->pixelShader = desc.pixelShader->GetPixelShader();
 		pso->topology = desc.topology;
@@ -35,11 +36,73 @@ namespace vidf { namespace dx11 {
 
 
 
+	RenderPass::~RenderPass()
+	{
+		for (auto ptr : rtvs)
+			ptr->Release();
+		for (auto ptr : uavs)
+			ptr->Release();
+	}
+
+
+
+	RenderPassPtr RenderPass::Create(RenderDevicePtr /*renderDevice*/, const RenderPassDesc& desc)
+	{
+		RenderPassPtr pass = std::make_shared<RenderPass>();
+
+		int lastSlot = 0;
+		for (uint i = 0; i < RenderPassDesc::numRtvs; ++i)
+			if (desc.rtvs[i]) lastSlot = i + 1;
+		pass->rtvs.resize(lastSlot);
+		for (uint i = 0; i < pass->rtvs.size(); ++i)
+		{
+			pass->rtvs[i] = const_cast<ID3D11RenderTargetView*>(desc.rtvs[i].Get());
+			pass->rtvs[i]->AddRef();
+		}
+
+		lastSlot = 0;
+		for (uint i = 0; i < RenderPassDesc::numUavs; ++i)
+			if (desc.uavs[i]) lastSlot = i + 1;
+		pass->uavs.resize(lastSlot);
+		for (uint i = 0; i < pass->uavs.size(); ++i)
+		{
+			pass->uavs[i] = const_cast<ID3D11UnorderedAccessView*>(desc.uavs[i].Get());
+			pass->uavs[i]->AddRef();
+		}
+
+		pass->viewport = desc.viewport;
+
+		return pass;
+	}
+
+
+
 	CommandBuffer::CommandBuffer(RenderDevicePtr _renderDevice)
 		: renderDevice(_renderDevice)
 	{
 	}
 	
+
+
+	void CommandBuffer::BeginRenderPass(RenderPassPtr renderPass)
+	{
+		PD3D11DeviceContext context = renderDevice->GetContext();		
+		context->RSSetViewports(1, &renderPass->viewport);
+		context->OMSetRenderTargetsAndUnorderedAccessViews(
+			renderPass->rtvs.size(), renderPass->rtvs.data(),
+			nullptr,
+			0, renderPass->uavs.size(), renderPass->uavs.data(), nullptr);
+	}
+
+
+
+	void CommandBuffer::EndRenderPass()
+	{
+		srvs.fill(PD3D11ShaderResourceView());
+		vertexStreams.fill(VertexStream());
+		renderDevice->GetContext()->ClearState();
+	}
+
 
 
 	void CommandBuffer::SetGraphicsPSO(GraphicsPSOPtr pso)
@@ -73,15 +136,6 @@ namespace vidf { namespace dx11 {
 
 
 
-	void CommandBuffer::ClearState()
-	{
-		srvs.fill(PD3D11ShaderResourceView());
-		vertexStreams.fill(VertexStream());
-		renderDevice->GetContext()->ClearState();
-	}
-
-
-
 	void CommandBuffer::FlushGraphicsState()
 	{
 		PD3D11DeviceContext context = renderDevice->GetContext();
@@ -106,6 +160,7 @@ namespace vidf { namespace dx11 {
 			vertexStreamOffsetArray.data());
 		context->OMSetDepthStencilState(currentGraphicsPSO->depthStencil, 0);
 		context->RSSetState(currentGraphicsPSO->rasterizer);
+		context->OMSetBlendState(currentGraphicsPSO->blend, nullptr, ~0);
 		context->IASetPrimitiveTopology(currentGraphicsPSO->topology);
 		context->VSSetShader(currentGraphicsPSO->vertexShader, nullptr, 0);
 		context->PSSetShader(currentGraphicsPSO->pixelShader, nullptr, 0);

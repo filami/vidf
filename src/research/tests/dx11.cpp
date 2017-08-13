@@ -86,7 +86,7 @@ void TestDx11()
 	elements[1].SemanticName = "COLOR";
 	elements[1].Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	elements[1].AlignedByteOffset = offsetof(Vertex, color);
-		
+	
 	RWTexture2DDesc rovTestDesc = RWTexture2DDesc(
 		DXGI_FORMAT_R11G11B10_FLOAT,
 		canvasDesc.width, canvasDesc.height,
@@ -113,6 +113,24 @@ void TestDx11()
 	finalPSODesc.pixelShader = finalPixelShader;
 	GraphicsPSOPtr finalPSO = GraphicsPSO::Create(renderDevice, finalPSODesc);
 
+	D3D11_VIEWPORT viewport{};
+	viewport.TopLeftX = 0;
+	viewport.TopLeftY = 0;
+	viewport.Width = canvasDesc.width;
+	viewport.Height = canvasDesc.height;
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
+
+	RenderPassDesc renderPassDesc;
+	renderPassDesc.viewport = viewport;
+	renderPassDesc.uavs[0] = rovTest.uav;
+	RenderPassPtr renderPass = RenderPass::Create(renderDevice, renderPassDesc);
+
+	RenderPassDesc finalizePassDesc;
+	finalizePassDesc.viewport = viewport;
+	finalizePassDesc.rtvs[0] = swapChain->GetBackBufferRTV();
+	RenderPassPtr finalizePass = RenderPass::Create(renderDevice, finalizePassDesc);
+
 	while (UpdateSystemMessages() == SystemMessageResult::Continue)
 	{
 		{
@@ -133,29 +151,25 @@ void TestDx11()
 			{
 				VIDF_GPU_EVENT(renderDevice, Render);
 
-				ID3D11UnorderedAccessView* uavs[] = { rovTest.uav };
-				context->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, 0, 1, uavs, nullptr);
-				context->RSSetViewports(1, &viewport);
+				commandBuffer.BeginRenderPass(renderPass);
 
 				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
 				commandBuffer.SetGraphicsPSO(pso);
 				commandBuffer.Draw(ARRAYSIZE(vertices), 0);
 
-				commandBuffer.ClearState();
+				commandBuffer.EndRenderPass();
 			}
 
 			{
 				VIDF_GPU_EVENT(renderDevice, Finalize);
 
-				ID3D11RenderTargetView* rtvs[] = { swapChain->GetBackBufferRTV() };
-				context->OMSetRenderTargets(1, rtvs, nullptr);
-				context->RSSetViewports(1, &viewport);
+				commandBuffer.BeginRenderPass(finalizePass);
 								
 				commandBuffer.SetSRV(0, rovTest.srv);
 				commandBuffer.SetGraphicsPSO(finalPSO);
 				commandBuffer.Draw(3, 0);
 
-				commandBuffer.ClearState();
+				commandBuffer.EndRenderPass();
 			}
 		}
 
