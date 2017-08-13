@@ -4,10 +4,12 @@
 #include "vidf/rendererdx11/resources.h"
 #include "vidf/rendererdx11/shaders.h"
 #include "vidf/rendererdx11/pipeline.h"
+#include "vidf/proto/mesh.h"
 
 
 using namespace vidf;
 using namespace dx11;
+using namespace proto;
 
 
 class Dx11CanvasListener : public CanvasListener
@@ -30,6 +32,10 @@ void TestDx11()
 {
 	const uint width = 1280;
 	const uint height = 720;
+
+	std::cout << "Loading Model . . . ";
+	auto model = LoadObjModuleFromFile("data/leather_chair/leather_chair.obj");
+	std::cout << "DONE" << std::endl;
 
 	RenderDevicePtr renderDevice = RenderDevice::Create(RenderDeviceDesc());
 	if (!renderDevice)
@@ -57,35 +63,64 @@ void TestDx11()
 
 	struct Vertex
 	{
-		Vector2f position;
-		uint32 color;
+		Vector3f position;
+		Vector3f normal;
+		Vector2f texCoord;
 	};
-	Vertex vertices[] =
-	{
-		{ Vector2f(0.25f, -0.25f), 0xffffff },
-		{ Vector2f(0.25f, 0.75f), 0xffffff },
-		{ Vector2f(-0.25f, 0.0f), 0xffffff },
 
-		{ Vector2f(-0.05f, 0.0f), 0xffff0000 },
-		{ Vector2f(0.0f, 0.5f), 0xff00ff00 },
-		{ Vector2f(0.5f, 0.0f), 0xff0000ff },
-	};
+	std::vector<Vertex> vertices;
+	for (uint geomIdx = 0; geomIdx < model->GetNumGeometries(); ++geomIdx)
+	{
+		const auto& geometry = model->GetGeometry(geomIdx);
+		for (uint polyIdx = 0; polyIdx < geometry.numPolygons; ++polyIdx)
+		{
+			const uint numVertices = model->GetPolygonNumVertices(geometry.firstPolygon + polyIdx);
+			if (numVertices < 3)
+				continue;
+						
+			Vertex v0;
+			v0.position = model->GetVertex(model->GetPolygonVertexIndex(polyIdx, 0));
+			v0.normal = model->GetNormal(model->GetPolygonNormalIndex(polyIdx, 0));
+			v0.texCoord = model->GetTexCoord(model->GetPolygonTexCoordIndex(polyIdx, 0));
+						
+			Vertex v1;
+			v1.position = model->GetVertex(model->GetPolygonVertexIndex(polyIdx, 1));
+			v1.normal = model->GetNormal(model->GetPolygonNormalIndex(polyIdx, 1));
+			v1.texCoord = model->GetTexCoord(model->GetPolygonTexCoordIndex(polyIdx, 1));
+
+			for (uint vertIdx = 2; vertIdx < numVertices; ++vertIdx)
+			{
+				Vertex v2;
+				v2.position = model->GetVertex(model->GetPolygonVertexIndex(polyIdx, vertIdx));
+				v2.normal = model->GetNormal(model->GetPolygonNormalIndex(polyIdx, vertIdx));
+				v2.texCoord = model->GetTexCoord(model->GetPolygonTexCoordIndex(polyIdx, vertIdx));
+
+				vertices.push_back(v0);
+				vertices.push_back(v1);
+				vertices.push_back(v2);
+				v1 = v2;
+			}
+		}
+	}
 	VertexBuffer vertexBuffer = VertexBuffer::Create(
 		renderDevice,
-		VertexBufferDesc(vertices, ARRAYSIZE(vertices), "vertexBuffer"));
+		VertexBufferDesc(vertices.data(), vertices.size(), "vertexBuffer"));
 	
 	ShaderPtr vertexShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "vsMain", ShaderType::VertexShader);
 	ShaderPtr pixelShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "psMain", ShaderType::PixelShader);
 	ShaderPtr finalVertexShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "vsFinalMain", ShaderType::VertexShader);
 	ShaderPtr finalPixelShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "psFinalMain", ShaderType::PixelShader);
 
-	D3D11_INPUT_ELEMENT_DESC elements[2]{};
+	D3D11_INPUT_ELEMENT_DESC elements[3]{};
 	elements[0].SemanticName = "POSITION";
-	elements[0].Format = DXGI_FORMAT_R32G32_FLOAT;
+	elements[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
 	elements[0].AlignedByteOffset = offsetof(Vertex, position);
-	elements[1].SemanticName = "COLOR";
-	elements[1].Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	elements[1].AlignedByteOffset = offsetof(Vertex, color);
+	elements[1].SemanticName = "NORMAL";
+	elements[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	elements[1].AlignedByteOffset = offsetof(Vertex, normal);
+	elements[2].SemanticName = "TEXCOORD";
+	elements[2].Format = DXGI_FORMAT_R32G32_FLOAT;
+	elements[2].AlignedByteOffset = offsetof(Vertex, texCoord);
 	
 	RWTexture2DDesc rovTestDesc = RWTexture2DDesc(
 		DXGI_FORMAT_R11G11B10_FLOAT,
@@ -155,7 +190,7 @@ void TestDx11()
 
 				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
 				commandBuffer.SetGraphicsPSO(pso);
-				commandBuffer.Draw(ARRAYSIZE(vertices), 0);
+				commandBuffer.Draw(vertices.size(), 0);
 
 				commandBuffer.EndRenderPass();
 			}
