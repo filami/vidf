@@ -61,6 +61,7 @@ namespace vidf { namespace dx11
 		friend class CommandBuffer;
 		std::vector<ID3D11RenderTargetView*> rtvs;
 		std::vector<ID3D11UnorderedAccessView*> uavs;
+		uint firstUAV;
 		D3D11_VIEWPORT viewport;
 	};
 

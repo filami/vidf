@@ -80,6 +80,62 @@ namespace vidf { namespace dx11 {
 
 
 
+	StructuredBuffer StructuredBuffer::Create(RenderDevicePtr renderDevice, const StructuredBufferDesc& desc)
+	{
+		StructuredBuffer output;
+
+		D3D11_BUFFER_DESC bufferDesc{};
+		bufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		bufferDesc.ByteWidth = desc.stride * desc.count;
+		bufferDesc.StructureByteStride = desc.stride;
+		bufferDesc.Usage = desc.dynamic ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_DEFAULT;
+		bufferDesc.CPUAccessFlags = desc.dynamic ? D3D11_CPU_ACCESS_WRITE : 0;
+		bufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+		renderDevice->GetDevice()->CreateBuffer(&bufferDesc, nullptr, &output.buffer.Get());
+		if (desc.name)
+			NameObject(output.buffer, desc.name);
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+		srvDesc.Buffer.NumElements = desc.count;
+		srvDesc.Buffer.ElementWidth = desc.stride;
+		renderDevice->GetDevice()->CreateShaderResourceView(output.buffer, &srvDesc, &output.srv.Get());
+
+		return output;
+	}
+
+
+
+	RWStructuredBuffer RWStructuredBuffer::Create(RenderDevicePtr renderDevice, const RWStructuredBufferDesc& desc)
+	{
+		RWStructuredBuffer output;
+
+		D3D11_BUFFER_DESC bufferDesc{};
+		bufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+		bufferDesc.ByteWidth = desc.stride * desc.count;
+		bufferDesc.StructureByteStride = desc.stride;
+		bufferDesc.Usage = desc.dynamic ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_DEFAULT;
+		bufferDesc.CPUAccessFlags = desc.dynamic ? D3D11_CPU_ACCESS_WRITE : 0;
+		bufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+		renderDevice->GetDevice()->CreateBuffer(&bufferDesc, nullptr, &output.buffer.Get());
+		if (desc.name)
+			NameObject(output.buffer, desc.name);
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+		srvDesc.Buffer.ElementWidth = desc.count;
+		renderDevice->GetDevice()->CreateShaderResourceView(output.buffer, &srvDesc, &output.srv.Get());
+
+		D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+		uavDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+		uavDesc.Buffer.NumElements = desc.count;
+		renderDevice->GetDevice()->CreateUnorderedAccessView(output.buffer, &uavDesc, &output.uav.Get());
+
+		return output;
+	}
+
+
+
 	VertexBuffer VertexBuffer::Create(RenderDevicePtr renderDevice, const VertexBufferDesc& desc)
 	{
 		VertexBuffer output;

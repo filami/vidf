@@ -115,6 +115,7 @@ void TestDx11()
 	
 	ShaderPtr vertexShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "vsMain", ShaderType::VertexShader);
 	ShaderPtr pixelShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "psMain", ShaderType::PixelShader);
+	ShaderPtr oitClearPS = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "psOITClear", ShaderType::PixelShader);
 	ShaderPtr finalVertexShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "vsFinalMain", ShaderType::VertexShader);
 	ShaderPtr finalPixelShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "psFinalMain", ShaderType::PixelShader);
 
@@ -128,20 +129,33 @@ void TestDx11()
 	elements[2].SemanticName = "TEXCOORD";
 	elements[2].Format = DXGI_FORMAT_R32G32_FLOAT;
 	elements[2].AlignedByteOffset = offsetof(Vertex, texCoord);
-	
-	RWTexture2DDesc rovTestDesc = RWTexture2DDesc(
-		DXGI_FORMAT_R11G11B10_FLOAT,
-		canvasDesc.width, canvasDesc.height,
-		"rovTest");
-	RWTexture2D rovTest = RWTexture2D::Create(renderDevice, rovTestDesc);
+		
+	/*
+	struct OIT
+	{
+		Vector4<uint16> fragments[8];
+		float           depth[8];
+		uint            numFrags;
+	};
+	*/
+	RWStructuredBufferDesc rovTestDesc(/*sizeof(OIT)*/ 164, canvasDesc.width * canvasDesc.height, "rovTest");
+	RWStructuredBuffer rovTest = RWStructuredBuffer::Create(renderDevice, rovTestDesc);
+
+	GraphicsPSODesc oitClearPSODesc;
+	oitClearPSODesc.rasterizer.CullMode = D3D11_CULL_NONE;
+	oitClearPSODesc.rasterizer.FillMode = D3D11_FILL_SOLID;
+	oitClearPSODesc.topology = D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	oitClearPSODesc.vertexShader = finalVertexShader;
+	oitClearPSODesc.pixelShader = oitClearPS;
+	GraphicsPSOPtr oitClearPSO = GraphicsPSO::Create(renderDevice, oitClearPSODesc);
 
 	GraphicsPSODesc PSODesc;
 	PSODesc.geometryDesc = elements;
 	PSODesc.numGeomDesc = ARRAYSIZE(elements);
 	PSODesc.rasterizer.CullMode = D3D11_CULL_NONE;
 	PSODesc.rasterizer.FillMode = D3D11_FILL_SOLID;
-	PSODesc.rasterizer.MultisampleEnable = true;
-	PSODesc.rasterizer.ForcedSampleCount = 16;
+	// PSODesc.rasterizer.MultisampleEnable = true;
+	// PSODesc.rasterizer.ForcedSampleCount = 16;
 	PSODesc.topology = D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	PSODesc.vertexShader = vertexShader;
 	PSODesc.pixelShader = pixelShader;
@@ -181,8 +195,9 @@ void TestDx11()
 	{
 		Matrix44f projTM;
 		Matrix44f viewTM;
+		Vector2f viewportSize;
+		Vector2f invViewportSize;
 	};
-
 	ConstantBufferDesc viewCBDesc(sizeof(ViewConsts), "viewCB");
 	ConstantBuffer viewCB = ConstantBuffer::Create(renderDevice, viewCBDesc);
 
@@ -191,27 +206,29 @@ void TestDx11()
 		ViewConsts viewConsts;
 		viewConsts.projTM = camera.PerspectiveMatrix();
 		viewConsts.viewTM = camera.ViewMatrix();
+		viewConsts.viewportSize = Vector2f(canvasDesc.width, canvasDesc.height);
+		viewConsts.invViewportSize = Vector2f(1.0f / canvasDesc.width, 1.0f / canvasDesc.height);
 		viewCB.Update(renderDevice->GetContext(), viewConsts);
 
 		{
 			VIDF_GPU_EVENT(renderDevice, Frame);
-
-			FLOAT gray[] = { 0.15f, 0.15f, 0.15f, 1.0f };
-			renderDevice->GetContext()->ClearUnorderedAccessViewFloat(rovTest.uav, gray);
-
+			
 			{
 				VIDF_GPU_EVENT(renderDevice, Render);
 
 				commandBuffer.BeginRenderPass(renderPass);
-
+				commandBuffer.SetConstantBuffer(0, viewCB.buffer);
+								
+				commandBuffer.SetGraphicsPSO(oitClearPSO);
+				commandBuffer.Draw(3, 0);
+				
 				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
 				commandBuffer.SetGraphicsPSO(pso);
-				commandBuffer.SetConstantBuffer(0, viewCB.buffer);
 				commandBuffer.Draw(vertices.size(), 0);
-
+				
 				commandBuffer.EndRenderPass();
 			}
-
+			
 			{
 				VIDF_GPU_EVENT(renderDevice, Finalize);
 

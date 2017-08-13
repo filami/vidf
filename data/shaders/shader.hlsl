@@ -1,7 +1,15 @@
 
-RasterizerOrderedTexture2D<float3> rovTestROV : register(u0);
+struct OIT
+{
+	half4 fragments[8];
+	float depth[8];
+	uint  numFrags;
+};
+
+RasterizerOrderedStructuredBuffer<OIT> rovTestROV : register(u0);
+StructuredBuffer<OIT> rovTestSRV : register(t0);
 // RWTexture2D<float3> rovTestROV : register(u0);
-Texture2D<float3> rovTestSRV : register(t0);
+// Texture2D<float3> rovTestSRV : register(t0);
 
 
 cbuffer viewCB : register(b0)
@@ -10,6 +18,8 @@ cbuffer viewCB : register(b0)
 	{
 		float4x4 projTM;
 		float4x4 viewTM;
+		float2 viewportSize;
+		float2 invViewportSize;
 	} view;
 };
 
@@ -39,12 +49,39 @@ Output vsMain(Input input)
 
 
 
-void psMain(Output input, uint coverage : SV_Coverage)
+void psOITClear(float4 coord : SV_Position)
 {
-	float aa = countbits(coverage) / 16.0;
-	float3 outColor = rovTestROV[input.hPosition.xy];
-	outColor = lerp(outColor, input.color, aa * 0.75);
-	rovTestROV[input.hPosition.xy] = outColor;
+	const uint idx = coord.x + view.viewportSize.x * coord.y;
+	for (int i = 0; i < 8; i++)
+		rovTestROV[idx].depth[i] = 1.0;
+	rovTestROV[idx].numFrags = 0;
+}
+
+
+
+void psMain(Output input /*, uint coverage : SV_Coverage*/)
+{
+	const float aa = /* countbits(coverage) / 16.0 */ 1.0;
+	const float4 output = float4(input.color * 0.75 * aa, 1.0 - 0.75 * aa);
+
+	const uint pxIdx = input.hPosition.x + view.viewportSize.x * input.hPosition.y;
+
+	half4 fragment = half4(output);
+	half depth = input.hPosition.z;
+	for (uint i = 0; i < rovTestROV[pxIdx].numFrags + 1; i++)
+	{
+		if (input.hPosition.z < rovTestROV[pxIdx].depth[i])
+		{
+			half4 tempFragment = fragment;
+			half tempDepth = depth;
+			fragment = rovTestROV[pxIdx].fragments[i];
+			depth = rovTestROV[pxIdx].depth[i];
+			rovTestROV[pxIdx].fragments[i] = tempFragment;
+			rovTestROV[pxIdx].depth[i] = tempDepth;
+		}
+	}
+
+	rovTestROV[pxIdx].numFrags += 1;
 }
 
 
@@ -62,5 +99,12 @@ float4 vsFinalMain(uint vertexId : SV_VertexId) : SV_Position
 
 float4 psFinalMain(float4 coord : SV_Position) : SV_Target
 {
-	return float4(rovTestSRV[coord.xy], 1.0);
+	const uint idx = coord.x + view.viewportSize.x * coord.y;
+
+	float3 output = 0.15;
+
+	for (int i = rovTestSRV[idx].numFrags - 1; i >= 0; --i)
+		output = output * rovTestSRV[idx].fragments[i].a + rovTestSRV[idx].fragments[i].rgb;
+
+	return float4(output, 1.0);
 }

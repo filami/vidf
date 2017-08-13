@@ -39,9 +39,15 @@ namespace vidf { namespace dx11 {
 	RenderPass::~RenderPass()
 	{
 		for (auto ptr : rtvs)
-			ptr->Release();
+		{
+			if (ptr)
+				ptr->Release();
+		}
 		for (auto ptr : uavs)
-			ptr->Release();
+		{
+			if (ptr)
+				ptr->Release();
+		}
 	}
 
 
@@ -60,15 +66,21 @@ namespace vidf { namespace dx11 {
 			pass->rtvs[i]->AddRef();
 		}
 
-		lastSlot = 0;
-		for (uint i = 0; i < RenderPassDesc::numUavs; ++i)
-			if (desc.uavs[i]) lastSlot = i + 1;
-		pass->uavs.resize(lastSlot);
-		for (uint i = 0; i < pass->uavs.size(); ++i)
+		pass->firstUAV = 0;
+		for (pass->firstUAV = 0; pass->firstUAV < RenderPassDesc::numUavs; ++pass->firstUAV)
 		{
-			pass->uavs[i] = const_cast<ID3D11UnorderedAccessView*>(desc.uavs[i].Get());
-			pass->uavs[i]->AddRef();
+			if (desc.uavs[pass->firstUAV])
+				break;
 		}
+		for (uint i = pass->firstUAV; i < RenderPassDesc::numUavs; ++i)
+		{
+			if (!desc.uavs[i])
+				break;
+			pass->uavs.push_back(const_cast<ID3D11UnorderedAccessView*>(desc.uavs[i].Get()));
+			pass->uavs.back()->AddRef();
+		}
+		if (pass->uavs.empty())
+			pass->firstUAV = 0;
 
 		pass->viewport = desc.viewport;
 
@@ -91,7 +103,7 @@ namespace vidf { namespace dx11 {
 		context->OMSetRenderTargetsAndUnorderedAccessViews(
 			renderPass->rtvs.size(), renderPass->rtvs.data(),
 			nullptr,
-			0, renderPass->uavs.size(), renderPass->uavs.data(), nullptr);
+			renderPass->firstUAV, renderPass->uavs.size(), renderPass->uavs.data(), nullptr);
 	}
 
 

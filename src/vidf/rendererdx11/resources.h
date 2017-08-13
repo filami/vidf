@@ -76,6 +76,45 @@ namespace vidf { namespace dx11 {
 
 
 
+	struct StructuredBufferDesc
+	{
+		StructuredBufferDesc(uint _stride, uint _count, const char* _name, bool _dynamic=false)
+			: stride(_stride)
+			, count(_count)
+			, name(_name)
+			, dynamic(_dynamic) {}
+
+		const char* name;
+		uint        stride;
+		uint        count;
+		bool        dynamic;
+	};
+
+	struct StructuredBuffer
+	{
+		PD3D11Buffer             buffer;
+		PD3D11ShaderResourceView srv;
+
+		static StructuredBuffer Create(RenderDevicePtr renderDevice, const StructuredBufferDesc& desc);
+	};
+
+
+
+	struct RWStructuredBufferDesc : public StructuredBufferDesc
+	{
+		RWStructuredBufferDesc(uint _stride, uint _count, const char* _name, bool _dynamic = false)
+			: StructuredBufferDesc(_stride, _count, _name, _dynamic) {}
+	};
+
+	struct RWStructuredBuffer : public StructuredBuffer
+	{
+		PD3D11UnorderedAccessView uav;
+
+		static RWStructuredBuffer Create(RenderDevicePtr renderDevice, const RWStructuredBufferDesc& desc);
+	};
+
+
+
 	struct VertexBufferDesc
 	{
 		VertexBufferDesc(uint _stride, uint _count, const char* _name)
