@@ -3,6 +3,17 @@ RasterizerOrderedTexture2D<float3> rovTestROV : register(u0);
 // RWTexture2D<float3> rovTestROV : register(u0);
 Texture2D<float3> rovTestSRV : register(t0);
 
+
+cbuffer viewCB : register(b0)
+{
+	struct
+	{
+		float4x4 projTM;
+		float4x4 viewTM;
+	} view;
+};
+
+
 struct Input
 {
 	float3 position : POSITION;
@@ -21,7 +32,7 @@ struct Output
 Output vsMain(Input input)
 {
 	Output output;
-	output.hPosition = float4(input.position.xy / 150.0 - float2(1.5, 0.0), 0.5, 1.0);
+	output.hPosition = mul(view.projTM, mul(view.viewTM, float4(input.position, 1.0)));
 	output.color = input.normal.xyz * 0.5 + 0.5;
 	return output;
 }

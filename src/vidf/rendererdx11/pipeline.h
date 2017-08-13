@@ -12,7 +12,7 @@ namespace vidf { namespace dx11
 		GraphicsPSODesc()
 		{
 			for (auto& rt : blend.RenderTarget)
-				rt.RenderTargetWriteMask = ~0;
+				rt.RenderTargetWriteMask = 0xf;
 		}
 		D3D11_INPUT_ELEMENT_DESC* geometryDesc = nullptr;
 		uint                      numGeomDesc = 0;

@@ -68,6 +68,9 @@ void TestDx11()
 		Vector2f texCoord;
 	};
 
+	Boxf bBox;
+	bBox.min = Vector3f( std::numeric_limits<float>::max(),  std::numeric_limits<float>::max(),  std::numeric_limits<float>::max());
+	bBox.max = Vector3f(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
 	std::vector<Vertex> vertices;
 	for (uint geomIdx = 0; geomIdx < model->GetNumGeometries(); ++geomIdx)
 	{
@@ -94,6 +97,10 @@ void TestDx11()
 				v2.position = model->GetVertex(model->GetPolygonVertexIndex(polyIdx, vertIdx));
 				v2.normal = model->GetNormal(model->GetPolygonNormalIndex(polyIdx, vertIdx));
 				v2.texCoord = model->GetTexCoord(model->GetPolygonTexCoordIndex(polyIdx, vertIdx));
+
+				bBox = Union(bBox, v0.position);
+				bBox = Union(bBox, v1.position);
+				bBox = Union(bBox, v2.position);
 
 				vertices.push_back(v0);
 				vertices.push_back(v1);
@@ -166,22 +173,40 @@ void TestDx11()
 	finalizePassDesc.rtvs[0] = swapChain->GetBackBufferRTV();
 	RenderPassPtr finalizePass = RenderPass::Create(renderDevice, finalizePassDesc);
 
+	OrbitalCamera camera(canvas);
+	camera.SetPerspective(1.4f, 1.0f, 10000.0f);
+	camera.SetCamera((bBox.max + bBox.min)*0.5f, Quaternionf(zero), Distance(bBox.min, bBox.max));
+
+	struct ViewConsts
+	{
+		Matrix44f projTM;
+		Matrix44f viewTM;
+	};
+	D3D11_BUFFER_DESC cBufferDesc{};
+	cBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	cBufferDesc.ByteWidth = sizeof(ViewConsts);
+	cBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	cBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	PD3D11Buffer cBuffer;
+	renderDevice->GetDevice()->CreateBuffer(&cBufferDesc, nullptr, &cBuffer.Get());
+	NameObject(cBuffer, "viewCB");
+
 	while (UpdateSystemMessages() == SystemMessageResult::Continue)
 	{
+		ViewConsts viewConsts;
+		viewConsts.projTM = camera.PerspectiveMatrix();
+		viewConsts.viewTM = camera.ViewMatrix();
+
+		D3D11_MAPPED_SUBRESOURCE mapped;
+		renderDevice->GetContext()->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		memcpy(mapped.pData, &viewConsts, sizeof(ViewConsts));
+		renderDevice->GetContext()->Unmap(cBuffer, 0);
+
 		{
 			VIDF_GPU_EVENT(renderDevice, Frame);
 
-			D3D11_VIEWPORT viewport{};
-			viewport.TopLeftX = 0;
-			viewport.TopLeftY = 0;
-			viewport.Width = canvasDesc.width;
-			viewport.Height = canvasDesc.height;
-			viewport.MinDepth = 0.0f;
-			viewport.MaxDepth = 1.0f;
-			PD3D11DeviceContext context = renderDevice->GetContext();
-
 			FLOAT gray[] = { 0.15f, 0.15f, 0.15f, 1.0f };
-			context->ClearUnorderedAccessViewFloat(rovTest.uav, gray);
+			renderDevice->GetContext()->ClearUnorderedAccessViewFloat(rovTest.uav, gray);
 
 			{
 				VIDF_GPU_EVENT(renderDevice, Render);
@@ -190,6 +215,7 @@ void TestDx11()
 
 				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
 				commandBuffer.SetGraphicsPSO(pso);
+				renderDevice->GetContext()->VSSetConstantBuffers(0, 1, &cBuffer.Get());
 				commandBuffer.Draw(vertices.size(), 0);
 
 				commandBuffer.EndRenderPass();
