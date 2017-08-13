@@ -121,6 +121,13 @@ namespace vidf { namespace dx11 {
 
 
 
+	void CommandBuffer::SetConstantBuffer(uint index, PD3D11Buffer cb)
+	{
+		cbs[index] = cb;
+	}
+
+
+
 	void CommandBuffer::SetSRV(uint index, PD3D11ShaderResourceView srv)
 	{
 		srvs[index] = srv;
@@ -140,6 +147,9 @@ namespace vidf { namespace dx11 {
 	{
 		PD3D11DeviceContext context = renderDevice->GetContext();
 
+		std::array<ID3D11Buffer*, numCBs> cbsArray;
+		for (uint i = 0; i < numCBs; ++i)
+			cbsArray[i] = cbs[i];
 		std::array<ID3D11ShaderResourceView*, numSrvs> srvsArray;
 		for (uint i = 0; i < numSrvs; ++i)
 			srvsArray[i] = srvs[i];
@@ -164,6 +174,8 @@ namespace vidf { namespace dx11 {
 		context->IASetPrimitiveTopology(currentGraphicsPSO->topology);
 		context->VSSetShader(currentGraphicsPSO->vertexShader, nullptr, 0);
 		context->PSSetShader(currentGraphicsPSO->pixelShader, nullptr, 0);
+		context->VSSetConstantBuffers(0, numCBs, cbsArray.data());
+		context->PSSetConstantBuffers(0, numCBs, cbsArray.data());
 		context->VSSetShaderResources(0, numSrvs, srvsArray.data());
 		context->PSSetShaderResources(0, numSrvs, srvsArray.data());
 	}

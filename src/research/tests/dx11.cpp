@@ -182,25 +182,16 @@ void TestDx11()
 		Matrix44f projTM;
 		Matrix44f viewTM;
 	};
-	D3D11_BUFFER_DESC cBufferDesc{};
-	cBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	cBufferDesc.ByteWidth = sizeof(ViewConsts);
-	cBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	cBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	PD3D11Buffer cBuffer;
-	renderDevice->GetDevice()->CreateBuffer(&cBufferDesc, nullptr, &cBuffer.Get());
-	NameObject(cBuffer, "viewCB");
+
+	ConstantBufferDesc viewCBDesc(sizeof(ViewConsts), "viewCB");
+	ConstantBuffer viewCB = ConstantBuffer::Create(renderDevice, viewCBDesc);
 
 	while (UpdateSystemMessages() == SystemMessageResult::Continue)
 	{
 		ViewConsts viewConsts;
 		viewConsts.projTM = camera.PerspectiveMatrix();
 		viewConsts.viewTM = camera.ViewMatrix();
-
-		D3D11_MAPPED_SUBRESOURCE mapped;
-		renderDevice->GetContext()->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-		memcpy(mapped.pData, &viewConsts, sizeof(ViewConsts));
-		renderDevice->GetContext()->Unmap(cBuffer, 0);
+		viewCB.Update(renderDevice->GetContext(), viewConsts);
 
 		{
 			VIDF_GPU_EVENT(renderDevice, Frame);
@@ -215,7 +206,7 @@ void TestDx11()
 
 				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
 				commandBuffer.SetGraphicsPSO(pso);
-				renderDevice->GetContext()->VSSetConstantBuffers(0, 1, &cBuffer.Get());
+				commandBuffer.SetConstantBuffer(0, viewCB.buffer);
 				commandBuffer.Draw(vertices.size(), 0);
 
 				commandBuffer.EndRenderPass();

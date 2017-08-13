@@ -69,6 +69,7 @@ namespace vidf { namespace dx11
 	class CommandBuffer
 	{
 	private:
+		static const uint numCBs           = 8;
 		static const uint numSrvs          = 8;
 		static const uint numVertexStreams = 8;
 		struct VertexStream
@@ -77,6 +78,7 @@ namespace vidf { namespace dx11
 			uint stride = 0;
 			uint offset = 0;
 		};
+		typedef std::array<PD3D11Buffer, numSrvs>             CBArray;
 		typedef std::array<PD3D11ShaderResourceView, numSrvs> SRVArray;
 		typedef std::array<VertexStream, numSrvs>             VertexStreamArray;
 
@@ -88,6 +90,7 @@ namespace vidf { namespace dx11
 
 		void SetGraphicsPSO(GraphicsPSOPtr pso);
 		void SetVertexStream(uint index, PD3D11Buffer stream, uint stride, uint offset=0);
+		void SetConstantBuffer(uint index, PD3D11Buffer cb);
 		void SetSRV(uint index, PD3D11ShaderResourceView srv);
 		void Draw(uint vertexCount, uint startVertexLocation);
 
@@ -97,6 +100,7 @@ namespace vidf { namespace dx11
 	private:
 		RenderDevicePtr   renderDevice;
 		GraphicsPSOPtr    currentGraphicsPSO;
+		CBArray           cbs;
 		SRVArray          srvs;
 		VertexStreamArray vertexStreams;
 	};

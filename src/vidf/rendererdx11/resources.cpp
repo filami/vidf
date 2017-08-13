@@ -111,4 +111,34 @@ namespace vidf { namespace dx11 {
 
 
 
+	ConstantBuffer ConstantBuffer::Create(RenderDevicePtr renderDevice, const ConstantBufferDesc& desc)
+	{
+		ConstantBuffer output;
+				
+		D3D11_BUFFER_DESC cBufferDesc{};
+		cBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		cBufferDesc.ByteWidth = desc.size;
+		cBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+		cBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+		renderDevice->GetDevice()->CreateBuffer(&cBufferDesc, nullptr, &output.buffer.Get());
+		if (desc.name)
+			NameObject(output.buffer, desc.name);
+
+		return output;
+	}
+
+
+
+	void ConstantBuffer::Update(PD3D11DeviceContext context, const void* data, uint dataSize)
+	{
+		D3D11_MAPPED_SUBRESOURCE mapped;
+		context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		assert(mapped.RowPitch >= dataSize);
+		memcpy(mapped.pData, data, dataSize);
+		context->Unmap(buffer, 0);
+	}
+
+
+
 } }

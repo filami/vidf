@@ -106,4 +106,26 @@ namespace vidf { namespace dx11 {
 	};
 
 
+
+	struct ConstantBufferDesc
+	{
+		ConstantBufferDesc(uint _size, const char* _name)
+			: size(_size)
+			, name(_name) {}
+
+		const char* name;
+		uint        size;
+	};
+
+	struct ConstantBuffer
+	{
+		PD3D11Buffer buffer;
+
+		static ConstantBuffer Create(RenderDevicePtr renderDevice, const ConstantBufferDesc& desc);
+		void Update(PD3D11DeviceContext context, const void* data, uint dataSize);
+		template<typename Type>
+		void Update(PD3D11DeviceContext context, const Type& object) { Update(context, &object, sizeof(Type)); }
+	};
+
+
 } }
