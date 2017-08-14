@@ -129,16 +129,14 @@ void TestDx11()
 	elements[2].SemanticName = "TEXCOORD";
 	elements[2].Format = DXGI_FORMAT_R32G32_FLOAT;
 	elements[2].AlignedByteOffset = offsetof(Vertex, texCoord);
-		
-	/*
+	
 	struct OIT
 	{
-		Vector4<uint16> fragments[8];
-		float           depth[8];
-		uint            numFrags;
+		Vector4f fragments[8];
+		float    depth[8];
+		uint     numFrags;
 	};
-	*/
-	RWStructuredBufferDesc rovTestDesc(/*sizeof(OIT)*/ 164, canvasDesc.width * canvasDesc.height, "rovTest");
+	RWStructuredBufferDesc rovTestDesc(sizeof(OIT), canvasDesc.width * canvasDesc.height, "rovTest");
 	RWStructuredBuffer rovTest = RWStructuredBuffer::Create(renderDevice, rovTestDesc);
 
 	GraphicsPSODesc oitClearPSODesc;
@@ -154,8 +152,7 @@ void TestDx11()
 	PSODesc.numGeomDesc = ARRAYSIZE(elements);
 	PSODesc.rasterizer.CullMode = D3D11_CULL_NONE;
 	PSODesc.rasterizer.FillMode = D3D11_FILL_SOLID;
-	// PSODesc.rasterizer.MultisampleEnable = true;
-	// PSODesc.rasterizer.ForcedSampleCount = 16;
+	PSODesc.rasterizer.FrontCounterClockwise = true;
 	PSODesc.topology = D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	PSODesc.vertexShader = vertexShader;
 	PSODesc.pixelShader = pixelShader;
@@ -197,6 +194,8 @@ void TestDx11()
 		Matrix44f viewTM;
 		Vector2f viewportSize;
 		Vector2f invViewportSize;
+		Vector3f viewPosition;
+		float _;
 	};
 	ConstantBufferDesc viewCBDesc(sizeof(ViewConsts), "viewCB");
 	ConstantBuffer viewCB = ConstantBuffer::Create(renderDevice, viewCBDesc);
@@ -208,6 +207,7 @@ void TestDx11()
 		viewConsts.viewTM = camera.ViewMatrix();
 		viewConsts.viewportSize = Vector2f(canvasDesc.width, canvasDesc.height);
 		viewConsts.invViewportSize = Vector2f(1.0f / canvasDesc.width, 1.0f / canvasDesc.height);
+		viewConsts.viewPosition = camera.Position();
 		viewCB.Update(renderDevice->GetContext(), viewConsts);
 
 		{

@@ -8,8 +8,6 @@ struct OIT
 
 RasterizerOrderedStructuredBuffer<OIT> rovTestROV : register(u0);
 StructuredBuffer<OIT> rovTestSRV : register(t0);
-// RWTexture2D<float3> rovTestROV : register(u0);
-// Texture2D<float3> rovTestSRV : register(t0);
 
 
 cbuffer viewCB : register(b0)
@@ -20,6 +18,8 @@ cbuffer viewCB : register(b0)
 		float4x4 viewTM;
 		float2 viewportSize;
 		float2 invViewportSize;
+		float3 viewPosition;
+		float _;
 	} view;
 };
 
@@ -35,7 +35,8 @@ struct Input
 struct Output
 {
 	float4 hPosition : SV_Position;
-	float3 color : COLOR;
+	float3 wPosition : TEXCOORD0;
+	float3 wNormal : TEXCOORD1;
 };
 
 
@@ -43,7 +44,8 @@ Output vsMain(Input input)
 {
 	Output output;
 	output.hPosition = mul(view.projTM, mul(view.viewTM, float4(input.position, 1.0)));
-	output.color = input.normal.xyz * 0.5 + 0.5;
+	output.wPosition = input.position;
+	output.wNormal = input.normal.xyz;
 	return output;
 }
 
@@ -53,35 +55,38 @@ void psOITClear(float4 coord : SV_Position)
 {
 	const uint idx = coord.x + view.viewportSize.x * coord.y;
 	for (int i = 0; i < 8; i++)
+	{
+		rovTestROV[idx].fragments[i] = half4(0, 0, 0, 1);
 		rovTestROV[idx].depth[i] = 1.0;
+	}
 	rovTestROV[idx].numFrags = 0;
 }
 
 
 
-void psMain(Output input /*, uint coverage : SV_Coverage*/)
+void psMain(Output input, bool isFrontFace : SV_IsFrontFace)
 {
-	const float aa = /* countbits(coverage) / 16.0 */ 1.0;
-	const float4 output = float4(input.color * 0.75 * aa, 1.0 - 0.75 * aa);
+	const float3 wNormal = normalize(input.wNormal * (isFrontFace ? 1.0 : -1.0));
+	const float3 diffuse = wNormal * 0.5 + 0.5;
+	const float3 emissive = (1 - pow(max(0, dot(normalize(view.viewPosition - input.wPosition), wNormal)), 1.0 / 8.0)) * float3(1, 0.75, 0.25) * 6.0;
+	const float filter = 0.75;
 
 	const uint pxIdx = input.hPosition.x + view.viewportSize.x * input.hPosition.y;
-
-	half4 fragment = half4(output);
-	half depth = input.hPosition.z;
-	for (uint i = 0; i < rovTestROV[pxIdx].numFrags + 1; i++)
+	rovTestROV[pxIdx].numFrags = min(8, rovTestROV[pxIdx].numFrags + 1);
+	half4 fragment = half4(diffuse * filter + emissive, 1.0 - filter);
+	float depth = input.hPosition.z;
+	for (uint i = 0; i < rovTestROV[pxIdx].numFrags; i++)
 	{
 		if (input.hPosition.z < rovTestROV[pxIdx].depth[i])
 		{
 			half4 tempFragment = fragment;
-			half tempDepth = depth;
+			float tempDepth = depth;
 			fragment = rovTestROV[pxIdx].fragments[i];
 			depth = rovTestROV[pxIdx].depth[i];
 			rovTestROV[pxIdx].fragments[i] = tempFragment;
 			rovTestROV[pxIdx].depth[i] = tempDepth;
 		}
 	}
-
-	rovTestROV[pxIdx].numFrags += 1;
 }
 
 
@@ -106,5 +111,5 @@ float4 psFinalMain(float4 coord : SV_Position) : SV_Target
 	for (int i = rovTestSRV[idx].numFrags - 1; i >= 0; --i)
 		output = output * rovTestSRV[idx].fragments[i].a + rovTestSRV[idx].fragments[i].rgb;
 
-	return float4(output, 1.0);
+	return float4(1 - exp(-output * 1.5), 1.0);
 }
