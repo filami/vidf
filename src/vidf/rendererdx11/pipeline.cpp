@@ -82,6 +82,8 @@ namespace vidf { namespace dx11 {
 		if (pass->uavs.empty())
 			pass->firstUAV = 0;
 
+		pass->dsv = desc.dsv;
+
 		pass->viewport = desc.viewport;
 
 		return pass;
@@ -102,7 +104,7 @@ namespace vidf { namespace dx11 {
 		context->RSSetViewports(1, &renderPass->viewport);
 		context->OMSetRenderTargetsAndUnorderedAccessViews(
 			renderPass->rtvs.size(), renderPass->rtvs.data(),
-			nullptr,
+			renderPass->dsv,
 			renderPass->firstUAV, renderPass->uavs.size(), renderPass->uavs.data(), nullptr);
 	}
 

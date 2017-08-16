@@ -69,7 +69,7 @@ namespace vidf { namespace dx11 {
 
 	struct DepthStencil : public Texture2D
 	{
-		PD3D11DepthStencilView rtv;
+		PD3D11DepthStencilView dsv;
 
 		static DepthStencil Create(RenderDevicePtr renderDevice, const DepthStencilDesc& desc);
 	};
@@ -135,6 +135,7 @@ namespace vidf { namespace dx11 {
 		uint        count;
 		void*       dataPtr = nullptr;
 		uint        dataSize = 0;
+		bool        dynamic = false;
 	};
 
 	struct VertexBuffer
@@ -142,6 +143,7 @@ namespace vidf { namespace dx11 {
 		PD3D11Buffer buffer;
 
 		static VertexBuffer Create(RenderDevicePtr renderDevice, const VertexBufferDesc& desc);
+		void Update(PD3D11DeviceContext context, const void* data, uint dataSize);
 	};
 
 

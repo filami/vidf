@@ -35,13 +35,17 @@ namespace vidf { namespace dx11
 	class RenderDevice;
 	class SwapChain;
 	class Shader;
+	class ShaderManager;
 	class GraphicsPSO;
 	class RenderPass;
+	class CommandBuffer;
 	typedef std::shared_ptr<RenderDevice>  RenderDevicePtr;
 	typedef std::shared_ptr<SwapChain>     SwapChainPtr;
 	typedef std::shared_ptr<Shader>        ShaderPtr;
 	typedef std::shared_ptr<GraphicsPSO>   GraphicsPSOPtr;
 	typedef std::shared_ptr<RenderPass>    RenderPassPtr;
+	typedef std::shared_ptr<ShaderManager> ShaderManagerPtr;
+	typedef std::shared_ptr<CommandBuffer> CommandBufferPtr;
 
 
 

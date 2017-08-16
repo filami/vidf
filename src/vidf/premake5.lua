@@ -87,6 +87,8 @@ AddFilesToProject
 		"rendererdx11/resources.cpp",
 		"rendererdx11/shaders.h",
 		"rendererdx11/shaders.cpp",
+		"rendererdx11/wikigeom.h",
+		"rendererdx11/wikigeom.cpp",
 	},
 
 	["Renderer Vulkan"] =

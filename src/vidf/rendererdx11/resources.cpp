@@ -67,15 +67,45 @@ namespace vidf { namespace dx11 {
 
 
 
-	RenderTarget RenderTarget::Create(RenderDevicePtr device, const RenderTargetDesc& desc)
+	RenderTarget RenderTarget::Create(RenderDevicePtr renderDevice, const RenderTargetDesc& desc)
 	{
 		return RenderTarget();
 	}
 
 
-	DepthStencil DepthStencil::Create(RenderDevicePtr device, const DepthStencilDesc& desc)
+	DepthStencil DepthStencil::Create(RenderDevicePtr renderDevice, const DepthStencilDesc& desc)
 	{
-		return DepthStencil();
+		DepthStencil output;
+
+		D3D11_TEXTURE2D_DESC bufferDesc{};
+		bufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
+		// bufferDesc.Format = desc.format;
+		bufferDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+		bufferDesc.ArraySize = 1;
+		bufferDesc.Width = desc.width;
+		bufferDesc.Height = desc.heigh;
+		bufferDesc.MipLevels = desc.mipLevels;
+		bufferDesc.SampleDesc.Count = 1;
+		bufferDesc.Usage = D3D11_USAGE_DEFAULT;
+		renderDevice->GetDevice()->CreateTexture2D(&bufferDesc, nullptr, &output.buffer.Get());
+		if (desc.name)
+			NameObject(output.buffer, desc.name);
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		srvDesc.Texture2D.MipLevels = desc.mipLevels;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		renderDevice->GetDevice()->CreateShaderResourceView(output.buffer, &srvDesc, &output.srv.Get());
+
+		D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
+		dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+		// dsvDesc.Format = desc.format;
+		dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+		dsvDesc.Texture2D.MipSlice = 0;
+		renderDevice->GetDevice()->CreateDepthStencilView(output.buffer, &dsvDesc, &output.dsv.Get());
+
+		return output;
 	}
 
 
@@ -144,7 +174,8 @@ namespace vidf { namespace dx11 {
 		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		vertexBufferDesc.ByteWidth = desc.stride * desc.count;
 		vertexBufferDesc.StructureByteStride = desc.stride;
-		vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+		vertexBufferDesc.Usage = desc.dynamic ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_DEFAULT;
+		vertexBufferDesc.CPUAccessFlags = desc.dynamic ? D3D11_CPU_ACCESS_WRITE : 0;
 
 		bool hasData = false;
 		D3D11_SUBRESOURCE_DATA vertexData{};
@@ -163,6 +194,17 @@ namespace vidf { namespace dx11 {
 			NameObject(output.buffer, desc.name);
 
 		return output;
+	}
+
+
+
+	void VertexBuffer::Update(PD3D11DeviceContext context, const void* data, uint dataSize)
+	{
+		D3D11_MAPPED_SUBRESOURCE mapped;
+		context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		assert(mapped.RowPitch >= dataSize);
+		memcpy(mapped.pData, data, dataSize);
+		context->Unmap(buffer, 0);
 	}
 
 

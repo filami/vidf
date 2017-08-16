@@ -88,8 +88,6 @@ namespace vidf { namespace dx11 {
 		shader->state = ShaderState::Ready;
 		NameObject(shader->shader, nameBuffer);
 
-		std::cout << std::endl;
-
 		return shader;
 	}
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "renderdevice.h"
 
 namespace vidf { namespace dx11
 {
@@ -45,9 +46,10 @@ namespace vidf { namespace dx11
 		static const uint numUavs = 8;
 		typedef std::array<PD3D11RenderTargetView, numRtvs>    RTVArray;
 		typedef std::array<PD3D11UnorderedAccessView, numUavs> UAVArray;
-		RTVArray rtvs;
-		UAVArray uavs;
-		D3D11_VIEWPORT viewport;
+		RTVArray               rtvs;
+		UAVArray               uavs;
+		PD3D11DepthStencilView dsv;
+		D3D11_VIEWPORT         viewport;
 	};
 
 	struct RenderPass
@@ -59,10 +61,11 @@ namespace vidf { namespace dx11
 
 	private:
 		friend class CommandBuffer;
-		std::vector<ID3D11RenderTargetView*> rtvs;
+		std::vector<ID3D11RenderTargetView*>    rtvs;
 		std::vector<ID3D11UnorderedAccessView*> uavs;
-		uint firstUAV;
-		D3D11_VIEWPORT viewport;
+		PD3D11DepthStencilView dsv;
+		uint                   firstUAV;
+		D3D11_VIEWPORT         viewport;
 	};
 
 
@@ -94,6 +97,9 @@ namespace vidf { namespace dx11
 		void SetConstantBuffer(uint index, PD3D11Buffer cb);
 		void SetSRV(uint index, PD3D11ShaderResourceView srv);
 		void Draw(uint vertexCount, uint startVertexLocation);
+
+		RenderDevicePtr     GetRenderDevice() const { return renderDevice; }
+		PD3D11DeviceContext GetContext() const { return renderDevice->GetContext(); }
 
 	private:
 		void FlushGraphicsState();

@@ -4,6 +4,7 @@
 #include "vidf/rendererdx11/resources.h"
 #include "vidf/rendererdx11/shaders.h"
 #include "vidf/rendererdx11/pipeline.h"
+#include "vidf/rendererdx11/wikigeom.h"
 #include "vidf/proto/mesh.h"
 
 
@@ -40,8 +41,9 @@ void TestDx11()
 	RenderDevicePtr renderDevice = RenderDevice::Create(RenderDeviceDesc());
 	if (!renderDevice)
 		return;
-	ShaderManager shaderManager(renderDevice);
-	CommandBuffer commandBuffer(renderDevice);
+	ShaderManagerPtr shaderManager = std::make_shared<ShaderManager>(renderDevice);
+	CommandBufferPtr commandBuffer = std::make_shared<CommandBuffer>(renderDevice);
+	WikiGeomPtr wikiGeom = std::make_shared<WikiGeom>(renderDevice, shaderManager);
 
 	Dx11CanvasListener canvasListener;
 
@@ -113,11 +115,11 @@ void TestDx11()
 		renderDevice,
 		VertexBufferDesc(vertices.data(), vertices.size(), "vertexBuffer"));
 	
-	ShaderPtr vertexShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "vsMain", ShaderType::VertexShader);
-	ShaderPtr pixelShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "psMain", ShaderType::PixelShader);
-	ShaderPtr oitClearPS = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "psOITClear", ShaderType::PixelShader);
-	ShaderPtr finalVertexShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "vsFinalMain", ShaderType::VertexShader);
-	ShaderPtr finalPixelShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "psFinalMain", ShaderType::PixelShader);
+	ShaderPtr vertexShader = shaderManager->CompileShaderFile("data/shaders/shader.hlsl", "vsMain", ShaderType::VertexShader);
+	ShaderPtr pixelShader = shaderManager->CompileShaderFile("data/shaders/shader.hlsl", "psMain", ShaderType::PixelShader);
+	ShaderPtr oitClearPS = shaderManager->CompileShaderFile("data/shaders/shader.hlsl", "psOITClear", ShaderType::PixelShader);
+	ShaderPtr finalVertexShader = shaderManager->CompileShaderFile("data/shaders/shader.hlsl", "vsFinalMain", ShaderType::VertexShader);
+	ShaderPtr finalPixelShader = shaderManager->CompileShaderFile("data/shaders/shader.hlsl", "psFinalMain", ShaderType::PixelShader);
 
 	D3D11_INPUT_ELEMENT_DESC elements[3]{};
 	elements[0].SemanticName = "POSITION";
@@ -216,31 +218,33 @@ void TestDx11()
 			{
 				VIDF_GPU_EVENT(renderDevice, Render);
 
-				commandBuffer.BeginRenderPass(renderPass);
-				commandBuffer.SetConstantBuffer(0, viewCB.buffer);
+				commandBuffer->BeginRenderPass(renderPass);
+				commandBuffer->SetConstantBuffer(0, viewCB.buffer);
 								
-				commandBuffer.SetGraphicsPSO(oitClearPSO);
-				commandBuffer.Draw(3, 0);
+				commandBuffer->SetGraphicsPSO(oitClearPSO);
+				commandBuffer->Draw(3, 0);
 				
-				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
-				commandBuffer.SetGraphicsPSO(pso);
-				commandBuffer.Draw(vertices.size(), 0);
+				commandBuffer->SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
+				commandBuffer->SetGraphicsPSO(pso);
+				commandBuffer->Draw(vertices.size(), 0);
 				
-				commandBuffer.EndRenderPass();
+				commandBuffer->EndRenderPass();
 			}
 			
 			{
 				VIDF_GPU_EVENT(renderDevice, Finalize);
 
-				commandBuffer.BeginRenderPass(finalizePass);
+				commandBuffer->BeginRenderPass(finalizePass);
 								
-				commandBuffer.SetSRV(0, rovTest.srv);
-				commandBuffer.SetGraphicsPSO(finalPSO);
-				commandBuffer.Draw(3, 0);
+				commandBuffer->SetSRV(0, rovTest.srv);
+				commandBuffer->SetGraphicsPSO(finalPSO);
+				commandBuffer->Draw(3, 0);
 
-				commandBuffer.EndRenderPass();
+				commandBuffer->EndRenderPass();
 			}
 		}
+
+		wikiGeom->Flush(commandBuffer);
 
 		swapChain->Present();
 	}
