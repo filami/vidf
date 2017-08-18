@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "wikigeom.h"
+#include "wikidraw.h"
 #include "shaders.h"
 #include "pipeline.h"
 
@@ -8,13 +8,13 @@ namespace vidf { namespace dx11
 
 
 
-	WikiGeom::WikiGeom(RenderDevicePtr _renderDevice, ShaderManager* _shaderManager)
+	WikiDraw::WikiDraw(RenderDevicePtr _renderDevice, ShaderManager* _shaderManager)
 		: renderDevice(_renderDevice)
 	{
 		vertices.reserve(128);
 
-		vertexShader = _shaderManager->CompileShaderFile("data/shaders/wikigeom.hlsl", "vsMain", ShaderType::VertexShader);
-		pixelShader = _shaderManager->CompileShaderFile("data/shaders/wikigeom.hlsl", "psMain", ShaderType::PixelShader);
+		vertexShader = _shaderManager->CompileShaderFile("data/shaders/wikidraw.hlsl", "vsMain", ShaderType::VertexShader);
+		pixelShader = _shaderManager->CompileShaderFile("data/shaders/wikidraw.hlsl", "psMain", ShaderType::PixelShader);
 
 		D3D11_INPUT_ELEMENT_DESC elements[2]{};
 		elements[0].SemanticName = "POSITION";
@@ -49,7 +49,7 @@ namespace vidf { namespace dx11
 
 
 
-	void WikiGeom::Begin(WikiGeom::StreamType type)
+	void WikiDraw::Begin(WikiDraw::StreamType type)
 	{
 		assert(type != Undefined);
 		assert(!streaming);
@@ -58,10 +58,10 @@ namespace vidf { namespace dx11
 		uint psoIdx;
 		switch (type)
 		{
-		case vidf::dx11::WikiGeom::Points:    psoIdx = PointsPso; break;
-		case vidf::dx11::WikiGeom::Lines:     psoIdx = LinesPso; break;
-		case vidf::dx11::WikiGeom::Triangles: psoIdx = TrianglesPso; break;
-		case vidf::dx11::WikiGeom::Quads:     psoIdx = TrianglesPso; break;
+		case vidf::dx11::WikiDraw::Points:    psoIdx = PointsPso; break;
+		case vidf::dx11::WikiDraw::Lines:     psoIdx = LinesPso; break;
+		case vidf::dx11::WikiDraw::Triangles: psoIdx = TrianglesPso; break;
+		case vidf::dx11::WikiDraw::Quads:     psoIdx = TrianglesPso; break;
 		}
 		if (curBatch.psoIdx != psoIdx)
 			RestartBatch();
@@ -72,7 +72,7 @@ namespace vidf { namespace dx11
 
 
 
-	void WikiGeom::End()
+	void WikiDraw::End()
 	{
 		assert(streaming);
 		assert(primitive.empty());
@@ -81,14 +81,14 @@ namespace vidf { namespace dx11
 
 
 
-	void WikiGeom::SetColor(uint8 r, uint8 g, uint8 b, uint8 a)
+	void WikiDraw::SetColor(uint8 r, uint8 g, uint8 b, uint8 a)
 	{
 		curVertex.color = (a << 24) | (b << 16) | (g << 8) | r;
 	}
 
 
 
-	void WikiGeom::PushVertex(Vector3f vertex)
+	void WikiDraw::PushVertex(Vector3f vertex)
 	{
 		curVertex.vertex = vertex;
 		PushVertex(curVertex);
@@ -96,7 +96,7 @@ namespace vidf { namespace dx11
 
 
 
-	void WikiGeom::PushVertex(Vertex vertex)
+	void WikiDraw::PushVertex(Vertex vertex)
 	{
 		assert(streaming);
 
@@ -105,12 +105,12 @@ namespace vidf { namespace dx11
 
 		switch (curBatch.type)
 		{
-		case vidf::dx11::WikiGeom::Points:
+		case vidf::dx11::WikiDraw::Points:
 			vertices.push_back(curVertex);
 			primitive.clear();
 			curBatch.numVertices++;
 			break;
-		case vidf::dx11::WikiGeom::Lines:
+		case vidf::dx11::WikiDraw::Lines:
 			if (primitive.size() == 2)
 			{
 				vertices.insert(vertices.end(), primitive.begin(), primitive.end());
@@ -118,7 +118,7 @@ namespace vidf { namespace dx11
 				curBatch.numVertices += 2;
 			}
 			break;
-		case vidf::dx11::WikiGeom::Triangles:
+		case vidf::dx11::WikiDraw::Triangles:
 			if (primitive.size() == 3)
 			{
 				vertices.insert(vertices.end(), primitive.begin(), primitive.end());
@@ -126,7 +126,7 @@ namespace vidf { namespace dx11
 				curBatch.numVertices += 3;
 			}
 			break;
-		case vidf::dx11::WikiGeom::Quads:
+		case vidf::dx11::WikiDraw::Quads:
 			if (primitive.size() == 4)
 			{
 				vertices.push_back(primitive[0]);
@@ -144,7 +144,7 @@ namespace vidf { namespace dx11
 
 
 
-	void WikiGeom::PushProjViewTM(const Matrix44f& tm)
+	void WikiDraw::PushProjViewTM(const Matrix44f& tm)
 	{
 		assert(!streaming);
 		if (curBatch.psoIdx != -1)
@@ -156,7 +156,7 @@ namespace vidf { namespace dx11
 
 
 
-	void WikiGeom::PushWorldTM(const Matrix44f& tm)
+	void WikiDraw::PushWorldTM(const Matrix44f& tm)
 	{
 		assert(!streaming);
 		if (curBatch.psoIdx != -1)
@@ -168,7 +168,7 @@ namespace vidf { namespace dx11
 
 
 
-	void WikiGeom::Flush(CommandBuffer* commandBuffer)
+	void WikiDraw::Flush(CommandBuffer* commandBuffer)
 	{
 		assert(!streaming);
 		assert(!viewProjTMs.empty());
@@ -204,7 +204,7 @@ namespace vidf { namespace dx11
 
 
 
-	void WikiGeom::RestartBatch()
+	void WikiDraw::RestartBatch()
 	{
 		if (curBatch.numVertices != 0)
 			batches.push_back(curBatch);
@@ -216,7 +216,7 @@ namespace vidf { namespace dx11
 
 
 
-	void WikiGeom::UpdateCBuffer(CommandBuffer* commandBuffer, const Batch& batch)
+	void WikiDraw::UpdateCBuffer(CommandBuffer* commandBuffer, const Batch& batch)
 	{
 		CBuffer cBufferData;
 		cBufferData.viewProjTM = viewProjTMs[batch.projViewTMIdx];
@@ -226,7 +226,7 @@ namespace vidf { namespace dx11
 
 
 
-	void WikiGeom::UpdateVertexBuffer(CommandBuffer* commandBuffer)
+	void WikiDraw::UpdateVertexBuffer(CommandBuffer* commandBuffer)
 	{
 		if (gpuVertexCount != vertices.capacity())
 		{

@@ -8,7 +8,7 @@ namespace vidf { namespace dx11
 {
 
 
-	class WikiGeom
+	class WikiDraw
 	{
 	public:
 		enum StreamType
@@ -52,7 +52,7 @@ namespace vidf { namespace dx11
 		};
 
 	public:
-		WikiGeom(RenderDevicePtr _renderDevice, ShaderManager* _shaderManager);
+		WikiDraw(RenderDevicePtr _renderDevice, ShaderManager* _shaderManager);
 
 		void Begin(StreamType type);
 		void End();
@@ -91,7 +91,7 @@ namespace vidf { namespace dx11
 
 
 
-	typedef std::shared_ptr<WikiGeom> WikiGeomPtr;
+	typedef std::shared_ptr<WikiDraw> WikiGeomPtr;
 
 
 

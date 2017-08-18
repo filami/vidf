@@ -7,7 +7,7 @@
 #include "vidf/rendererdx11/resources.h"
 #include "vidf/rendererdx11/shaders.h"
 #include "vidf/rendererdx11/pipeline.h"
-#include "vidf/rendererdx11/wikigeom.h"
+#include "vidf/rendererdx11/wikidraw.h"
 
 using namespace vidf;
 using namespace proto;
@@ -35,11 +35,11 @@ const Boxf sparceMapBox = Boxf(
 
 //////////////////////////////////////////////////////////////////////////
 
-void DrawModelGeometry(WikiGeomPtr wikiGeom, const Module& model, uint geomIdx)
+void DrawModelGeometry(WikiDraw* wikiDraw, const Module& model, uint geomIdx)
 {
 	const Module::Geometry& geometry = model.GetGeometry(geomIdx);
 
-	wikiGeom->Begin(WikiGeom::Lines);
+	wikiDraw->Begin(WikiDraw::Lines);
 	const uint lastPolygon = geometry.firstPolygon + geometry.numPolygons;
 	for (uint polyIdx = geometry.firstPolygon; polyIdx != lastPolygon; ++polyIdx)
 	{
@@ -50,22 +50,22 @@ void DrawModelGeometry(WikiGeomPtr wikiGeom, const Module& model, uint geomIdx)
 		for (uint vertIdx = 1; vertIdx < numVertices; ++vertIdx)
 		{
 			const Vector3f cur = model.GetVertex(model.GetPolygonVertexIndex(polyIdx, vertIdx));
-			wikiGeom->PushVertex(last);
-			wikiGeom->PushVertex(cur);
+			wikiDraw->PushVertex(last);
+			wikiDraw->PushVertex(cur);
 			last = cur;
 		}
-		wikiGeom->PushVertex(last);
-		wikiGeom->PushVertex(first);
+		wikiDraw->PushVertex(last);
+		wikiDraw->PushVertex(first);
 	}
-	wikiGeom->End();
+	wikiDraw->End();
 }
 
-void DrawModel(WikiGeomPtr wikiGeom, const Module& model)
+void DrawModel(WikiDraw* wikiDraw, const Module& model)
 {
-	wikiGeom->SetColor(0, 0, 0, 255);
+	wikiDraw->SetColor(0, 0, 0, 255);
 	const uint numGeoms = model.GetNumGeometries();
 	for (uint geomIdx = 0; geomIdx < numGeoms; ++geomIdx)
-		DrawModelGeometry(wikiGeom, model, geomIdx);
+		DrawModelGeometry(wikiDraw, model, geomIdx);
 }
 
 struct Fragment
@@ -211,41 +211,41 @@ void SparceTreeClearData(SparceMap<SparceMapData, sparceMapSize>* map)
 
 //////////////////////////////////////////////////////////////////////////
 
-void DrawBoxWireframe(WikiGeomPtr wikiGeom, Boxf box)
+void DrawBoxWireframe(WikiDraw* wikiDraw, Boxf box)
 {
-	wikiGeom->Begin(WikiGeom::Lines);
+	wikiDraw->Begin(WikiDraw::Lines);
 
-	wikiGeom->PushVertex(Vector3f(box.min.x, box.min.y, box.min.z));
-	wikiGeom->PushVertex(Vector3f(box.max.x, box.min.y, box.min.z));
-	wikiGeom->PushVertex(Vector3f(box.min.x, box.max.y, box.min.z));
-	wikiGeom->PushVertex(Vector3f(box.max.x, box.max.y, box.min.z));
-	wikiGeom->PushVertex(Vector3f(box.min.x, box.max.y, box.max.z));
-	wikiGeom->PushVertex(Vector3f(box.max.x, box.max.y, box.max.z));
-	wikiGeom->PushVertex(Vector3f(box.min.x, box.min.y, box.max.z));
-	wikiGeom->PushVertex(Vector3f(box.max.x, box.min.y, box.max.z));
+	wikiDraw->PushVertex(Vector3f(box.min.x, box.min.y, box.min.z));
+	wikiDraw->PushVertex(Vector3f(box.max.x, box.min.y, box.min.z));
+	wikiDraw->PushVertex(Vector3f(box.min.x, box.max.y, box.min.z));
+	wikiDraw->PushVertex(Vector3f(box.max.x, box.max.y, box.min.z));
+	wikiDraw->PushVertex(Vector3f(box.min.x, box.max.y, box.max.z));
+	wikiDraw->PushVertex(Vector3f(box.max.x, box.max.y, box.max.z));
+	wikiDraw->PushVertex(Vector3f(box.min.x, box.min.y, box.max.z));
+	wikiDraw->PushVertex(Vector3f(box.max.x, box.min.y, box.max.z));
 
-	wikiGeom->PushVertex(Vector3f(box.min.x, box.min.y, box.min.z));
-	wikiGeom->PushVertex(Vector3f(box.min.x, box.max.y, box.min.z));
-	wikiGeom->PushVertex(Vector3f(box.max.x, box.min.y, box.min.z));
-	wikiGeom->PushVertex(Vector3f(box.max.x, box.max.y, box.min.z));
-	wikiGeom->PushVertex(Vector3f(box.max.x, box.min.y, box.max.z));
-	wikiGeom->PushVertex(Vector3f(box.max.x, box.max.y, box.max.z));
-	wikiGeom->PushVertex(Vector3f(box.min.x, box.min.y, box.max.z));
-	wikiGeom->PushVertex(Vector3f(box.min.x, box.max.y, box.max.z));
+	wikiDraw->PushVertex(Vector3f(box.min.x, box.min.y, box.min.z));
+	wikiDraw->PushVertex(Vector3f(box.min.x, box.max.y, box.min.z));
+	wikiDraw->PushVertex(Vector3f(box.max.x, box.min.y, box.min.z));
+	wikiDraw->PushVertex(Vector3f(box.max.x, box.max.y, box.min.z));
+	wikiDraw->PushVertex(Vector3f(box.max.x, box.min.y, box.max.z));
+	wikiDraw->PushVertex(Vector3f(box.max.x, box.max.y, box.max.z));
+	wikiDraw->PushVertex(Vector3f(box.min.x, box.min.y, box.max.z));
+	wikiDraw->PushVertex(Vector3f(box.min.x, box.max.y, box.max.z));
 
-	wikiGeom->PushVertex(Vector3f(box.min.x, box.min.y, box.min.z));
-	wikiGeom->PushVertex(Vector3f(box.min.x, box.min.y, box.max.z));
-	wikiGeom->PushVertex(Vector3f(box.max.x, box.min.y, box.min.z));
-	wikiGeom->PushVertex(Vector3f(box.max.x, box.min.y, box.max.z));
-	wikiGeom->PushVertex(Vector3f(box.max.x, box.max.y, box.min.z));
-	wikiGeom->PushVertex(Vector3f(box.max.x, box.max.y, box.max.z));
-	wikiGeom->PushVertex(Vector3f(box.min.x, box.max.y, box.min.z));
-	wikiGeom->PushVertex(Vector3f(box.min.x, box.max.y, box.max.z));
+	wikiDraw->PushVertex(Vector3f(box.min.x, box.min.y, box.min.z));
+	wikiDraw->PushVertex(Vector3f(box.min.x, box.min.y, box.max.z));
+	wikiDraw->PushVertex(Vector3f(box.max.x, box.min.y, box.min.z));
+	wikiDraw->PushVertex(Vector3f(box.max.x, box.min.y, box.max.z));
+	wikiDraw->PushVertex(Vector3f(box.max.x, box.max.y, box.min.z));
+	wikiDraw->PushVertex(Vector3f(box.max.x, box.max.y, box.max.z));
+	wikiDraw->PushVertex(Vector3f(box.min.x, box.max.y, box.min.z));
+	wikiDraw->PushVertex(Vector3f(box.min.x, box.max.y, box.max.z));
 
-	wikiGeom->End();
+	wikiDraw->End();
 }
 
-void DrawBoxFilled(WikiGeomPtr wikiGeom, Boxf box)
+void DrawBoxFilled(WikiDraw* wikiDraw, Boxf box)
 {
 	const Vector3f vertices[] =
 	{
@@ -259,51 +259,51 @@ void DrawBoxFilled(WikiGeomPtr wikiGeom, Boxf box)
 		{ box.max.x, box.max.y, box.max.z },
 	};
 
-	wikiGeom->Begin(WikiGeom::Quads);
+	wikiDraw->Begin(WikiDraw::Quads);
 
-	wikiGeom->SetColor(255, 128, 0, 255);
-	wikiGeom->PushVertex(vertices[0]);
-	wikiGeom->PushVertex(vertices[2]);
-	wikiGeom->PushVertex(vertices[3]);
-	wikiGeom->PushVertex(vertices[1]);
+	wikiDraw->SetColor(255, 128, 0, 255);
+	wikiDraw->PushVertex(vertices[0]);
+	wikiDraw->PushVertex(vertices[2]);
+	wikiDraw->PushVertex(vertices[3]);
+	wikiDraw->PushVertex(vertices[1]);
 
-	wikiGeom->SetColor(0, 128, 255, 255);
-	wikiGeom->PushVertex(vertices[4]);
-	wikiGeom->PushVertex(vertices[5]);
-	wikiGeom->PushVertex(vertices[7]);
-	wikiGeom->PushVertex(vertices[6]);
+	wikiDraw->SetColor(0, 128, 255, 255);
+	wikiDraw->PushVertex(vertices[4]);
+	wikiDraw->PushVertex(vertices[5]);
+	wikiDraw->PushVertex(vertices[7]);
+	wikiDraw->PushVertex(vertices[6]);
 
-	wikiGeom->SetColor(128, 255, 0, 255);
-	wikiGeom->PushVertex(vertices[0]);
-	wikiGeom->PushVertex(vertices[4]);
-	wikiGeom->PushVertex(vertices[6]);
-	wikiGeom->PushVertex(vertices[2]);
+	wikiDraw->SetColor(128, 255, 0, 255);
+	wikiDraw->PushVertex(vertices[0]);
+	wikiDraw->PushVertex(vertices[4]);
+	wikiDraw->PushVertex(vertices[6]);
+	wikiDraw->PushVertex(vertices[2]);
 
-	wikiGeom->SetColor(128, 0, 255, 255);
-	wikiGeom->PushVertex(vertices[1]);
-	wikiGeom->PushVertex(vertices[3]);
-	wikiGeom->PushVertex(vertices[7]);
-	wikiGeom->PushVertex(vertices[5]);
+	wikiDraw->SetColor(128, 0, 255, 255);
+	wikiDraw->PushVertex(vertices[1]);
+	wikiDraw->PushVertex(vertices[3]);
+	wikiDraw->PushVertex(vertices[7]);
+	wikiDraw->PushVertex(vertices[5]);
 
-	wikiGeom->SetColor(0, 255, 128, 255);
-	wikiGeom->PushVertex(vertices[0]);
-	wikiGeom->PushVertex(vertices[1]);
-	wikiGeom->PushVertex(vertices[5]);
-	wikiGeom->PushVertex(vertices[4]);
+	wikiDraw->SetColor(0, 255, 128, 255);
+	wikiDraw->PushVertex(vertices[0]);
+	wikiDraw->PushVertex(vertices[1]);
+	wikiDraw->PushVertex(vertices[5]);
+	wikiDraw->PushVertex(vertices[4]);
 
-	wikiGeom->SetColor(255, 0, 128, 255);
-	wikiGeom->PushVertex(vertices[2]);
-	wikiGeom->PushVertex(vertices[6]);
-	wikiGeom->PushVertex(vertices[7]);
-	wikiGeom->PushVertex(vertices[3]);
+	wikiDraw->SetColor(255, 0, 128, 255);
+	wikiDraw->PushVertex(vertices[2]);
+	wikiDraw->PushVertex(vertices[6]);
+	wikiDraw->PushVertex(vertices[7]);
+	wikiDraw->PushVertex(vertices[3]);
 
-	wikiGeom->End();
+	wikiDraw->End();
 }
 
-void DrawSparceMap(WikiGeomPtr wikiGeom, const SparceMap<SparceMapData, sparceMapSize>& map, Boxf box)
+void DrawSparceMap(WikiDraw* wikiDraw, const SparceMap<SparceMapData, sparceMapSize>& map, Boxf box)
 {
-	wikiGeom->SetColor(255, 0, 0, 255);
-	DrawBoxWireframe(wikiGeom, box);
+	wikiDraw->SetColor(255, 0, 0, 255);
+	DrawBoxWireframe(wikiDraw, box);
 
 	const Vector3f voxelSize = (box.max - box.min) / sparceMapSize;
 	for (uint z = 0; z < sparceMapSize; ++z)
@@ -318,14 +318,14 @@ void DrawSparceMap(WikiGeomPtr wikiGeom, const SparceMap<SparceMapData, sparceMa
 
 				if (map.dataBrick[x][y][z] == 2)
 				{
-					DrawSparceMap(wikiGeom, *map.subMapBrick[x][y][z], subBox);
+					DrawSparceMap(wikiDraw, *map.subMapBrick[x][y][z], subBox);
 				}
 				else if (map.dataBrick[x][y][z] == 1)
 				{
 					Vector3f center = (subBox.min + subBox.max) * 0.5f;
 					subBox.min = center - voxelSize * 0.45f;
 					subBox.max = center + voxelSize * 0.45f;
-					DrawBoxFilled(wikiGeom, subBox);
+					DrawBoxFilled(wikiDraw, subBox);
 				}
 			}
 		}
@@ -383,7 +383,7 @@ void Voxelizer()
 	RenderDevicePtr renderDevice = RenderDevice::Create(RenderDeviceDesc());
 	ShaderManager shaderManager(renderDevice);
 	CommandBuffer commandBuffer(renderDevice);
-	WikiGeomPtr wikiGeom = std::make_shared<WikiGeom>(renderDevice, &shaderManager);
+	WikiDraw wikiDraw(renderDevice, &shaderManager);
 
 	Dx11CanvasListener canvasListener;
 	CanvasDesc canvasDesc{};
@@ -426,8 +426,8 @@ void Voxelizer()
 		Time deltaTime = counter.GetElapsed();
 
 		camera.Update(deltaTime);
-		wikiGeom->PushProjViewTM(Mul(camera.ViewMatrix(), camera.PerspectiveMatrix()));
-		wikiGeom->PushWorldTM(Matrix44f(zero));
+		wikiDraw.PushProjViewTM(Mul(camera.ViewMatrix(), camera.PerspectiveMatrix()));
+		wikiDraw.PushWorldTM(Matrix44f(zero));
 
 		Time time = GetTime();
 		Matrix44f objectTM = ToMatrix44(QuaternionAxisAngle(Vector3f(0.0f, 1.0f, 0.0f), time.AsFloat()*0.15f));
@@ -444,10 +444,10 @@ void Voxelizer()
 
 		commandBuffer.BeginRenderPass(renderPass);
 
-		DrawSparceMap(wikiGeom, sparceMap, sparceMapBox);
-		wikiGeom->PushWorldTM(objectTM);
-		DrawModel(wikiGeom, *model);
-		wikiGeom->Flush(&commandBuffer);
+		DrawSparceMap(&wikiDraw, sparceMap, sparceMapBox);
+		wikiDraw.PushWorldTM(objectTM);
+		DrawModel(&wikiDraw, *model);
+		wikiDraw.Flush(&commandBuffer);
 
 		commandBuffer.EndRenderPass();
 

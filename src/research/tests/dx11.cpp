@@ -4,7 +4,6 @@
 #include "vidf/rendererdx11/resources.h"
 #include "vidf/rendererdx11/shaders.h"
 #include "vidf/rendererdx11/pipeline.h"
-#include "vidf/rendererdx11/wikigeom.h"
 #include "vidf/proto/mesh.h"
 
 
@@ -43,7 +42,6 @@ void TestDx11()
 		return;
 	ShaderManager shaderManager(renderDevice);
 	CommandBuffer commandBuffer(renderDevice);
-	WikiGeom wikiGeom(renderDevice, &shaderManager);
 
 	Dx11CanvasListener canvasListener;
 
@@ -243,8 +241,6 @@ void TestDx11()
 				commandBuffer.EndRenderPass();
 			}
 		}
-
-		wikiGeom.Flush(&commandBuffer);
 
 		swapChain->Present();
 	}
