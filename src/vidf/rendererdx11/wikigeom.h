@@ -52,7 +52,7 @@ namespace vidf { namespace dx11
 		};
 
 	public:
-		WikiGeom(RenderDevicePtr _renderDevice, ShaderManagerPtr _shaderManager);
+		WikiGeom(RenderDevicePtr _renderDevice, ShaderManager* _shaderManager);
 
 		void Begin(StreamType type);
 		void End();
@@ -63,12 +63,12 @@ namespace vidf { namespace dx11
 		void PushProjViewTM(const Matrix44f& tm);
 		void PushWorldTM(const Matrix44f& tm);
 
-		void Flush(CommandBufferPtr commandBuffer);
+		void Flush(CommandBuffer* commandBuffer);
 
 	private:
 		void RestartBatch();
-		void UpdateCBuffer(CommandBufferPtr commandBuffer, const Batch& batch);
-		void UpdateVertexBuffer(CommandBufferPtr commandBuffer);
+		void UpdateCBuffer(CommandBuffer* commandBuffer, const Batch& batch);
+		void UpdateVertexBuffer(CommandBuffer* commandBuffer);
 
 	private:
 		RenderDevicePtr             renderDevice;

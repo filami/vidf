@@ -16,10 +16,18 @@ using namespace dx11;
 //////////////////////////////////////////////////////////////////////////
 
 // const float voxelSize = 50.0f;
+
 const float voxelSize = 2.0f;
 typedef uint8 SparceMapData;
 const uint sparceMapSize = 8;
 const uint sparceMapLevels = 3;
+
+/*
+const float voxelSize = 2.0f;
+typedef uint8 SparceMapData;
+const uint sparceMapSize = 2;
+const uint sparceMapLevels = 9;
+*/
 const float sparceMapDimension = std::pow(sparceMapSize, sparceMapLevels) * voxelSize;
 const Boxf sparceMapBox = Boxf(
 	Vector3f(-sparceMapDimension, -sparceMapDimension, -sparceMapDimension) * 0.5f,
@@ -309,7 +317,9 @@ void DrawSparceMap(WikiGeomPtr wikiGeom, const SparceMap<SparceMapData, sparceMa
 				subBox.max = subBox.min + voxelSize;
 
 				if (map.dataBrick[x][y][z] == 2)
+				{
 					DrawSparceMap(wikiGeom, *map.subMapBrick[x][y][z], subBox);
+				}
 				else if (map.dataBrick[x][y][z] == 1)
 				{
 					Vector3f center = (subBox.min + subBox.max) * 0.5f;
@@ -371,9 +381,9 @@ void Voxelizer()
 	}
 
 	RenderDevicePtr renderDevice = RenderDevice::Create(RenderDeviceDesc());
-	ShaderManagerPtr shaderManager = std::make_shared<ShaderManager>(renderDevice);
-	CommandBufferPtr commandBuffer = std::make_shared<CommandBuffer>(renderDevice);
-	WikiGeomPtr wikiGeom = std::make_shared<WikiGeom>(renderDevice, shaderManager);
+	ShaderManager shaderManager(renderDevice);
+	CommandBuffer commandBuffer(renderDevice);
+	WikiGeomPtr wikiGeom = std::make_shared<WikiGeom>(renderDevice, &shaderManager);
 
 	Dx11CanvasListener canvasListener;
 	CanvasDesc canvasDesc{};
@@ -432,14 +442,14 @@ void Voxelizer()
 		renderDevice->GetContext()->ClearRenderTargetView(swapChain->GetBackBufferRTV(), white);
 		renderDevice->GetContext()->ClearDepthStencilView(depthStencil.dsv, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-		commandBuffer->BeginRenderPass(renderPass);
+		commandBuffer.BeginRenderPass(renderPass);
 
 		DrawSparceMap(wikiGeom, sparceMap, sparceMapBox);
 		wikiGeom->PushWorldTM(objectTM);
 		DrawModel(wikiGeom, *model);
-		wikiGeom->Flush(commandBuffer);
+		wikiGeom->Flush(&commandBuffer);
 
-		commandBuffer->EndRenderPass();
+		commandBuffer.EndRenderPass();
 
 		swapChain->Present();
 	}

@@ -8,7 +8,7 @@ namespace vidf { namespace dx11
 
 
 
-	WikiGeom::WikiGeom(RenderDevicePtr _renderDevice, ShaderManagerPtr _shaderManager)
+	WikiGeom::WikiGeom(RenderDevicePtr _renderDevice, ShaderManager* _shaderManager)
 		: renderDevice(_renderDevice)
 	{
 		vertices.reserve(128);
@@ -168,7 +168,7 @@ namespace vidf { namespace dx11
 
 
 
-	void WikiGeom::Flush(CommandBufferPtr commandBuffer)
+	void WikiGeom::Flush(CommandBuffer* commandBuffer)
 	{
 		assert(!streaming);
 		assert(!viewProjTMs.empty());
@@ -216,7 +216,7 @@ namespace vidf { namespace dx11
 
 
 
-	void WikiGeom::UpdateCBuffer(CommandBufferPtr commandBuffer, const Batch& batch)
+	void WikiGeom::UpdateCBuffer(CommandBuffer* commandBuffer, const Batch& batch)
 	{
 		CBuffer cBufferData;
 		cBufferData.viewProjTM = viewProjTMs[batch.projViewTMIdx];
@@ -226,7 +226,7 @@ namespace vidf { namespace dx11
 
 
 
-	void WikiGeom::UpdateVertexBuffer(CommandBufferPtr commandBuffer)
+	void WikiGeom::UpdateVertexBuffer(CommandBuffer* commandBuffer)
 	{
 		if (gpuVertexCount != vertices.capacity())
 		{
