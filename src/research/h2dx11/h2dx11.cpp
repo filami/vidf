@@ -368,6 +368,19 @@ namespace h2
 	};
 
 
+	enum BspSurface
+	{
+		BspSurf_LIGHT	= 0x01,	
+		BspSurf_SLICK	= 0x02,
+		BspSurf_SKY	    = 0x04,
+		BspSurf_WARP	= 0x08,
+		BspSurf_TRANS33 = 0x10,
+		BspSurf_TRANS66 = 0x20,
+		BspSurf_FLOWING = 0x40,
+		BspSurf_NODRAW	= 0x80,
+	};
+
+
 	struct BspHeader
 	{
 		uint32 signature;
@@ -657,9 +670,13 @@ void H2Dx11()
 	for (const BspFace& face : bspData.faces)
 	{
 		const BspTexInfo& texInfo = bspData.texInfo[face.textureInfo];
-		const Vector3f normal = Normalize(bspData.planes[face.plane].normal) * (face.planeSide ? -1.0f : 1.0f);
+		const uint noDraw = BspSurf_NODRAW | BspSurf_SKY;
+		if (texInfo.flags & noDraw)
+			continue;
+
 		Batch& batch = batches[bspData.texInfoToTexture[face.textureInfo]];
 		std::vector<Vertex>& vertices = batch.vertices;
+		const Vector3f normal = Normalize(bspData.planes[face.plane].normal) * (face.planeSide ? -1.0f : 1.0f);
 
 		auto GetVertexId = [&bspData, face](uint i)
 		{
