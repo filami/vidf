@@ -221,6 +221,41 @@ namespace h2
 
 
 
+	struct M8Data
+	{
+		uint32 width  = 1;
+		uint32 heigth = 1;
+	};
+
+
+
+	template<typename TStream>
+	StreamResult Stream(TStream& stream, M8Data& m8Data)
+	{
+		static_assert(StreamTraits<TStream>::IsInput(), "Only supports Input streams");
+		static_assert(StreamTraits<TStream>::IsBinary(), "Only supports Binary streams");
+
+		size_t fileOffset = stream.tellg();
+
+		uint32 signature;
+		Stream(stream, signature);
+		if (signature != 0x02)
+			return StreamResult::Fail;
+
+		char name[32];
+		Stream(stream, name);
+
+		std::array<uint32, 16> values;
+		Stream(stream, values.begin(), values.end());
+		m8Data.width = values[0];
+		Stream(stream, values.begin(), values.end());
+		m8Data.heigth = values[0];
+
+		return StreamResult::Ok;
+	}
+
+
+
 	enum BspLumpType
 	{
 		BspLump_Entities,
@@ -273,13 +308,13 @@ namespace h2
 
 	struct BspNode
 	{
-		uint32          plane;
-		int32           frontChild;
-		int32           backChild;
-		Vector3<int16>  bboxMin;
-		Vector3<int16>  bboxMax;
-		uint16          firstFace;
-		uint16          numFaces;
+		uint32         plane;
+		int32          frontChild;
+		int32          backChild;
+		Vector3<int16> bboxMin;
+		Vector3<int16> bboxMax;
+		uint16         firstFace;
+		uint16         numFaces;
 	};
 
 	struct BspFace
@@ -293,14 +328,29 @@ namespace h2
 		uint32 lightmapOffset;
 	};
 
+	struct BspTexInfo
+	{
+		Vector3f uAxis;
+		float    uOffset;
+		Vector3f vAxis;
+		float    vOffset;
+		uint32   flags;
+		uint32   value;
+		char     textureName[32];
+		uint32   nextTexInfo;
+	};
+
 	struct BspData
 	{
-		std::vector<Vector3f> vertices;
-		std::vector<BspEdge>  edges;
-		std::vector<BspNode>  nodes;
-		std::vector<int32>    faceEdges;
-		std::vector<BspFace>  faces;
-		std::vector<BspPlane> planes;
+		std::vector<Vector3f>   vertices;
+		std::vector<BspEdge>    edges;
+		std::vector<BspNode>    nodes;
+		std::vector<int32>      faceEdges;
+		std::vector<BspFace>    faces;
+		std::vector<BspPlane>   planes;
+		std::vector<BspTexInfo> texInfo;
+
+		std::map<std::string, M8Data> textures;
 	};
 
 	template<typename TStream>
@@ -364,6 +414,20 @@ namespace h2
 		return StreamResult::Ok;
 	}
 
+	template<typename TStream>
+	StreamResult Stream(TStream& stream, BspTexInfo& texInfo)
+	{
+		Stream(stream, texInfo.uAxis);
+		Stream(stream, texInfo.uOffset);
+		Stream(stream, texInfo.vAxis);
+		Stream(stream, texInfo.vOffset);
+		Stream(stream, texInfo.flags);
+		Stream(stream, texInfo.value);
+		Stream(stream, texInfo.textureName);
+		Stream(stream, texInfo.nextTexInfo);
+		return StreamResult::Ok;
+	}
+
 	template<typename TStream, typename T>
 	StreamResult Stream(TStream& stream, size_t fileOffset, std::vector<T>& data, const BspLump& lump)
 	{
@@ -392,6 +456,7 @@ namespace h2
 		Stream(stream, fileOffset, bspData.faceEdges, lumps[BspLump_FaceEdgeTable]);
 		Stream(stream, fileOffset, bspData.faces, lumps[BspLump_Faces]);
 		Stream(stream, fileOffset, bspData.planes, lumps[BspLump_Planes]);
+		Stream(stream, fileOffset, bspData.texInfo, lumps[BspLump_TextureInformation]);
 
 		return StreamResult::Ok;
 	}
@@ -412,22 +477,37 @@ void H2Dx11()
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/sstown.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/andslums.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/hive1.bsp");
-	FileManager::PakFileHandle map = fileManager.OpenFile("maps/oglemine1.bsp");
+	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/oglemine1.bsp");
+	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/oglemine2.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/tutorial.bsp");
-	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/tutorial2.bsp");
+	FileManager::PakFileHandle map = fileManager.OpenFile("maps/tutorial2.bsp");
+	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/dmandoria.bsp");
 	if (!map)
 		return;
 
 	BspData bspData;
 	if (Stream(*map, bspData) != h2::StreamResult::Ok)
 		return;
+	for (auto& texInfo : bspData.texInfo)
+	{
+		auto it = bspData.textures.find(texInfo.textureName);
+		if (it == bspData.textures.end())
+		{
+			M8Data m8Data;
+			FileManager::PakFileHandle m8 = fileManager.OpenFile((std::string("textures/") + texInfo.textureName + ".m8").c_str());
+			if (m8)
+				Stream(*m8, m8Data);
+			bspData.textures[texInfo.textureName] = m8Data;
+			it = bspData.textures.find(texInfo.textureName);
+		}
+		texInfo.uAxis = texInfo.uAxis / it->second.width;
+		texInfo.vAxis = texInfo.vAxis / it->second.heigth;
+		texInfo.uOffset = texInfo.uOffset / it->second.width;
+		texInfo.vOffset = texInfo.vOffset / it->second.heigth;
+	}
 
 	const uint width = 1280;
 	const uint height = 720;
-
-	// std::cout << "Loading Model . . . ";
-	// auto model = LoadObjModuleFromFile("data/leather_chair/leather_chair.obj");
-	// std::cout << "DONE" << std::endl;
 
 	RenderDevicePtr renderDevice = RenderDevice::Create(RenderDeviceDesc());
 	if (!renderDevice)
@@ -466,30 +546,37 @@ void H2Dx11()
 	std::vector<Vertex> vertices;
 	for (const BspFace& face : bspData.faces)
 	{
+		const BspTexInfo& texInfo = bspData.texInfo[face.textureInfo];
+		const Vector3f normal = Normalize(bspData.planes[face.plane].normal) * (face.planeSide ? 1.0f : -1.0f);
+
 		auto GetVertexId = [&bspData, face](uint i)
 		{
 			int edgeId = bspData.faceEdges[face.firstEdge + i];
 			return edgeId > 0 ? bspData.edges[edgeId].vId[1] : bspData.edges[-edgeId].vId[0];
 		};
-
-		const Vector3f normal = Normalize(bspData.planes[face.plane].normal) * (face.planeSide ? 1.0f : -1.0f);
+		auto GetTexCoord = [&texInfo](Vector3f vertex)
+		{
+			return Vector2f(
+				vertex.x * texInfo.uAxis.x + vertex.y * texInfo.uAxis.y + vertex.z * texInfo.uAxis.z + texInfo.uOffset,
+				vertex.x * texInfo.vAxis.x + vertex.y * texInfo.vAxis.y + vertex.z * texInfo.vAxis.z + texInfo.vOffset);
+		};
 
 		Vertex v0;
 		v0.position = bspData.vertices[GetVertexId(0)];
 		v0.normal = normal;
-		v0.texCoord = Vector2f(zero);
+		v0.texCoord = GetTexCoord(v0.position);
 
 		Vertex v1;
 		v1.position = bspData.vertices[GetVertexId(1)];
 		v1.normal = normal;
-		v1.texCoord = Vector2f(zero);
+		v1.texCoord = GetTexCoord(v1.position);
 
 		for (uint vertIdx = 2; vertIdx < face.numEdges; ++vertIdx)
 		{
 			Vertex v2;
 			v2.position = bspData.vertices[GetVertexId(vertIdx)];
 			v2.normal = normal;
-			v2.texCoord = Vector2f(zero);
+			v2.texCoord = GetTexCoord(v2.position);
 
 			bBox = Union(bBox, v0.position);
 			bBox = Union(bBox, v1.position);

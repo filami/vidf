@@ -28,7 +28,7 @@ struct Input
 {
 	float3 position : POSITION;
 	float3 normal : NORMAL;
-	float2 texCoord : TEXCOORD;
+	float2 texCoord : TEXCOORD0;
 };
 
 
@@ -37,6 +37,7 @@ struct Output
 	float4 hPosition : SV_Position;
 	float3 wPosition : TEXCOORD0;
 	float3 wNormal : TEXCOORD1;
+	float2 texCoord : TEXCOORD2;
 };
 
 
@@ -46,6 +47,7 @@ Output vsMain(Input input)
 	output.hPosition = mul(view.projTM, mul(view.viewTM, float4(input.position, 1.0)));
 	output.wPosition = input.position;
 	output.wNormal = input.normal.xyz;
+	output.texCoord = input.texCoord;
 	return output;
 }
 
@@ -66,17 +68,13 @@ void psOITClear(float4 coord : SV_Position)
 
 void psMain(Output input, bool isFrontFace : SV_IsFrontFace)
 {
-	/*
+	const float2 tc = frac(input.texCoord);
 	const float3 wNormal = normalize(input.wNormal * (isFrontFace ? 1.0 : -1.0));
-	const float3 diffuse = wNormal * 0.5 + 0.5;
-	const float3 emissive = (1 - pow(max(0, dot(normalize(view.viewPosition - input.wPosition), wNormal)), 1.0 / 8.0)) * float3(1, 0.75, 0.25) * 6.0;
-	const float filter = 0.75;
-	*/
+	const float3 diffuseColor = float3(tc.x, tc.y, 1 - max(tc.x, tc.y));
 
-	const float3 wNormal = normalize(input.wNormal * (isFrontFace ? 1.0 : -1.0));
-	const float3 diffuse = saturate(dot(wNormal, normalize(float3(1, 2, 3))) * 0.5 + 0.5) * 1.0;
+	const float3 diffuse = saturate(dot(wNormal, normalize(float3(1, 2, 3))) * 0.5 + 0.5) * diffuseColor;
 	const float3 emissive = (1 - pow(max(0, dot(normalize(view.viewPosition - input.wPosition), wNormal)), 1.0 / 8.0)) * float3(1, 0.75, 0.25) * 0.5;
-	const float filter = 0.65;
+	const float filter = 0.25;
 		
 	const uint pxIdx = input.hPosition.x + view.viewportSize.x * input.hPosition.y;
 	rovTestROV[pxIdx].numFrags = min(8, rovTestROV[pxIdx].numFrags + 1);
@@ -94,16 +92,6 @@ void psMain(Output input, bool isFrontFace : SV_IsFrontFace)
 			rovTestROV[pxIdx].depth[i] = tempDepth;
 		}
 	}
-	
-	/*
-	half4 fragment = half4(diffuse * filter + emissive, 1.0 - filter);
-	const uint pxIdx = input.hPosition.x + view.viewportSize.x * input.hPosition.y;
-	rovTestROV[pxIdx].numFrags = rovTestROV[pxIdx].numFrags + 1;
-	if (rovTestROV[pxIdx].numFrags >= 8)
-		discard;
-	else
-		rovTestROV[pxIdx].fragments[rovTestROV[pxIdx].numFrags] = fragment;
-	*/
 }
 
 
