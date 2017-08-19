@@ -28,6 +28,7 @@ namespace vidf { namespace dx11
 	typedef Pointer<ID3D11RasterizerState2>    PD3D11RasterizerState2;
 	typedef Pointer<ID3D11BlendState1>         PD3D11BlendState1;
 	typedef Pointer<ID3D11DepthStencilState>   PD3D11DepthStencilState;
+	typedef Pointer<ID3D11SamplerState>        PD3D11SamplerState;
 	typedef Pointer<ID3DBlob>                  PD3DBlob;
 
 

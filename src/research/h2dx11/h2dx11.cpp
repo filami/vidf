@@ -221,21 +221,21 @@ namespace h2
 
 
 
-	struct M8Data
+	struct BspTexture
 	{
-		uint32 width  = 1;
-		uint32 heigth = 1;
+		std::string name;
+		Texture2D   gpuTexture;
+		uint32      width  = 1;
+		uint32      heigth = 1;
 	};
 
 
 
 	template<typename TStream>
-	StreamResult Stream(TStream& stream, M8Data& m8Data)
+	StreamResult StreamM8(TStream& stream, BspTexture& m8Data)
 	{
 		static_assert(StreamTraits<TStream>::IsInput(), "Only supports Input streams");
 		static_assert(StreamTraits<TStream>::IsBinary(), "Only supports Binary streams");
-
-		size_t fileOffset = stream.tellg();
 
 		uint32 signature;
 		Stream(stream, signature);
@@ -252,6 +252,93 @@ namespace h2
 		m8Data.heigth = values[0];
 
 		return StreamResult::Ok;
+	}
+
+
+
+	template<typename TStream>
+	Texture2D LoadTextureM8(TStream& stream, RenderDevicePtr renderDevice, const char* textureName)
+	{
+		static_assert(StreamTraits<TStream>::IsInput(), "Only supports Input streams");
+		static_assert(StreamTraits<TStream>::IsBinary(), "Only supports Binary streams");
+
+		Texture2D texture;
+
+		const size_t fileOffset = stream.tellg();
+
+		uint32 signature;
+		Stream(stream, signature);
+		assert(signature == 0x02);
+
+		char name[32];
+		Stream(stream, name);
+
+		const uint maxNumMips = 16;
+		std::array<uint32, maxNumMips> widths;
+		std::array<uint32, maxNumMips> heigths;
+		std::array<uint32, maxNumMips> offsets;
+		Stream(stream, widths.begin(), widths.end());
+		Stream(stream, heigths.begin(), heigths.end());
+		Stream(stream, offsets.begin(), offsets.end());
+
+		uint numMips = 0;
+		uint bufferSize = 0;
+		for (uint i = 0; i < 16; ++i)
+		{
+			if (widths[i] == 0 || heigths[i] == 0)
+				break;
+			bufferSize += widths[i] * heigths[i];
+			++numMips;
+		}
+
+		char nextFrame[32];
+		Stream(stream, nextFrame);
+
+		const uint paletteSize = 256 * 3;
+		uint8 palette[paletteSize];
+		Stream(stream, palette);
+
+		uint32 flags;
+		uint32 content;
+		uint32 value;
+		Stream(stream, flags);
+		Stream(stream, content);
+		Stream(stream, value);
+
+		std::vector<uint32> buffer;
+		buffer.resize(bufferSize);
+		Texture2DDesc desc;
+		desc.width = widths[0];
+		desc.heigh = heigths[0];
+		desc.mipLevels = numMips;
+		desc.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+		desc.name = textureName;
+
+		std::vector<uint32>::iterator dstIt = buffer.begin();
+		std::vector<uint8> inputBuffer;
+		inputBuffer.resize(widths[0] * heigths[0]);
+		for (uint i = 0; i < numMips; ++i)
+		{
+			uint bufferSz = widths[i] * heigths[i];
+			stream.seekg(fileOffset + offsets[i]);
+			// Stream(stream, inputBuffer.data(), bufferSz);
+			stream.read((char*)inputBuffer.data(), bufferSz);
+			for (uint j = 0; j < bufferSz; ++j)
+			{
+				const uint8 r = palette[inputBuffer[j] * 3 + 0];
+				const uint8 g = palette[inputBuffer[j] * 3 + 1];
+				const uint8 b = palette[inputBuffer[j] * 3 + 2];
+				const uint32 color = (0xff << 24) | (b << 16) | (g << 8) | r;
+				*dstIt = color;
+				++dstIt;
+			}
+		}
+
+		desc.dataPtr = buffer.data();
+		desc.dataSize = bufferSize * sizeof(uint32);
+		texture = Texture2D::Create(renderDevice, desc);
+
+		return texture;
 	}
 
 
@@ -350,7 +437,9 @@ namespace h2
 		std::vector<BspPlane>   planes;
 		std::vector<BspTexInfo> texInfo;
 
-		std::map<std::string, M8Data> textures;
+		std::vector<uint32>     texInfoToTexture;
+		std::vector<BspTexture> textures;
+		std::map<std::string, uint> textureMap;
 	};
 
 	template<typename TStream>
@@ -473,14 +562,14 @@ void H2Dx11()
 	fileManager.AddPak("data/h2dx11/Htic2-0.pak");
 	fileManager.AddPak("data/h2dx11/Htic2-1.pak");
 
-	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/ssdocks.bsp");
+	FileManager::PakFileHandle map = fileManager.OpenFile("maps/ssdocks.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/sstown.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/andslums.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/hive1.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/oglemine1.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/oglemine2.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/tutorial.bsp");
-	FileManager::PakFileHandle map = fileManager.OpenFile("maps/tutorial2.bsp");
+	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/tutorial2.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/dmandoria.bsp");
 	if (!map)
 		return;
@@ -488,22 +577,35 @@ void H2Dx11()
 	BspData bspData;
 	if (Stream(*map, bspData) != h2::StreamResult::Ok)
 		return;
-	for (auto& texInfo : bspData.texInfo)
+
+	bspData.texInfoToTexture.resize(bspData.texInfo.size());
+	for (uint i = 0; i < bspData.texInfo.size(); ++i)
 	{
-		auto it = bspData.textures.find(texInfo.textureName);
-		if (it == bspData.textures.end())
+		BspTexInfo& texInfo = bspData.texInfo[i];
+
+		auto it = bspData.textureMap.find(texInfo.textureName);
+		uint textureId;
+		if (it == bspData.textureMap.end())
 		{
-			M8Data m8Data;
-			FileManager::PakFileHandle m8 = fileManager.OpenFile((std::string("textures/") + texInfo.textureName + ".m8").c_str());
+			BspTexture m8Data;
+			m8Data.name = std::string("textures/") + texInfo.textureName + ".m8";
+			FileManager::PakFileHandle m8 = fileManager.OpenFile(m8Data.name.c_str());
 			if (m8)
-				Stream(*m8, m8Data);
-			bspData.textures[texInfo.textureName] = m8Data;
-			it = bspData.textures.find(texInfo.textureName);
+				StreamM8(*m8, m8Data);
+			textureId = bspData.textures.size();
+			bspData.textures.push_back(m8Data);
+			bspData.textureMap[texInfo.textureName] = textureId;
 		}
-		texInfo.uAxis = texInfo.uAxis / it->second.width;
-		texInfo.vAxis = texInfo.vAxis / it->second.heigth;
-		texInfo.uOffset = texInfo.uOffset / it->second.width;
-		texInfo.vOffset = texInfo.vOffset / it->second.heigth;
+		else
+		{
+			textureId = it->second;
+		}
+		const BspTexture& texture = bspData.textures[textureId];
+		texInfo.uAxis = texInfo.uAxis / texture.width;
+		texInfo.vAxis = texInfo.vAxis / texture.heigth;
+		texInfo.uOffset = texInfo.uOffset / texture.width;
+		texInfo.vOffset = texInfo.vOffset / texture.heigth;
+		bspData.texInfoToTexture[i] = textureId;
 	}
 
 	const uint width = 1280;
@@ -591,6 +693,23 @@ void H2Dx11()
 	VertexBuffer vertexBuffer = VertexBuffer::Create(
 		renderDevice,
 		VertexBufferDesc(vertices.data(), vertices.size(), "vertexBuffer"));
+
+	for (auto& texture : bspData.textures)
+	{
+		FileManager::PakFileHandle m8 = fileManager.OpenFile(texture.name.c_str());
+		if (m8)
+			texture.gpuTexture = LoadTextureM8(*m8, renderDevice, texture.name.c_str());
+	}
+
+	D3D11_SAMPLER_DESC samplerDesc{};
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.MinLOD = -std::numeric_limits<float>::max();
+	samplerDesc.MaxLOD = std::numeric_limits<float>::max();
+	PD3D11SamplerState diffuseSS;
+	renderDevice->GetDevice()->CreateSamplerState(&samplerDesc, &diffuseSS.Get());
 
 	ShaderPtr vertexShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "vsMain", ShaderType::VertexShader);
 	ShaderPtr pixelShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "psMain", ShaderType::PixelShader);
@@ -707,6 +826,8 @@ void H2Dx11()
 
 				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
 				commandBuffer.SetGraphicsPSO(pso);
+				commandBuffer.SetSRV(0, bspData.textures[7].gpuTexture.srv);
+				commandBuffer.GetContext()->PSSetSamplers(0, 1, &diffuseSS.Get());
 				commandBuffer.Draw(vertices.size(), 0);
 
 				commandBuffer.EndRenderPass();

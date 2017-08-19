@@ -8,16 +8,19 @@ namespace vidf { namespace dx11 {
 
 	struct Texture2DDesc
 	{
+		Texture2DDesc() = default;
 		Texture2DDesc(DXGI_FORMAT _format, uint _width, uint _heigh, const char* _name)
 			: format(_format)
 			, width(_width)
 			, heigh(_heigh)
 			, name(_name) {}
 
-		const char* name;
-		DXGI_FORMAT format;
-		uint        width;
-		uint        heigh;
+		const char* name = nullptr;
+		DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		void*       dataPtr = nullptr;
+		uint        dataSize = 0;
+		uint        width = 16;
+		uint        heigh = 16;
 		uint        mipLevels = 1;
 	};
 

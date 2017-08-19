@@ -5,6 +5,23 @@
 namespace vidf { namespace dx11 {
 
 
+	uint GetFormatSize(DXGI_FORMAT format)
+	{
+		switch (format)
+		{
+		case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+		case DXGI_FORMAT_R8G8B8A8_SNORM:
+		case DXGI_FORMAT_R8G8B8A8_SINT:
+		case DXGI_FORMAT_R8G8B8A8_UINT:
+		case DXGI_FORMAT_R8G8B8A8_UNORM:
+		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+			return 4;
+		default:
+			return 0;
+		}
+	}
+
+
 
 	Texture2D Texture2D::Create(RenderDevicePtr renderDevice, const Texture2DDesc& desc)
 	{
@@ -19,7 +36,30 @@ namespace vidf { namespace dx11 {
 		bufferDesc.MipLevels = desc.mipLevels;
 		bufferDesc.SampleDesc.Count = 1;
 		bufferDesc.Usage = D3D11_USAGE_DEFAULT;
-		renderDevice->GetDevice()->CreateTexture2D(&bufferDesc, nullptr, &output.buffer.Get());
+
+		std::vector<D3D11_SUBRESOURCE_DATA> data;
+		const uint formatSize = GetFormatSize(desc.format);
+		assert(formatSize != 0);	// using unknownw format
+		if (desc.dataPtr != nullptr && desc.dataSize != 0)
+		{
+			data.resize(desc.mipLevels);
+			const uint8* begin = reinterpret_cast<const uint8*>(desc.dataPtr);
+			const uint8* end = begin + desc.dataSize;
+			int width = bufferDesc.Width;
+			int height = bufferDesc.Height;
+			for (uint i = 0; i < desc.mipLevels; ++i)
+			{
+				data[i].pSysMem = begin;
+				data[i].SysMemPitch = width* formatSize;
+				data[i].SysMemSlicePitch = width * height * formatSize;
+				begin += data[i].SysMemSlicePitch;
+				width = Max(1, width / 2);
+				height = Max(1, height / 2);
+				assert(begin <= end);	// dataPtr is not large enough
+			}
+		}
+
+		renderDevice->GetDevice()->CreateTexture2D(&bufferDesc, data.data(), &output.buffer.Get());
 		if (desc.name)
 			NameObject(output.buffer, desc.name);
 
