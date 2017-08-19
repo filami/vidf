@@ -6,6 +6,7 @@ bool TestVulkan();
 void TestGM();
 void Voxelizer();
 void Gomoku();
+void H2Dx11();
 
 
 int main()
@@ -14,7 +15,8 @@ int main()
 	// TestDx11();
 	// TestVulkan();
 	// TestGM();
-	Voxelizer();
+	// Voxelizer();
 	// Gomoku();
+	H2Dx11();
 	return 0;
 }

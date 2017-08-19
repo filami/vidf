@@ -27,4 +27,9 @@ AddFilesToProject
 	{
 		"gomoku/game.cpp",
 	},
+
+	["h2dx11"] =
+	{
+		"h2dx11/h2dx11.cpp",
+	},
 }

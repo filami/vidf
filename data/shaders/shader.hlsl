@@ -66,11 +66,18 @@ void psOITClear(float4 coord : SV_Position)
 
 void psMain(Output input, bool isFrontFace : SV_IsFrontFace)
 {
+	/*
 	const float3 wNormal = normalize(input.wNormal * (isFrontFace ? 1.0 : -1.0));
 	const float3 diffuse = wNormal * 0.5 + 0.5;
 	const float3 emissive = (1 - pow(max(0, dot(normalize(view.viewPosition - input.wPosition), wNormal)), 1.0 / 8.0)) * float3(1, 0.75, 0.25) * 6.0;
 	const float filter = 0.75;
+	*/
 
+	const float3 wNormal = normalize(input.wNormal * (isFrontFace ? 1.0 : -1.0));
+	const float3 diffuse = saturate(dot(wNormal, normalize(float3(1, 2, 3))) * 0.5 + 0.5) * 1.0;
+	const float3 emissive = (1 - pow(max(0, dot(normalize(view.viewPosition - input.wPosition), wNormal)), 1.0 / 8.0)) * float3(1, 0.75, 0.25) * 0.5;
+	const float filter = 0.65;
+		
 	const uint pxIdx = input.hPosition.x + view.viewportSize.x * input.hPosition.y;
 	rovTestROV[pxIdx].numFrags = min(8, rovTestROV[pxIdx].numFrags + 1);
 	half4 fragment = half4(diffuse * filter + emissive, 1.0 - filter);
@@ -87,6 +94,16 @@ void psMain(Output input, bool isFrontFace : SV_IsFrontFace)
 			rovTestROV[pxIdx].depth[i] = tempDepth;
 		}
 	}
+	
+	/*
+	half4 fragment = half4(diffuse * filter + emissive, 1.0 - filter);
+	const uint pxIdx = input.hPosition.x + view.viewportSize.x * input.hPosition.y;
+	rovTestROV[pxIdx].numFrags = rovTestROV[pxIdx].numFrags + 1;
+	if (rovTestROV[pxIdx].numFrags >= 8)
+		discard;
+	else
+		rovTestROV[pxIdx].fragments[rovTestROV[pxIdx].numFrags] = fragment;
+	*/
 }
 
 
