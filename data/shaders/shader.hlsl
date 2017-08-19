@@ -7,7 +7,9 @@ struct OIT
 };
 
 RasterizerOrderedStructuredBuffer<OIT> rovTestROV : register(u0);
-StructuredBuffer<OIT> rovTestSRV : register(t0);
+
+Texture2D solidSRV : register(t0);
+StructuredBuffer<OIT> rovTestSRV : register(t1);
 
 Texture2D diffuseSRV : register(t0);
 SamplerState diffuseSS : register(s0);
@@ -69,15 +71,25 @@ void psOITClear(float4 coord : SV_Position)
 
 
 
-void psMain(Output input, bool isFrontFace : SV_IsFrontFace)
+float4 psMain(Output input) : SV_Target
+{
+	const float3 diffuseColor = diffuseSRV.Sample(diffuseSS, input.texCoord).rgb;
+	return float4(diffuseColor, 1.0);
+}
+
+
+
+[earlydepthstencil]
+void psMainOIT(Output input)
 {
 	const float2 tc = frac(input.texCoord);
 	const float3 wNormal = normalize(input.wNormal);
 	const float3 diffuseColor = diffuseSRV.Sample(diffuseSS, input.texCoord).rgb;
 
-	const float3 diffuse = /* saturate(dot(wNormal, normalize(float3(1, 2, 3))) * 0.5 + 0.5) */ diffuseColor;
-	const float3 emissive = (1 - pow(max(0, dot(normalize(view.viewPosition - input.wPosition), wNormal)), 1.0 / 8.0)) * float3(1, 0.75, 0.25) * 0.2;
-	const float filter = 0.65;
+	const float3 diffuse = diffuseColor;
+	// const float3 emissive = (1 - pow(max(0, dot(normalize(view.viewPosition - input.wPosition), wNormal)), 1.0 / 8.0)) * float3(1, 0.75, 0.25) * 0.2;
+	const float3 emissive = 0;
+	const float filter = (1 - pow(max(0, dot(normalize(view.viewPosition - input.wPosition), wNormal)), 1.0 / 4.0));
 	
 	const uint pxIdx = input.hPosition.x + view.viewportSize.x * input.hPosition.y;
 	rovTestROV[pxIdx].numFrags = min(8, rovTestROV[pxIdx].numFrags + 1);
@@ -114,7 +126,8 @@ float4 psFinalMain(float4 coord : SV_Position) : SV_Target
 {
 	const uint idx = coord.x + view.viewportSize.x * coord.y;
 
-	float3 output = 0.15;
+	// float3 output = 0.15;
+	float3 output = solidSRV[coord.xy].rgb;
 
 	for (int i = rovTestSRV[idx].numFrags - 1; i >= 0; --i)
 		output = output * rovTestSRV[idx].fragments[i].a + rovTestSRV[idx].fragments[i].rgb;

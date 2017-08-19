@@ -109,7 +109,34 @@ namespace vidf { namespace dx11 {
 
 	RenderTarget RenderTarget::Create(RenderDevicePtr renderDevice, const RenderTargetDesc& desc)
 	{
-		return RenderTarget();
+		RenderTarget output;
+
+		D3D11_TEXTURE2D_DESC bufferDesc{};
+		bufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+		bufferDesc.Format = desc.format;
+		bufferDesc.ArraySize = 1;
+		bufferDesc.Width = desc.width;
+		bufferDesc.Height = desc.heigh;
+		bufferDesc.MipLevels = desc.mipLevels;
+		bufferDesc.SampleDesc.Count = 1;
+		bufferDesc.Usage = D3D11_USAGE_DEFAULT;
+
+		renderDevice->GetDevice()->CreateTexture2D(&bufferDesc, nullptr, &output.buffer.Get());
+		if (desc.name)
+			NameObject(output.buffer, desc.name);
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = desc.mipLevels;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		renderDevice->GetDevice()->CreateShaderResourceView(output.buffer, &srvDesc, &output.srv.Get());
+
+		D3D11_RENDER_TARGET_VIEW_DESC rtvDes{};
+		rtvDes.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		rtvDes.Texture2D.MipSlice = 0;
+		renderDevice->GetDevice()->CreateRenderTargetView(output.buffer, &rtvDes, &output.rtv.Get());
+
+		return output;
 	}
 
 

@@ -573,10 +573,10 @@ void H2Dx11()
 	fileManager.AddPak("data/h2dx11/Htic2-0.pak");
 	fileManager.AddPak("data/h2dx11/Htic2-1.pak");
 
-	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/ssdocks.bsp");
+	FileManager::PakFileHandle map = fileManager.OpenFile("maps/ssdocks.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/sstown.bsp");
+	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/andplaza.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/andslums.bsp");
-	FileManager::PakFileHandle map = fileManager.OpenFile("maps/andplaza.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/hive1.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/oglemine1.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/oglemine2.bsp");
@@ -763,6 +763,7 @@ void H2Dx11()
 
 	ShaderPtr vertexShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "vsMain", ShaderType::VertexShader);
 	ShaderPtr pixelShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "psMain", ShaderType::PixelShader);
+	ShaderPtr pixelShaderOIT = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "psMainOIT", ShaderType::PixelShader);
 	ShaderPtr oitClearPS = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "psOITClear", ShaderType::PixelShader);
 	ShaderPtr finalVertexShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "vsFinalMain", ShaderType::VertexShader);
 	ShaderPtr finalPixelShader = shaderManager.CompileShaderFile("data/shaders/shader.hlsl", "psFinalMain", ShaderType::PixelShader);
@@ -778,14 +779,20 @@ void H2Dx11()
 	elements[2].Format = DXGI_FORMAT_R32G32_FLOAT;
 	elements[2].AlignedByteOffset = offsetof(Vertex, texCoord);
 
+	RenderTargetDesc solidRTDesc{ DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, uint(canvasDesc.width), uint(canvasDesc.height), "diffuseRT"};
+	RenderTarget solidRT = RenderTarget::Create(renderDevice, solidRTDesc);
+
+	DepthStencilDesc depthDSVDesc{DXGI_FORMAT_R32_FLOAT, uint(canvasDesc.width), uint(canvasDesc.height), "depthDSV" };
+	DepthStencil depthDSV = DepthStencil::Create(renderDevice, depthDSVDesc);
+
 	struct OIT
 	{
 		Vector4f fragments[8];
 		float    depth[8];
 		uint     numFrags;
 	};
-	RWStructuredBufferDesc rovTestDesc(sizeof(OIT), canvasDesc.width * canvasDesc.height, "rovTest");
-	RWStructuredBuffer rovTest = RWStructuredBuffer::Create(renderDevice, rovTestDesc);
+	RWStructuredBufferDesc oitFragmentRT(sizeof(OIT), canvasDesc.width * canvasDesc.height, "oitRT");
+	RWStructuredBuffer oitRT = RWStructuredBuffer::Create(renderDevice, oitFragmentRT);
 
 	GraphicsPSODesc oitClearPSODesc;
 	oitClearPSODesc.rasterizer.CullMode = D3D11_CULL_NONE;
@@ -801,10 +808,17 @@ void H2Dx11()
 	PSODesc.rasterizer.CullMode = D3D11_CULL_BACK;
 	PSODesc.rasterizer.FillMode = D3D11_FILL_SOLID;
 	PSODesc.rasterizer.FrontCounterClockwise = false;
+	PSODesc.depthStencil.DepthEnable = true;
+	PSODesc.depthStencil.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+	PSODesc.depthStencil.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
 	PSODesc.topology = D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	PSODesc.vertexShader = vertexShader;
 	PSODesc.pixelShader = pixelShader;
-	GraphicsPSOPtr pso = GraphicsPSO::Create(renderDevice, PSODesc);
+	GraphicsPSOPtr solidPSO = GraphicsPSO::Create(renderDevice, PSODesc);
+		
+	PSODesc.pixelShader = pixelShaderOIT;
+	PSODesc.depthStencil.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	GraphicsPSOPtr oitPSO = GraphicsPSO::Create(renderDevice, PSODesc);
 
 	GraphicsPSODesc finalPSODesc;
 	finalPSODesc.rasterizer.CullMode = D3D11_CULL_NONE;
@@ -822,10 +836,17 @@ void H2Dx11()
 	viewport.MinDepth = 0.0f;
 	viewport.MaxDepth = 1.0f;
 
-	RenderPassDesc renderPassDesc;
-	renderPassDesc.viewport = viewport;
-	renderPassDesc.uavs[0] = rovTest.uav;
-	RenderPassPtr renderPass = RenderPass::Create(renderDevice, renderPassDesc);
+	RenderPassDesc solidPassDesc;
+	solidPassDesc.viewport = viewport;
+	solidPassDesc.rtvs[0] = solidRT.rtv;
+	solidPassDesc.dsv = depthDSV.dsv;
+	RenderPassPtr solidPass = RenderPass::Create(renderDevice, solidPassDesc);
+
+	RenderPassDesc oitPassDesc;
+	oitPassDesc.viewport = viewport;
+	oitPassDesc.uavs[0] = oitRT.uav;
+	oitPassDesc.dsv = depthDSV.dsv;
+	RenderPassPtr oitPass = RenderPass::Create(renderDevice, oitPassDesc);
 
 	RenderPassDesc finalizePassDesc;
 	finalizePassDesc.viewport = viewport;
@@ -866,18 +887,40 @@ void H2Dx11()
 			VIDF_GPU_EVENT(renderDevice, Frame);
 
 			{
-				VIDF_GPU_EVENT(renderDevice, Render);
+				VIDF_GPU_EVENT(renderDevice, Solid);
 
-				commandBuffer.BeginRenderPass(renderPass);
+				FLOAT black[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+				commandBuffer.GetContext()->ClearRenderTargetView(solidRT.rtv, black);
+				commandBuffer.GetContext()->ClearDepthStencilView(depthDSV.dsv, D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+				commandBuffer.BeginRenderPass(solidPass);
+				commandBuffer.SetConstantBuffer(0, viewCB.buffer);
+
+				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
+				commandBuffer.SetGraphicsPSO(solidPSO);
+				commandBuffer.GetContext()->PSSetSamplers(0, 1, &diffuseSS.Get());
+				for (const auto& batch : solidBatches)
+				{
+					commandBuffer.SetSRV(0, bspData.textures[batch.textureId].gpuTexture.srv);
+					commandBuffer.Draw(batch.count, batch.first);
+				}
+
+				commandBuffer.EndRenderPass();
+			}
+
+			{
+				VIDF_GPU_EVENT(renderDevice, OIT);
+
+				commandBuffer.BeginRenderPass(oitPass);
 				commandBuffer.SetConstantBuffer(0, viewCB.buffer);
 
 				commandBuffer.SetGraphicsPSO(oitClearPSO);
 				commandBuffer.Draw(3, 0);
 
 				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
-				commandBuffer.SetGraphicsPSO(pso);
+				commandBuffer.SetGraphicsPSO(oitPSO);
 				commandBuffer.GetContext()->PSSetSamplers(0, 1, &diffuseSS.Get());
-				for (const auto& batch : solidBatches)
+				for (const auto& batch : oitBatches)
 				{
 					commandBuffer.SetSRV(0, bspData.textures[batch.textureId].gpuTexture.srv);
 					commandBuffer.Draw(batch.count, batch.first);
@@ -891,7 +934,8 @@ void H2Dx11()
 
 				commandBuffer.BeginRenderPass(finalizePass);
 
-				commandBuffer.SetSRV(0, rovTest.srv);
+				commandBuffer.SetSRV(0, solidRT.srv);
+				commandBuffer.SetSRV(1, oitRT.srv);
 				commandBuffer.SetGraphicsPSO(finalPSO);
 				commandBuffer.Draw(3, 0);
 
