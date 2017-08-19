@@ -224,8 +224,9 @@ namespace h2
 	{
 		std::string name;
 		Texture2D   gpuTexture;
-		uint32      width  = 1;
-		uint32      heigth = 1;
+		uint        width  = 1;
+		uint        heigth = 1;
+		uint        flags = 0;
 	};
 
 
@@ -235,6 +236,8 @@ namespace h2
 	{
 		static_assert(StreamTraits<TStream>::IsInput(), "Only supports Input streams");
 		static_assert(StreamTraits<TStream>::IsBinary(), "Only supports Binary streams");
+
+		const size_t fileOffset = stream.tellg();
 
 		uint32 signature;
 		Stream(stream, signature);
@@ -249,6 +252,9 @@ namespace h2
 		m8Data.width = values[0];
 		Stream(stream, values.begin(), values.end());
 		m8Data.heigth = values[0];
+
+		stream.seekg(fileOffset + 1028);
+		Stream(stream, m8Data.flags);
 
 		return StreamResult::Ok;
 	}
@@ -296,13 +302,6 @@ namespace h2
 		const uint paletteSize = 256 * 3;
 		uint8 palette[paletteSize];
 		Stream(stream, palette);
-
-		uint32 flags;
-		uint32 content;
-		uint32 value;
-		Stream(stream, flags);
-		Stream(stream, content);
-		Stream(stream, value);
 
 		std::vector<uint32> buffer;
 		buffer.resize(bufferSize);
@@ -574,9 +573,10 @@ void H2Dx11()
 	fileManager.AddPak("data/h2dx11/Htic2-0.pak");
 	fileManager.AddPak("data/h2dx11/Htic2-1.pak");
 
-	FileManager::PakFileHandle map = fileManager.OpenFile("maps/ssdocks.bsp");
+	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/ssdocks.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/sstown.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/andslums.bsp");
+	FileManager::PakFileHandle map = fileManager.OpenFile("maps/andplaza.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/hive1.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/oglemine1.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/oglemine2.bsp");
@@ -664,6 +664,7 @@ void H2Dx11()
 		std::vector<Vertex> vertices;
 		uint first = 0;
 		uint count = 0;
+		uint textureId = 0;
 	};
 	std::vector<Batch> batches;
 	batches.resize(bspData.textures.size());
@@ -718,13 +719,26 @@ void H2Dx11()
 		}
 	}
 	std::vector<Vertex> vertices;
+	std::vector<Batch> solidBatches;
+	std::vector<Batch> oitBatches;
 	for (uint i = 0; i < batches.size(); ++i)
 	{
 		Batch& batch = batches[i];
 		batch.first = vertices.size();
 		batch.count = batch.vertices.size();
+		batch.textureId = i;
 		vertices.insert(vertices.end(), batch.vertices.begin(), batch.vertices.end());
 		batch.vertices.clear();
+
+		if (batch.count != 0)
+		{
+			const BspTexture& texture = bspData.textures[i];
+			const uint transparent = BspSurf_TRANS33 | BspSurf_TRANS66;
+			if (texture.flags & transparent)
+				oitBatches.push_back(batch);
+			else
+				solidBatches.push_back(batch);
+		}
 	}
 	VertexBuffer vertexBuffer = VertexBuffer::Create(
 		renderDevice,
@@ -863,10 +877,10 @@ void H2Dx11()
 				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
 				commandBuffer.SetGraphicsPSO(pso);
 				commandBuffer.GetContext()->PSSetSamplers(0, 1, &diffuseSS.Get());
-				for (uint i = 0; i < batches.size(); ++i)
+				for (const auto& batch : solidBatches)
 				{
-					commandBuffer.SetSRV(0, bspData.textures[i].gpuTexture.srv);
-					commandBuffer.Draw(batches[i].count, batches[i].first);
+					commandBuffer.SetSRV(0, bspData.textures[batch.textureId].gpuTexture.srv);
+					commandBuffer.Draw(batch.count, batch.first);
 				}
 
 				commandBuffer.EndRenderPass();
