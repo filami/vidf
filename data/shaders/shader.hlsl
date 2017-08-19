@@ -72,13 +72,13 @@ void psOITClear(float4 coord : SV_Position)
 void psMain(Output input, bool isFrontFace : SV_IsFrontFace)
 {
 	const float2 tc = frac(input.texCoord);
-	const float3 wNormal = normalize(input.wNormal * (isFrontFace ? 1.0 : -1.0));
+	const float3 wNormal = normalize(input.wNormal);
 	const float3 diffuseColor = diffuseSRV.Sample(diffuseSS, input.texCoord).rgb;
 
-	const float3 diffuse = saturate(dot(wNormal, normalize(float3(1, 2, 3))) * 0.5 + 0.5) * diffuseColor;
+	const float3 diffuse = /* saturate(dot(wNormal, normalize(float3(1, 2, 3))) * 0.5 + 0.5) */ diffuseColor;
 	const float3 emissive = (1 - pow(max(0, dot(normalize(view.viewPosition - input.wPosition), wNormal)), 1.0 / 8.0)) * float3(1, 0.75, 0.25) * 0.2;
 	const float filter = 0.65;
-		
+	
 	const uint pxIdx = input.hPosition.x + view.viewportSize.x * input.hPosition.y;
 	rovTestROV[pxIdx].numFrags = min(8, rovTestROV[pxIdx].numFrags + 1);
 	half4 fragment = half4(diffuse * filter + emissive, 1.0 - filter);

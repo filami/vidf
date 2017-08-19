@@ -227,4 +227,15 @@ template
 	}
 
 
+
+	template<typename TChar>
+	inline std::basic_string<TChar> ToLower(const TChar* str)
+	{
+		std::basic_string<TChar> out;
+		while (*str != 0)
+			out.push_back(std::tolower(*str++));
+		return out;
+	}
+
+
 }

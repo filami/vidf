@@ -183,8 +183,7 @@ namespace h2
 		PakFileHandle OpenFile(const char* fileName);
 
 	private:
-		// std::unordered_map<std::string, PakfileRef> files;
-		std::map<std::string, PakfileRef> files;
+		std::unordered_map<std::string, PakfileRef> files;
 	};
 
 
@@ -204,7 +203,7 @@ namespace h2
 		{
 			PakFile directory;
 			Stream(*fileHandle, directory);
-			files[directory.fileName] = PakfileRef{ fileHandle, directory.position };
+			files[ToLower(directory.fileName)] = PakfileRef{ fileHandle, directory.position };
 		}
 	}
 
@@ -212,7 +211,7 @@ namespace h2
 
 	FileManager::PakFileHandle FileManager::OpenFile(const char* fileName)
 	{
-		auto it = files.find(fileName);
+		auto it = files.find(ToLower(fileName));
 		if (it == files.end())
 			return PakFileHandle();
 		it->second.handle->seekg(it->second.offset);
@@ -592,6 +591,8 @@ void H2Dx11()
 			FileManager::PakFileHandle m8 = fileManager.OpenFile(m8Data.name.c_str());
 			if (m8)
 				StreamM8(*m8, m8Data);
+			else
+				__debugbreak();
 			textureId = bspData.textures.size();
 			bspData.textures.push_back(m8Data);
 			bspData.textureMap[texInfo.textureName] = textureId;
@@ -645,11 +646,20 @@ void H2Dx11()
 	Boxf bBox;
 	bBox.min = Vector3f(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 	bBox.max = Vector3f(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
-	std::vector<Vertex> vertices;
+	struct Batch
+	{
+		std::vector<Vertex> vertices;
+		uint first = 0;
+		uint count = 0;
+	};
+	std::vector<Batch> batches;
+	batches.resize(bspData.textures.size());
 	for (const BspFace& face : bspData.faces)
 	{
 		const BspTexInfo& texInfo = bspData.texInfo[face.textureInfo];
-		const Vector3f normal = Normalize(bspData.planes[face.plane].normal) * (face.planeSide ? 1.0f : -1.0f);
+		const Vector3f normal = Normalize(bspData.planes[face.plane].normal) * (face.planeSide ? -1.0f : 1.0f);
+		Batch& batch = batches[bspData.texInfoToTexture[face.textureInfo]];
+		std::vector<Vertex>& vertices = batch.vertices;
 
 		auto GetVertexId = [&bspData, face](uint i)
 		{
@@ -689,6 +699,15 @@ void H2Dx11()
 			vertices.push_back(v2);
 			v1 = v2;
 		}
+	}
+	std::vector<Vertex> vertices;
+	for (uint i = 0; i < batches.size(); ++i)
+	{
+		Batch& batch = batches[i];
+		batch.first = vertices.size();
+		batch.count = batch.vertices.size();
+		vertices.insert(vertices.end(), batch.vertices.begin(), batch.vertices.end());
+		batch.vertices.clear();
 	}
 	VertexBuffer vertexBuffer = VertexBuffer::Create(
 		renderDevice,
@@ -748,9 +767,9 @@ void H2Dx11()
 	GraphicsPSODesc PSODesc;
 	PSODesc.geometryDesc = elements;
 	PSODesc.numGeomDesc = ARRAYSIZE(elements);
-	PSODesc.rasterizer.CullMode = D3D11_CULL_NONE;
+	PSODesc.rasterizer.CullMode = D3D11_CULL_BACK;
 	PSODesc.rasterizer.FillMode = D3D11_FILL_SOLID;
-	PSODesc.rasterizer.FrontCounterClockwise = true;
+	PSODesc.rasterizer.FrontCounterClockwise = false;
 	PSODesc.topology = D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	PSODesc.vertexShader = vertexShader;
 	PSODesc.pixelShader = pixelShader;
@@ -826,9 +845,12 @@ void H2Dx11()
 
 				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
 				commandBuffer.SetGraphicsPSO(pso);
-				commandBuffer.SetSRV(0, bspData.textures[7].gpuTexture.srv);
 				commandBuffer.GetContext()->PSSetSamplers(0, 1, &diffuseSS.Get());
-				commandBuffer.Draw(vertices.size(), 0);
+				for (uint i = 0; i < batches.size(); ++i)
+				{
+					commandBuffer.SetSRV(0, bspData.textures[i].gpuTexture.srv);
+					commandBuffer.Draw(batches[i].count, batches[i].first);
+				}
 
 				commandBuffer.EndRenderPass();
 			}

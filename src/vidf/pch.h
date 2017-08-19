@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cctype>
 #include <string>
 #include <vector>
 #include <map>
