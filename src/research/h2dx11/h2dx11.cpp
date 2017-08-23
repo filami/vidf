@@ -953,6 +953,17 @@ void H2Dx11()
 
 	ShaderPtr shadowVertexShader = shaderManager.CompileShaderFile("data/shaders/shadows.hlsl", "vsMain", ShaderType::VertexShader);
 
+	D3D11_SAMPLER_DESC shadowSSDesc{};
+	shadowSSDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	shadowSSDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	shadowSSDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	shadowSSDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	shadowSSDesc.MinLOD = 0;
+	shadowSSDesc.MaxLOD = 0;
+	shadowSSDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+	PD3D11SamplerState shadowSS;
+	renderDevice->GetDevice()->CreateSamplerState(&shadowSSDesc, &shadowSS.Get());
+
 	GraphicsPSODesc shadowPSODesc = PSODesc;
 	shadowPSODesc.rasterizer.CullMode = D3D11_CULL_NONE;
 	shadowPSODesc.vertexShader = shadowVertexShader;
@@ -1036,6 +1047,7 @@ void H2Dx11()
 				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
 				commandBuffer.SetGraphicsPSO(solidPSO);
 				commandBuffer.GetContext()->PSSetSamplers(0, 1, &diffuseSS.Get());
+				commandBuffer.GetContext()->PSSetSamplers(1, 1, &shadowSS.Get());
 				commandBuffer.SetSRV(1, cascadeShadowMap.srv);
 				for (const auto& batch : solidBatches)
 				{
@@ -1058,6 +1070,7 @@ void H2Dx11()
 				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
 				commandBuffer.SetGraphicsPSO(oitPSO);
 				commandBuffer.GetContext()->PSSetSamplers(0, 1, &diffuseSS.Get());
+				commandBuffer.GetContext()->PSSetSamplers(1, 1, &shadowSS.Get());
 				commandBuffer.SetSRV(1, cascadeShadowMap.srv);
 				for (const auto& batch : oitBatches)
 				{

@@ -14,6 +14,7 @@ StructuredBuffer<OIT> rovTestSRV : register(t1);
 Texture2D diffuseSRV : register(t0);
 Texture2D shadowSRV : register(t1);
 SamplerState diffuseSS : register(s0);
+SamplerComparisonState shadowSS : register(s1);
 
 
 cbuffer viewCB : register(b0)
@@ -122,7 +123,8 @@ float4 psMain(Output input) : SV_Target
 	// float p = hp.z;
 	p *= 1 - (hp.x < 0 || hp.y < 0 || hp.x > 1 || hp.y > 1);
 
-	float3 l = diffuseSRV.Sample(diffuseSS, input.texCoord).rgb * dot(shadow.lightDir, wNormal) * p * 2.5;
+	float shadowMult = shadowSRV.SampleCmp(shadowSS, hp.xy, hp.z - 0.001);
+	float3 l = diffuseSRV.Sample(diffuseSS, input.texCoord).rgb * dot(shadow.lightDir, wNormal) * shadowMult * 2.5;
 
 	return float4(l, 1);
 }
