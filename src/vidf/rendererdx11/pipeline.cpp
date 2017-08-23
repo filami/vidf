@@ -9,8 +9,11 @@ namespace vidf { namespace dx11 {
 
 	GraphicsPSOPtr GraphicsPSO::Create(RenderDevicePtr renderDevice, const GraphicsPSODesc& desc)
 	{
+		// valid vertex shader
 		assert(desc.vertexShader && desc.vertexShader->IsValid() && desc.vertexShader->GetShaderType() == ShaderType::VertexShader);
-		assert(desc.pixelShader && desc.pixelShader->IsValid() && desc.pixelShader->GetShaderType() == ShaderType::PixelShader);
+		// either valid pixel shader or not pixel shader at all
+		assert(!desc.pixelShader || (desc.pixelShader && desc.pixelShader->IsValid() && desc.pixelShader->GetShaderType() == ShaderType::PixelShader));
+		// valid primitive
 		assert(desc.topology >= D3D_PRIMITIVE_TOPOLOGY_POINTLIST && desc.topology <= D3D_PRIMITIVE_TOPOLOGY_32_CONTROL_POINT_PATCHLIST);
 
 		PD3D11Device3 device = renderDevice->GetDevice3();
@@ -28,7 +31,8 @@ namespace vidf { namespace dx11 {
 		device->CreateDepthStencilState(&desc.depthStencil, &pso->depthStencil.Get());
 		device->CreateBlendState1(&desc.blend, &pso->blend.Get());
 		pso->vertexShader = desc.vertexShader->GetVertexShader();
-		pso->pixelShader = desc.pixelShader->GetPixelShader();
+		if (desc.pixelShader)
+			pso->pixelShader = desc.pixelShader->GetPixelShader();
 		pso->topology = desc.topology;
 
 		return pso;

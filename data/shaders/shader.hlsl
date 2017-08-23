@@ -12,6 +12,7 @@ Texture2D solidSRV : register(t0);
 StructuredBuffer<OIT> rovTestSRV : register(t1);
 
 Texture2D diffuseSRV : register(t0);
+Texture2D shadowSRV : register(t1);
 SamplerState diffuseSS : register(s0);
 
 
@@ -26,6 +27,18 @@ cbuffer viewCB : register(b0)
 		float3 viewPosition;
 		float _;
 	} view;
+};
+
+
+
+cbuffer cascadeShadowCB : register(b1)
+{
+	struct
+	{
+		float4x4 projTM;
+		float4x4 invProjTM;
+		float3 lightDir;
+	} shadow;
 };
 
 
@@ -53,6 +66,7 @@ Output vsMain(Input input)
 	output.wPosition = input.position;
 	output.wNormal = input.normal.xyz;
 	output.texCoord = input.texCoord;
+
 	return output;
 }
 
@@ -73,8 +87,44 @@ void psOITClear(float4 coord : SV_Position)
 
 float4 psMain(Output input) : SV_Target
 {
-	const float3 diffuseColor = diffuseSRV.Sample(diffuseSS, input.texCoord).rgb;
+	const float3 wNormal = normalize(input.wNormal);
+
+	/*
+	float4 hp = mul(shadow.projTM, float4(input.wPosition, 1.0));
+	hp /= hp.w;
+	float p = (frac(hp.x * 8) > 0.5) * (frac(hp.y * 8) > 0.5) * 0.75 + 0.25;
+	p *= 1 - (hp.x < -1 || hp.y < -1 || hp.x > 1 || hp.y > 1);
+	return p;
+	*/
+	/*
+	float2 hp = mul(shadow.projTM, float4(input.wPosition, 1.0)).xy * 0.5 + 0.5;
+	float p = (frac(hp.x * 16) > 0.5) * (frac(hp.y * 16) > 0.5) * 0.75 + 0.25;
+	p *= 1 - (hp.x < 0 || hp.y < 0 || hp.x > 1 || hp.y > 1);
+	return p;
+	*/
+	// const float3 diffuseColor = diffuseSRV.Sample(diffuseSS, input.texCoord).rgb;
+	// return float4(diffuseColor, 1.0);
+	/*
+	float2 hp = mul(shadow.projTM, float4(input.wPosition, 1.0)).xy*0.5+0.5;
+	const float3 diffuseColor = shadowSRV.Sample(diffuseSS, hp).rrr;
 	return float4(diffuseColor, 1.0);
+	*/
+
+	// float3 hp = mul(shadow.projTM, float4(input.wPosition, 1.0)).xy * float2(1, -1, 1) * 0.5 + 0.5;
+	float3 hp = mul(shadow.projTM, float4(input.wPosition, 1.0)).xyz;
+	hp.y *= -1.0;
+	// hp.z = 1.0 - hp.z;
+	hp.xy = hp.xy * 0.5 + 0.5;
+	// float p = shadowSRV.Sample(diffuseSS, hp.xy).r;
+	// float p = 1 - (shadowSRV.Sample(diffuseSS, hp.xy).r - hp.z) * 128.0;
+	float p = shadowSRV.Sample(diffuseSS, hp.xy).r + 0.001 > hp.z;
+	// float p = frac(shadowSRV.Sample(diffuseSS, hp.xy).r * 64.0) * 0.5 + 0.5;
+	// float p = hp.z;
+	p *= 1 - (hp.x < 0 || hp.y < 0 || hp.x > 1 || hp.y > 1);
+
+	float3 l = diffuseSRV.Sample(diffuseSS, input.texCoord).rgb * dot(shadow.lightDir, wNormal) * p * 2.5;
+
+	return float4(l, 1);
 }
 
 

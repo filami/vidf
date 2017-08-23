@@ -562,6 +562,82 @@ namespace h2
 	}
 
 
+	//////////////////////////////////////////////////////////////////////////
+
+
+
+	// const Vector3f lightDir = Normalize(Vector3f(1.0f, 2.0f, 3.0f));
+	const Vector3f lightDir = Normalize(Vector3f(1.0f, 3.0f, 7.0f));
+	// const Vector3f lightDir = Normalize(Vector3f(1.0f, 0.0f, 2.0f));
+	const uint cascadeShadowSize = 1024 * 4;
+	const float cascadeShadowLength = 2048.0f * 2;
+	// const float cascadeShadowLength = 256.0f;
+	// const float cascadeShadowLength = 512.0f;
+	// const float cascadeShadowDepth = 2048.0f * 2.0f;
+	// const float cascadeShadowDepth = 256.0f;
+	const float cascadeShadowDepth = 1024.0f * 4.0f;
+	const DXGI_FORMAT cascadeShadowFormat = DXGI_FORMAT_R16_UNORM;
+
+
+	struct CascadeShadowConsts
+	{
+		Matrix44f tm;
+		Matrix44f itm;
+		Vector3f lightDir;
+		float _;
+	};
+
+
+
+	Matrix44f MakeCascadeProjTM(Vector3f viewPosition, Vector3f lightDir, int level)
+	{
+		const Vector3f up = Vector3f(0, 1, 0);
+
+		/*
+		Matrix44f tm;		
+		Vector3f zAxis = Normalize(lightDir);
+		Vector3f xAxis = Normalize(Cross(up, zAxis));
+		Vector3f yAxis = Cross(zAxis, xAxis);
+
+		// Vector3f pos = viewPosition - zAxis * cascadeShadowDepth * 0.5f;
+		Vector3f pos = Vector3f(0.0f, 0.0f, -cascadeShadowDepth*0.5f);
+		const Vector3f nxAxis = xAxis / cascadeShadowLength;
+		const Vector3f nyAxis = yAxis / cascadeShadowLength;
+		const Vector3f nzAxis = zAxis / cascadeShadowDepth;
+		tm.m00 = nxAxis.x; tm.m01 = nyAxis.x; tm.m02 = nzAxis.x; tm.m03 = 0;
+		tm.m10 = nxAxis.y; tm.m11 = nyAxis.y; tm.m12 = nzAxis.y; tm.m13 = 0;
+		tm.m20 = nxAxis.z; tm.m21 = nyAxis.z; tm.m22 = nzAxis.z; tm.m23 = 0;
+		tm.m30 = -Dot(nxAxis, pos); tm.m31 = -Dot(nyAxis, pos); tm.m32 = -Dot(nzAxis, pos); tm.m33 = 1.0f;
+		*/
+
+		Vector3f pos = Vector3f(0.0f, 0.0f, cascadeShadowDepth*0.5f);
+		Vector3f zAxis = Normalize(-lightDir);
+		Vector3f xAxis = Normalize(Cross(up, zAxis));
+		Vector3f yAxis = Cross(zAxis, xAxis);
+
+		Matrix44f tm0;
+		tm0.m00 = xAxis.x; tm0.m01 = yAxis.x; tm0.m02 = zAxis.x; tm0.m03 = 0;
+		tm0.m10 = xAxis.y; tm0.m11 = yAxis.y; tm0.m12 = zAxis.y; tm0.m13 = 0;
+		tm0.m20 = xAxis.z; tm0.m21 = yAxis.z; tm0.m22 = zAxis.z; tm0.m23 = 0;
+		tm0.m30 = -Dot(xAxis, pos); tm0.m31 = -Dot(yAxis, pos); tm0.m32 = -Dot(zAxis, pos); tm0.m33 = 1.0f;
+
+		Matrix44f tm1(zero);
+		tm1.m00 = 1.0f / cascadeShadowLength;
+		tm1.m11 = 1.0f / cascadeShadowLength;
+		tm1.m22 = 1.0f / cascadeShadowDepth;
+		// tm1.m22 = 1.0f / 128.0f;
+		tm1.m33 = 1.0f;
+
+		Matrix44f tm = Mul(tm0, tm1);
+
+		return tm;
+	}
+
+
+
+	//////////////////////////////////////////////////////////////////////////
+
+
 }
 
 
@@ -573,11 +649,13 @@ void H2Dx11()
 	fileManager.AddPak("data/h2dx11/Htic2-0.pak");
 	fileManager.AddPak("data/h2dx11/Htic2-1.pak");
 
-	FileManager::PakFileHandle map = fileManager.OpenFile("maps/ssdocks.bsp");
-	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/sstown.bsp");
+	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/ssdocks.bsp");
+	FileManager::PakFileHandle map = fileManager.OpenFile("maps/sstown.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/andplaza.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/andslums.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/hive1.bsp");
+	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/kellcaves.bsp");
+	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/canyon.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/oglemine1.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/oglemine2.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/tutorial.bsp");
@@ -816,9 +894,10 @@ void H2Dx11()
 	PSODesc.pixelShader = pixelShader;
 	GraphicsPSOPtr solidPSO = GraphicsPSO::Create(renderDevice, PSODesc);
 		
-	PSODesc.pixelShader = pixelShaderOIT;
-	PSODesc.depthStencil.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	GraphicsPSOPtr oitPSO = GraphicsPSO::Create(renderDevice, PSODesc);
+	GraphicsPSODesc oitPSODesc = PSODesc;
+	oitPSODesc.pixelShader = pixelShaderOIT;
+	oitPSODesc.depthStencil.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	GraphicsPSOPtr oitPSO = GraphicsPSO::Create(renderDevice, oitPSODesc);
 
 	GraphicsPSODesc finalPSODesc;
 	finalPSODesc.rasterizer.CullMode = D3D11_CULL_NONE;
@@ -855,7 +934,8 @@ void H2Dx11()
 
 	OrbitalCamera camera(canvas);
 	camera.SetPerspective(1.4f, 1.0f, 10000.0f);
-	camera.SetCamera((bBox.max + bBox.min)*0.5f, Quaternionf(zero), Distance(bBox.min, bBox.max));
+	// camera.SetCamera((bBox.max + bBox.min)*0.5f, Quaternionf(zero), Distance(bBox.min, bBox.max));
+	camera.SetCamera(Vector3f(zero), Quaternionf(zero), Distance(bBox.min, bBox.max));
 
 	struct ViewConsts
 	{
@@ -868,6 +948,37 @@ void H2Dx11()
 	};
 	ConstantBufferDesc viewCBDesc(sizeof(ViewConsts), "viewCB");
 	ConstantBuffer viewCB = ConstantBuffer::Create(renderDevice, viewCBDesc);
+
+	//////////////////////////////////////////////////////////////////////////
+
+	ShaderPtr shadowVertexShader = shaderManager.CompileShaderFile("data/shaders/shadows.hlsl", "vsMain", ShaderType::VertexShader);
+
+	GraphicsPSODesc shadowPSODesc = PSODesc;
+	shadowPSODesc.rasterizer.CullMode = D3D11_CULL_NONE;
+	shadowPSODesc.vertexShader = shadowVertexShader;
+	shadowPSODesc.pixelShader.reset();
+	GraphicsPSOPtr shadowPSO = GraphicsPSO::Create(renderDevice, shadowPSODesc);
+
+	D3D11_VIEWPORT cascadeShadowViewport{};
+	cascadeShadowViewport.TopLeftX = 0;
+	cascadeShadowViewport.TopLeftY = 0;
+	cascadeShadowViewport.Width = cascadeShadowSize;
+	cascadeShadowViewport.Height = cascadeShadowSize;
+	cascadeShadowViewport.MinDepth = 0.0f;
+	cascadeShadowViewport.MaxDepth = 1.0f;
+
+	DepthStencilDesc cascadeShadowMapDesc{ cascadeShadowFormat, cascadeShadowSize, cascadeShadowSize, "cascadeShadowMap" };
+	DepthStencil cascadeShadowMap = DepthStencil::Create(renderDevice, cascadeShadowMapDesc);
+
+	ConstantBufferDesc cascadeShadowsCBDesc(sizeof(CascadeShadowConsts), "cascadeShadowdCB");
+	ConstantBuffer cascadeShadowsCB = ConstantBuffer::Create(renderDevice, cascadeShadowsCBDesc);
+
+	RenderPassDesc cascadeShadowMapPassDesc;
+	cascadeShadowMapPassDesc.viewport = cascadeShadowViewport;
+	cascadeShadowMapPassDesc.dsv = cascadeShadowMap.dsv;
+	RenderPassPtr cascadeShadowMapPass = RenderPass::Create(renderDevice, cascadeShadowMapPassDesc);
+
+	//////////////////////////////////////////////////////////////////////////
 
 	TimeCounter counter;
 	while (UpdateSystemMessages() == SystemMessageResult::Continue)
@@ -883,8 +994,33 @@ void H2Dx11()
 		viewConsts.viewPosition = camera.Position();
 		viewCB.Update(renderDevice->GetContext(), viewConsts);
 
+		CascadeShadowConsts shadowConts;
+		shadowConts.tm = MakeCascadeProjTM(camera.Position(), lightDir, 0);
+		shadowConts.itm = Inverse(shadowConts.tm);
+		shadowConts.lightDir = lightDir;
+		cascadeShadowsCB.Update(renderDevice->GetContext(), shadowConts);
+
 		{
 			VIDF_GPU_EVENT(renderDevice, Frame);
+
+			{
+				VIDF_GPU_EVENT(renderDevice, CascadeShadows);
+
+				commandBuffer.GetContext()->ClearDepthStencilView(cascadeShadowMap.dsv, D3D11_CLEAR_DEPTH, 1.0f, 0);
+				commandBuffer.BeginRenderPass(cascadeShadowMapPass);
+				commandBuffer.SetConstantBuffer(0, viewCB.buffer);
+				commandBuffer.SetConstantBuffer(1, cascadeShadowsCB.buffer);
+
+				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
+				commandBuffer.SetGraphicsPSO(shadowPSO);
+				commandBuffer.GetContext()->PSSetSamplers(0, 1, &diffuseSS.Get());
+				for (const auto& batch : solidBatches)
+				{
+					commandBuffer.SetSRV(0, bspData.textures[batch.textureId].gpuTexture.srv);
+					commandBuffer.Draw(batch.count, batch.first);
+				}
+				commandBuffer.EndRenderPass();
+			}
 
 			{
 				VIDF_GPU_EVENT(renderDevice, Solid);
@@ -895,10 +1031,12 @@ void H2Dx11()
 
 				commandBuffer.BeginRenderPass(solidPass);
 				commandBuffer.SetConstantBuffer(0, viewCB.buffer);
+				commandBuffer.SetConstantBuffer(1, cascadeShadowsCB.buffer);
 
 				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
 				commandBuffer.SetGraphicsPSO(solidPSO);
 				commandBuffer.GetContext()->PSSetSamplers(0, 1, &diffuseSS.Get());
+				commandBuffer.SetSRV(1, cascadeShadowMap.srv);
 				for (const auto& batch : solidBatches)
 				{
 					commandBuffer.SetSRV(0, bspData.textures[batch.textureId].gpuTexture.srv);
@@ -920,6 +1058,7 @@ void H2Dx11()
 				commandBuffer.SetVertexStream(0, vertexBuffer.buffer, sizeof(Vertex));
 				commandBuffer.SetGraphicsPSO(oitPSO);
 				commandBuffer.GetContext()->PSSetSamplers(0, 1, &diffuseSS.Get());
+				commandBuffer.SetSRV(1, cascadeShadowMap.srv);
 				for (const auto& batch : oitBatches)
 				{
 					commandBuffer.SetSRV(0, bspData.textures[batch.textureId].gpuTexture.srv);
