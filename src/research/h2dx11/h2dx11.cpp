@@ -573,7 +573,7 @@ namespace h2
 
 
 	// const Vector3f lightDir = Normalize(Vector3f(1.0f, 2.0f, 3.0f));
-	const Vector3f lightDir = Normalize(Vector3f(1.0f, 3.0f, 7.0f));
+	// const Vector3f lightDir = Normalize(Vector3f(1.0f, 3.0f, 7.0f));
 	// const Vector3f lightDir = Normalize(Vector3f(1.0f, 0.0f, 2.0f));
 	const uint cascadeShadowSize = 1024 * 4;
 	const float cascadeShadowLength = 2048.0f * 2;
@@ -591,6 +591,8 @@ namespace h2
 		Matrix44f itm;
 		Vector3f lightDir;
 		float _;
+		Vector2f texelSize;
+		Vector2f __;
 	};
 
 
@@ -600,9 +602,15 @@ namespace h2
 		const Vector3f up = Vector3f(0, 1, 0);
 
 		Vector3f pos = Vector3f(0.0f, 0.0f, cascadeShadowDepth*0.5f);
-		Vector3f zAxis = Normalize(-lightDir);
-		Vector3f xAxis = Normalize(Cross(up, zAxis));
-		Vector3f yAxis = Cross(zAxis, xAxis);
+		Vector3f zAxis = up;
+		Vector3f xAxis = Vector3f(1.0f, 0.0f, 0.0f);
+		Vector3f yAxis = Vector3f(0.0f, 1.0f, 0.0f);
+		if (std::abs(Dot(lightDir, up)) < 0.99f)
+		{
+			zAxis = Normalize(-lightDir);
+			xAxis = Normalize(Cross(up, zAxis));
+			yAxis = Cross(zAxis, xAxis);
+		}
 
 		Matrix44f tm0;
 		tm0.m00 = xAxis.x; tm0.m01 = yAxis.x; tm0.m02 = zAxis.x; tm0.m03 = 0;
@@ -611,8 +619,8 @@ namespace h2
 		tm0.m30 = -Dot(xAxis, pos); tm0.m31 = -Dot(yAxis, pos); tm0.m32 = -Dot(zAxis, pos); tm0.m33 = 1.0f;
 
 		Matrix44f tm1(zero);
-		tm1.m00 = 1.0f / cascadeShadowLength;
-		tm1.m11 = 1.0f / cascadeShadowLength;
+		tm1.m00 = 1.0f / cascadeShadowLength * 0.5f;
+		tm1.m11 = 1.0f / cascadeShadowLength * 0.5f;
 		tm1.m22 = 1.0f / cascadeShadowDepth;
 		// tm1.m22 = 1.0f / 128.0f;
 		tm1.m33 = 1.0f;
@@ -978,6 +986,9 @@ void H2Dx11()
 	cascadeShadowMapPassDesc.dsv = cascadeShadowMap.dsv;
 	RenderPassPtr cascadeShadowMapPass = RenderPass::Create(renderDevice, cascadeShadowMapPassDesc);
 
+	float lightTheta = 0.0f;
+	float lightAlpha = 1.0f;
+
 	//////////////////////////////////////////////////////////////////////////
 
 	TimeCounter counter;
@@ -985,6 +996,19 @@ void H2Dx11()
 	{
 		Time deltaTime = counter.GetElapsed();
 		camera.Update(deltaTime);
+
+		if (GetAsyncKeyState(VK_UP) & 0x8000)
+			lightAlpha += deltaTime.AsFloat() * 0.5f;
+		if (GetAsyncKeyState(VK_DOWN) & 0x8000)
+			lightAlpha -= deltaTime.AsFloat() * 0.5f;
+		if (GetAsyncKeyState(VK_LEFT) & 0x8000)
+			lightTheta += deltaTime.AsFloat() * 0.5f;
+		if (GetAsyncKeyState(VK_RIGHT) & 0x8000)
+			lightTheta -= deltaTime.AsFloat() * 0.5f;
+		Vector3f lightDir;
+		lightDir.x = std::cos(lightTheta) * std::cos(lightAlpha);
+		lightDir.y = std::sin(lightTheta) * std::cos(lightAlpha);
+		lightDir.z = std::sin(lightAlpha);
 
 		ViewConsts viewConsts;
 		viewConsts.projTM = camera.PerspectiveMatrix();
@@ -998,6 +1022,8 @@ void H2Dx11()
 		shadowConts.tm = MakeCascadeProjTM(camera.Position(), lightDir, 0);
 		shadowConts.itm = Inverse(shadowConts.tm);
 		shadowConts.lightDir = lightDir;
+		shadowConts.texelSize.x = cascadeShadowSize / cascadeShadowLength;
+		shadowConts.texelSize.y = shadowConts.texelSize.x;
 		cascadeShadowsCB.Update(renderDevice->GetContext(), shadowConts);
 
 		{
