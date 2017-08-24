@@ -124,7 +124,7 @@ float4 psMain(Output input) : SV_Target
 	p *= 1 - (hp.x < 0 || hp.y < 0 || hp.x > 1 || hp.y > 1);
 
 	float shadowMult = shadowSRV.SampleCmp(shadowSS, hp.xy, hp.z - 0.001);
-	float3 l = diffuseSRV.Sample(diffuseSS, input.texCoord).rgb * dot(shadow.lightDir, wNormal) * shadowMult * 2.5;
+	float3 l = diffuseSRV.Sample(diffuseSS, input.texCoord).rgb * dot(shadow.lightDir, wNormal) * shadowMult * 5.5;
 
 	return float4(l, 1);
 }
@@ -138,7 +138,12 @@ void psMainOIT(Output input)
 	const float3 wNormal = normalize(input.wNormal);
 	const float3 diffuseColor = diffuseSRV.Sample(diffuseSS, input.texCoord).rgb;
 
-	const float3 diffuse = diffuseColor;
+	float3 hp = mul(shadow.projTM, float4(input.wPosition, 1.0)).xyz;
+	hp.y *= -1.0;
+	hp.xy = hp.xy * 0.5 + 0.5;
+	float shadowMult = shadowSRV.SampleCmp(shadowSS, hp.xy, hp.z - 0.001);
+
+	const float3 diffuse = diffuseColor * dot(shadow.lightDir, wNormal) * shadowMult * 5.5;
 	// const float3 emissive = (1 - pow(max(0, dot(normalize(view.viewPosition - input.wPosition), wNormal)), 1.0 / 8.0)) * float3(1, 0.75, 0.25) * 0.2;
 	const float3 emissive = 0;
 	const float filter = (1 - pow(max(0, dot(normalize(view.viewPosition - input.wPosition), wNormal)), 1.0 / 4.0));

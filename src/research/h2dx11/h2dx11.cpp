@@ -16,6 +16,9 @@ using namespace proto;
 class Dx11CanvasListener : public CanvasListener
 {
 public:
+	Dx11CanvasListener(ShaderManager& _shaderManager)
+		: shaderManager(_shaderManager) {}
+
 	virtual void Close()
 	{
 		PostQuitMessage();
@@ -24,7 +27,10 @@ public:
 	{
 		if (keyCode == KeyCode::Escape)
 			PostQuitMessage();
+		else if (keyCode == KeyCode::F5)
+			shaderManager.RecompileShaders();
 	}
+	ShaderManager& shaderManager;
 };
 
 
@@ -593,23 +599,6 @@ namespace h2
 	{
 		const Vector3f up = Vector3f(0, 1, 0);
 
-		/*
-		Matrix44f tm;		
-		Vector3f zAxis = Normalize(lightDir);
-		Vector3f xAxis = Normalize(Cross(up, zAxis));
-		Vector3f yAxis = Cross(zAxis, xAxis);
-
-		// Vector3f pos = viewPosition - zAxis * cascadeShadowDepth * 0.5f;
-		Vector3f pos = Vector3f(0.0f, 0.0f, -cascadeShadowDepth*0.5f);
-		const Vector3f nxAxis = xAxis / cascadeShadowLength;
-		const Vector3f nyAxis = yAxis / cascadeShadowLength;
-		const Vector3f nzAxis = zAxis / cascadeShadowDepth;
-		tm.m00 = nxAxis.x; tm.m01 = nyAxis.x; tm.m02 = nzAxis.x; tm.m03 = 0;
-		tm.m10 = nxAxis.y; tm.m11 = nyAxis.y; tm.m12 = nzAxis.y; tm.m13 = 0;
-		tm.m20 = nxAxis.z; tm.m21 = nyAxis.z; tm.m22 = nzAxis.z; tm.m23 = 0;
-		tm.m30 = -Dot(nxAxis, pos); tm.m31 = -Dot(nyAxis, pos); tm.m32 = -Dot(nzAxis, pos); tm.m33 = 1.0f;
-		*/
-
 		Vector3f pos = Vector3f(0.0f, 0.0f, cascadeShadowDepth*0.5f);
 		Vector3f zAxis = Normalize(-lightDir);
 		Vector3f xAxis = Normalize(Cross(up, zAxis));
@@ -650,9 +639,9 @@ void H2Dx11()
 	fileManager.AddPak("data/h2dx11/Htic2-1.pak");
 
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/ssdocks.bsp");
-	FileManager::PakFileHandle map = fileManager.OpenFile("maps/sstown.bsp");
+	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/sstown.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/andplaza.bsp");
-	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/andslums.bsp");
+	FileManager::PakFileHandle map = fileManager.OpenFile("maps/andslums.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/hive1.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/kellcaves.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/canyon.bsp");
@@ -709,7 +698,7 @@ void H2Dx11()
 	ShaderManager shaderManager(renderDevice);
 	CommandBuffer commandBuffer(renderDevice);
 
-	Dx11CanvasListener canvasListener;
+	Dx11CanvasListener canvasListener{shaderManager};
 
 	CanvasDesc canvasDesc{};
 	canvasDesc.width = width;
@@ -1063,6 +1052,7 @@ void H2Dx11()
 
 				commandBuffer.BeginRenderPass(oitPass);
 				commandBuffer.SetConstantBuffer(0, viewCB.buffer);
+				commandBuffer.SetConstantBuffer(1, cascadeShadowsCB.buffer);
 
 				commandBuffer.SetGraphicsPSO(oitClearPSO);
 				commandBuffer.Draw(3, 0);

@@ -30,6 +30,57 @@ namespace vidf { namespace dx11 {
 
 
 
+	void Shader::Compile(RenderDevicePtr renderDevice)
+	{
+		std::wstring wPath = ToWString(filePath.c_str());
+		char nameBuffer[512]{};
+		sprintf_s(nameBuffer, "%s:%s", filePath, entryPoint.c_str());
+
+		const char* target = nullptr;
+		switch (type)
+		{
+		case ShaderType::VertexShader: target = "vs_5_0"; break;
+		case ShaderType::PixelShader: target = "ps_5_0"; break;
+		};
+
+		UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_WARNINGS_ARE_ERRORS;
+
+		std::cout << filePath.c_str() << std::endl;
+
+		PD3DBlob output;
+		PD3DBlob _byteCode;
+		HRESULT hr = D3DCompileFromFile(
+			wPath.c_str(), nullptr, nullptr, entryPoint.c_str(), target, flags, 0,
+			&_byteCode.Get(), &output.Get());
+		if (output)
+			std::cout << (const char*)output->GetBufferPointer() << std::endl;
+		if (hr != S_OK)
+			return;
+
+		switch (type)
+		{
+		case ShaderType::VertexShader:
+		{
+			ID3D11VertexShader* gpuShader{};
+			renderDevice->GetDevice()->CreateVertexShader(_byteCode->GetBufferPointer(), _byteCode->GetBufferSize(), nullptr, &gpuShader);
+			shader = gpuShader;
+			byteCode = _byteCode;
+			break;
+		}
+		case ShaderType::PixelShader:
+		{
+			ID3D11PixelShader* gpuShader{};
+			renderDevice->GetDevice()->CreatePixelShader(_byteCode->GetBufferPointer(), _byteCode->GetBufferSize(), nullptr, &gpuShader);
+			shader = gpuShader;
+			break;
+		}
+		};
+		state = ShaderState::Ready;
+		NameObject(shader, nameBuffer);
+	}
+
+
+
 	ShaderManager::ShaderManager(RenderDevicePtr _renderDevice)
 		: renderDevice(_renderDevice)
 	{
@@ -39,56 +90,24 @@ namespace vidf { namespace dx11 {
 
 	ShaderPtr ShaderManager::CompileShaderFile(const char* path, const char* entryPoint, ShaderType shaderType)
 	{
-		std::wstring wPath = ToWString(path);
-		char nameBuffer[512]{};
-		sprintf_s(nameBuffer, "%s:%s", path, entryPoint);
-
-		const char* target = nullptr;
-		switch (shaderType)
-		{
-		case ShaderType::VertexShader: target = "vs_5_0"; break;
-		case ShaderType::PixelShader: target = "ps_5_0"; break;
-		};
-
-		UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_WARNINGS_ARE_ERRORS;
-
-		std::cout << path << std::endl;
-		
-		PD3DBlob output;
-		PD3DBlob byteCode;
-		HRESULT hr = D3DCompileFromFile(
-			wPath.c_str(), nullptr, nullptr, entryPoint, target, flags, 0,
-			&byteCode.Get(), &output.Get());
-		if (output)
-			std::cout << (const char*)output->GetBufferPointer() << std::endl;
-		if (hr != S_OK)
-			return ShaderPtr();
-
 		ShaderPtr shader = std::make_shared<Shader>();
+		shader->filePath = path;
+		shader->entryPoint = entryPoint;
 		shader->type = shaderType;
 
-		switch (shaderType)
-		{
-		case ShaderType::VertexShader:
-		{
-			ID3D11VertexShader* gpuShader{};
-			renderDevice->GetDevice()->CreateVertexShader(byteCode->GetBufferPointer(), byteCode->GetBufferSize(), nullptr, &gpuShader);
-			shader->shader = gpuShader;
-			shader->byteCode = byteCode;
-			break;
-		}
-		case ShaderType::PixelShader:
-		{
-			ID3D11PixelShader* gpuShader{};
-			renderDevice->GetDevice()->CreatePixelShader(byteCode->GetBufferPointer(), byteCode->GetBufferSize(), nullptr, &gpuShader);
-			shader->shader = gpuShader;
-			break;
-		}
-		};
-		shader->state = ShaderState::Ready;
-		NameObject(shader->shader, nameBuffer);
+		shader->Compile(renderDevice);
+
+		shaders.push_back(shader);
 
 		return shader;
+	}
+
+
+
+	void ShaderManager::RecompileShaders()
+	{
+		for (auto& shader : shaders)
+			shader->Compile(renderDevice);
 	}
 
 

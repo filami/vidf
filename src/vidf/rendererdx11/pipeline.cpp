@@ -30,9 +30,8 @@ namespace vidf { namespace dx11 {
 		device->CreateRasterizerState2(&desc.rasterizer, &pso->rasterizer.Get());
 		device->CreateDepthStencilState(&desc.depthStencil, &pso->depthStencil.Get());
 		device->CreateBlendState1(&desc.blend, &pso->blend.Get());
-		pso->vertexShader = desc.vertexShader->GetVertexShader();
-		if (desc.pixelShader)
-			pso->pixelShader = desc.pixelShader->GetPixelShader();
+		pso->vertexShader = desc.vertexShader;
+		pso->pixelShader = desc.pixelShader;
 		pso->topology = desc.topology;
 
 		return pso;
@@ -190,8 +189,9 @@ namespace vidf { namespace dx11 {
 		context->RSSetState(currentGraphicsPSO->rasterizer);
 		context->OMSetBlendState(currentGraphicsPSO->blend, nullptr, ~0);
 		context->IASetPrimitiveTopology(currentGraphicsPSO->topology);
-		context->VSSetShader(currentGraphicsPSO->vertexShader, nullptr, 0);
-		context->PSSetShader(currentGraphicsPSO->pixelShader, nullptr, 0);
+		context->VSSetShader(currentGraphicsPSO->vertexShader->GetVertexShader(), nullptr, 0);
+		if (currentGraphicsPSO->pixelShader)
+			context->PSSetShader(currentGraphicsPSO->pixelShader->GetPixelShader(), nullptr, 0);
 		context->VSSetConstantBuffers(0, numCBs, cbsArray.data());
 		context->PSSetConstantBuffers(0, numCBs, cbsArray.data());
 		context->VSSetShaderResources(0, numSrvs, srvsArray.data());

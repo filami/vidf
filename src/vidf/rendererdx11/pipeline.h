@@ -31,8 +31,8 @@ namespace vidf { namespace dx11
 		PD3D11RasterizerState2  rasterizer;
 		PD3D11DepthStencilState depthStencil;
 		PD3D11BlendState1       blend;
-		PD3D11VertexShader      vertexShader;
-		PD3D11PixelShader       pixelShader;
+		ShaderPtr               vertexShader;
+		ShaderPtr               pixelShader;
 		D3D_PRIMITIVE_TOPOLOGY  topology;
 
 		static GraphicsPSOPtr Create(RenderDevicePtr renderDevice, const GraphicsPSODesc& desc);
