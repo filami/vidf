@@ -963,6 +963,9 @@ void H2Dx11()
 
 	GraphicsPSODesc shadowPSODesc = PSODesc;
 	shadowPSODesc.rasterizer.CullMode = D3D11_CULL_NONE;
+	shadowPSODesc.rasterizer.DepthBias = 2;
+	shadowPSODesc.rasterizer.SlopeScaledDepthBias = 1.0f;
+	shadowPSODesc.rasterizer.DepthBiasClamp = 16.0f;
 	shadowPSODesc.vertexShader = shadowVertexShader;
 	shadowPSODesc.pixelShader.reset();
 	GraphicsPSOPtr shadowPSO = GraphicsPSO::Create(renderDevice, shadowPSODesc);
@@ -1005,6 +1008,8 @@ void H2Dx11()
 			lightTheta += deltaTime.AsFloat() * 0.5f;
 		if (GetAsyncKeyState(VK_RIGHT) & 0x8000)
 			lightTheta -= deltaTime.AsFloat() * 0.5f;
+		if (GetAsyncKeyState('R') & 0x8000)
+			lightAlpha = PI * 0.5f;
 		Vector3f lightDir;
 		lightDir.x = std::cos(lightTheta) * std::cos(lightAlpha);
 		lightDir.y = std::sin(lightTheta) * std::cos(lightAlpha);
@@ -1023,7 +1028,7 @@ void H2Dx11()
 		shadowConts.itm = Inverse(shadowConts.tm);
 		shadowConts.lightDir = lightDir;
 		shadowConts.texelSize.x = cascadeShadowSize / cascadeShadowLength;
-		shadowConts.texelSize.y = shadowConts.texelSize.x;
+		shadowConts.texelSize.y = 1.0 / cascadeShadowDepth;
 		cascadeShadowsCB.Update(renderDevice->GetContext(), shadowConts);
 
 		{

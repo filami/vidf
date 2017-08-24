@@ -39,7 +39,7 @@ cbuffer cascadeShadowCB : register(b1)
 		float4x4 projTM;
 		float4x4 invProjTM;
 		float3 lightDir;
-		float  texelSize;
+		float2 texelSize;
 	} shadow;
 };
 
@@ -126,9 +126,9 @@ float4 psMain(Output input) : SV_Target
 
 	// float bias = 0.001;
 	// float bias = rcp(dot(shadow.lightDir, wNormal)) * shadow.texelSize.x * 0.000001;
-	float bias = 0.001;
-	float shadowMult = shadowSRV.SampleCmp(shadowSS, hp.xy, hp.z - bias);
-	return shadowMult;
+	// float bias = 1 / (4096.0 * 2.0);
+	// float bias = rcp(dot(shadow.lightDir * shadow.texelSize.x, wNormal)) * shadow.texelSize.y;
+	float shadowMult = shadowSRV.SampleCmp(shadowSS, hp.xy, hp.z);
 
 	float3 l = diffuseSRV.Sample(diffuseSS, input.texCoord).rgb * dot(shadow.lightDir, wNormal) * shadowMult * 5.5;
 

@@ -146,8 +146,7 @@ namespace vidf { namespace dx11 {
 
 		D3D11_TEXTURE2D_DESC bufferDesc{};
 		bufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
-		// bufferDesc.Format = desc.format;
-		bufferDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+		bufferDesc.Format = desc.format == DXGI_FORMAT_R32_FLOAT ? DXGI_FORMAT_R32_TYPELESS : DXGI_FORMAT_R16_TYPELESS;
 		bufferDesc.ArraySize = 1;
 		bufferDesc.Width = desc.width;
 		bufferDesc.Height = desc.heigh;
@@ -160,15 +159,14 @@ namespace vidf { namespace dx11 {
 
 		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
 		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		srvDesc.Format = desc.format;
 		srvDesc.Texture2D.MipLevels = desc.mipLevels;
 		srvDesc.Texture2D.MostDetailedMip = 0;
 		renderDevice->GetDevice()->CreateShaderResourceView(output.buffer, &srvDesc, &output.srv.Get());
 
 		D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
 		dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-		// dsvDesc.Format = desc.format;
-		dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+		dsvDesc.Format = desc.format == DXGI_FORMAT_R32_FLOAT ? DXGI_FORMAT_D32_FLOAT : DXGI_FORMAT_D16_UNORM;
 		dsvDesc.Texture2D.MipSlice = 0;
 		renderDevice->GetDevice()->CreateDepthStencilView(output.buffer, &dsvDesc, &output.dsv.Get());
 

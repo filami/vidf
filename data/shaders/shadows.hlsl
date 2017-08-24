@@ -23,7 +23,7 @@ cbuffer cascadeShadowCB : register(b1)
 		float4x4 projTM;
 		float4x4 invProjTM;
 		float3 lightDir;
-		float  texelSize;
+		float2 texelSize;
 	} shadow;
 };
 
