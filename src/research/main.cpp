@@ -7,6 +7,7 @@ void TestGM();
 void Voxelizer();
 void Gomoku();
 void H2Dx11();
+void Stuff();
 
 
 int main()
@@ -17,6 +18,7 @@ int main()
 	// TestGM();
 	// Voxelizer();
 	// Gomoku();
-	H2Dx11();
+	// H2Dx11();
+	Stuff();
 	return 0;
 }

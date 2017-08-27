@@ -20,6 +20,7 @@ AddFilesToProject
 		"tests/dx11.cpp",
 		"tests/vulkan.cpp",
 		-- "tests/gm.cpp",
+		"tests/stuff.cpp",
 		"tests/voxelizer.cpp",
 	},
 	
