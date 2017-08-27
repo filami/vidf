@@ -31,6 +31,8 @@ AddFilesToProject
 	["h2dx11"] =
 	{
 		"h2dx11/h2dx11.cpp",
+		"h2dx11/pak.h",
+		"h2dx11/pak.cpp",
 		"h2dx11/stream.h",
 	},
 }

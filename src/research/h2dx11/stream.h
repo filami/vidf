@@ -31,7 +31,7 @@ namespace h2
 
 
 
-	StreamResult Stream(std::istream& stream, vidf::int16& value)
+	inline StreamResult Stream(std::istream& stream, vidf::int16& value)
 	{
 		stream.read(reinterpret_cast<char*>(&value), sizeof(value));
 		return StreamResult::Ok;
@@ -39,7 +39,7 @@ namespace h2
 
 
 
-	StreamResult Stream(std::istream& stream, vidf::uint16& value)
+	inline StreamResult Stream(std::istream& stream, vidf::uint16& value)
 	{
 		stream.read(reinterpret_cast<char*>(&value), sizeof(value));
 		return StreamResult::Ok;
@@ -47,7 +47,7 @@ namespace h2
 
 
 
-	StreamResult Stream(std::istream& stream, vidf::int32& value)
+	inline StreamResult Stream(std::istream& stream, vidf::int32& value)
 	{
 		stream.read(reinterpret_cast<char*>(&value), sizeof(value));
 		return StreamResult::Ok;
@@ -55,7 +55,7 @@ namespace h2
 
 
 
-	StreamResult Stream(std::istream& stream, vidf::uint32& value)
+	inline StreamResult Stream(std::istream& stream, vidf::uint32& value)
 	{
 		stream.read(reinterpret_cast<char*>(&value), sizeof(value));
 		return StreamResult::Ok;
@@ -63,7 +63,7 @@ namespace h2
 
 
 
-	StreamResult Stream(std::istream& stream, float& value)
+	inline StreamResult Stream(std::istream& stream, float& value)
 	{
 		stream.read(reinterpret_cast<char*>(&value), sizeof(value));
 		return StreamResult::Ok;
