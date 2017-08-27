@@ -7,6 +7,8 @@
 #include "vidf/rendererdx11/pipeline.h"
 #include "vidf/proto/mesh.h"
 
+#include "stream.h"
+
 
 using namespace vidf;
 using namespace dx11;
@@ -37,96 +39,6 @@ public:
 
 namespace h2
 {
-
-
-
-	enum class StreamResult
-	{
-		Ok,
-		Fail,
-	};
-	
-	template<typename TStream>
-	struct StreamTraits
-	{
-	};
-
-	template<>
-	struct StreamTraits<std::istream>
-	{
-		static constexpr bool IsInput() { return true; }
-		static constexpr bool IsOutput() { return false; }
-		static constexpr bool IsBinary() { return true; }
-	};
-	template<> struct StreamTraits<std::ifstream> : public StreamTraits<std::istream> {};
-
-	StreamResult Stream(std::istream& stream, int16& value)
-	{
-		stream.read(reinterpret_cast<char*>(&value), sizeof(value));
-		return StreamResult::Ok;
-	};
-
-	StreamResult Stream(std::istream& stream, uint16& value)
-	{
-		stream.read(reinterpret_cast<char*>(&value), sizeof(value));
-		return StreamResult::Ok;
-	};
-
-	StreamResult Stream(std::istream& stream, int32& value)
-	{
-		stream.read(reinterpret_cast<char*>(&value), sizeof(value));
-		return StreamResult::Ok;
-	};
-	
-	StreamResult Stream(std::istream& stream, uint32& value)
-	{
-		stream.read(reinterpret_cast<char*>(&value), sizeof(value));
-		return StreamResult::Ok;
-	};
-
-	StreamResult Stream(std::istream& stream, float& value)
-	{
-		stream.read(reinterpret_cast<char*>(&value), sizeof(value));
-		return StreamResult::Ok;
-	};
-
-	template<typename TStream, typename T>
-	StreamResult Stream(TStream& stream, Vector3<T>& value)
-	{
-		Stream(stream, value.x);
-		Stream(stream, value.y);
-		Stream(stream, value.z);
-		return StreamResult::Ok;
-	};
-
-	template<int N>
-	StreamResult Stream(std::istream& stream, char(& value)[N])
-	{
-		stream.read(value, N);
-		return StreamResult::Ok;
-	};
-
-	template<int N>
-	StreamResult Stream(std::istream& stream, uint8(&value)[N])
-	{
-		stream.read((char*)value, N);
-		return StreamResult::Ok;
-	};
-
-	template<typename TStream, typename It>
-	StreamResult Stream(TStream& stream, It& begin, It& end)
-	{
-		for (It it = begin; it != end; ++it)
-			Stream(stream, *it);
-		return StreamResult::Ok;
-	};
-
-	template<int N>
-	StreamResult Stream(std::istream& stream, std::array<char, N>& value)
-	{
-		stream.read(value.data(), N);
-		return StreamResult::Ok;
-	};
 
 
 
@@ -648,8 +560,8 @@ void H2Dx11()
 
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/ssdocks.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/sstown.bsp");
-	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/andplaza.bsp");
-	FileManager::PakFileHandle map = fileManager.OpenFile("maps/andslums.bsp");
+	FileManager::PakFileHandle map = fileManager.OpenFile("maps/andplaza.bsp");
+	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/andslums.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/hive1.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/kellcaves.bsp");
 	// FileManager::PakFileHandle map = fileManager.OpenFile("maps/canyon.bsp");

@@ -91,43 +91,9 @@ float4 psMain(Output input) : SV_Target
 {
 	const float3 wNormal = normalize(input.wNormal);
 
-	/*
-	float4 hp = mul(shadow.projTM, float4(input.wPosition, 1.0));
-	hp /= hp.w;
-	float p = (frac(hp.x * 8) > 0.5) * (frac(hp.y * 8) > 0.5) * 0.75 + 0.25;
-	p *= 1 - (hp.x < -1 || hp.y < -1 || hp.x > 1 || hp.y > 1);
-	return p;
-	*/
-	/*
-	float2 hp = mul(shadow.projTM, float4(input.wPosition, 1.0)).xy * 0.5 + 0.5;
-	float p = (frac(hp.x * 16) > 0.5) * (frac(hp.y * 16) > 0.5) * 0.75 + 0.25;
-	p *= 1 - (hp.x < 0 || hp.y < 0 || hp.x > 1 || hp.y > 1);
-	return p;
-	*/
-	// const float3 diffuseColor = diffuseSRV.Sample(diffuseSS, input.texCoord).rgb;
-	// return float4(diffuseColor, 1.0);
-	/*
-	float2 hp = mul(shadow.projTM, float4(input.wPosition, 1.0)).xy*0.5+0.5;
-	const float3 diffuseColor = shadowSRV.Sample(diffuseSS, hp).rrr;
-	return float4(diffuseColor, 1.0);
-	*/
-
-	// float3 hp = mul(shadow.projTM, float4(input.wPosition, 1.0)).xy * float2(1, -1, 1) * 0.5 + 0.5;
 	float3 hp = mul(shadow.projTM, float4(input.wPosition, 1.0)).xyz;
 	hp.y *= -1.0;
-	// hp.z = 1.0 - hp.z;
 	hp.xy = hp.xy * 0.5 + 0.5;
-	// float p = shadowSRV.Sample(diffuseSS, hp.xy).r;
-	// float p = 1 - (shadowSRV.Sample(diffuseSS, hp.xy).r - hp.z) * 128.0;
-	float p = shadowSRV.Sample(diffuseSS, hp.xy).r + 0.001 > hp.z;
-	// float p = frac(shadowSRV.Sample(diffuseSS, hp.xy).r * 64.0) * 0.5 + 0.5;
-	// float p = hp.z;
-	p *= 1 - (hp.x < 0 || hp.y < 0 || hp.x > 1 || hp.y > 1);
-
-	// float bias = 0.001;
-	// float bias = rcp(dot(shadow.lightDir, wNormal)) * shadow.texelSize.x * 0.000001;
-	// float bias = 1 / (4096.0 * 2.0);
-	// float bias = rcp(dot(shadow.lightDir * shadow.texelSize.x, wNormal)) * shadow.texelSize.y;
 	float shadowMult = shadowSRV.SampleCmp(shadowSS, hp.xy, hp.z);
 
 	float3 l = diffuseSRV.Sample(diffuseSS, input.texCoord).rgb * dot(shadow.lightDir, wNormal) * shadowMult * 5.5;
