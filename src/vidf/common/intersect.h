@@ -22,7 +22,7 @@ namespace vidf
 		RayIntersectResult(const Ray<T>& _ray, bool _intersected, T _distance)
 			:	ray(_ray)
 			,	distance(_distance)
-			,	intersected(intersected) {}
+			,	intersected(_intersected) {}
 
 		operator bool () const {return intersected;}
 
