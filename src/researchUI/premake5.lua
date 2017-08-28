@@ -35,27 +35,9 @@ function QtCopyDll(dllName)
 	os.copyfile(QtLibLocation.."bin/"..dllName..".pdb", QtOutputPath..dllName..".pdb");
 end
 
-
-
 QtCopyDll("QtCore");
 QtCopyDll("QtWidgets");
 QtCopyDll("QtGui");
-
-
-AddFilesToProject
-{
-	["build"] =
-	{
-		"premake5.lua",
-	},
-
-	["common"] =
-	{
-		"main.cpp",
-		"pch.h",
-		"pch.cpp",
-	},
-}
 
 
 
@@ -72,7 +54,27 @@ end
 
 
 
+AddFilesToProject
+{
+	["build"] =
+	{
+		"premake5.lua",
+	},
+
+	["common"] =
+	{
+		"main.cpp",
+		"pch.h",
+		"pch.cpp",
+	},
+
+	["tests"] =
+	{
+		"tests/notepad.cpp",
+	},
+}
+
 QtMoc
 {
-	"main",
+	"tests/notepad",
 }

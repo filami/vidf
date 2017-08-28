@@ -8,3 +8,12 @@
 #include <vidf/platform/taskmanager.h>
 #include <vidf/platform/filechangenotification.h>
 #include <vidf/platform/system.h>
+
+#include <QApplication>
+#include <QTextEdit>
+#include <QMainWindow>
+#include <QAction>
+#include <QMenuBar>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QTextStream>
