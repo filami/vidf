@@ -17,3 +17,4 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QTextStream>
+#include <QBoxLayout>

@@ -1,29 +1,27 @@
 #include "pch.h"
+#include "notepad.h"
+#include "yasli/Enum.h"
+#include "yasli/STL.h"
 
-class Notepad : public QMainWindow
+void Entry::serialize(yasli::Archive& ar)
 {
-	Q_OBJECT
+	ar(name, "name", "Name");
+	ar(age, "age", "Age");
+	ar(position, "position", "Position");
+}
 
-public:
-	Notepad();
+void Document::serialize(yasli::Archive& ar)
+{
+	ar(entries, "entries", "Entries");
+}
 
-	private slots:
-	void open();
-	void save();
-
-private:
-	QTextEdit *textEdit;
-
-	QAction *openAction;
-	QAction *saveAction;
-	QAction *exitAction;
-
-	QMenu *fileMenu;
-};
+YASLI_ENUM_BEGIN(Position, "Position")
+YASLI_ENUM(ENGINEER, "engineer", "Engineer")
+YASLI_ENUM(MANAGER, "manager", "Manager")
+YASLI_ENUM_END()
 
 Notepad::Notepad()
 {
-
 	openAction = new QAction(tr("&Load"), this);
 	saveAction = new QAction(tr("&Save"), this);
 	exitAction = new QAction(tr("E&xit"), this);
@@ -39,7 +37,11 @@ Notepad::Notepad()
 	fileMenu->addAction(exitAction);
 
 	textEdit = new QTextEdit;
-	setCentralWidget(textEdit);
+	propertyTree = new QPropertyTree();
+	propertyTree->setUndoEnabled(true, false);
+	propertyTree->attach(yasli::Serializer(document));
+	propertyTree->expandAll();
+	setCentralWidget(propertyTree);
 
 	setWindowTitle(tr("Notepad"));
 }
@@ -91,5 +93,3 @@ int NotepadTest(int argc, char** argv)
 
 	return app.exec();
 }
-
-#include "notepad.moc"
