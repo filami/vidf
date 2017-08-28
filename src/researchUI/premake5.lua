@@ -1,5 +1,6 @@
 QtLibLocation = "C:/Qt/5.9.1/msvc2017_64/"
 QtOutputPath = _WORKING_DIR.."/bin/ResearchUI/"
+QtMocTool = QtLibLocation.."bin/moc.exe"
 
 
 CreateVIDFAppProject("ResearchUI", "pch", nil, "B1AF6BD6-530C-4224-B5DF-FE3BC0E0D84C")
@@ -8,6 +9,7 @@ CreateVIDFAppProject("ResearchUI", "pch", nil, "B1AF6BD6-530C-4224-B5DF-FE3BC0E0
 includedirs
 {
 	QtLibLocation.."/include/",
+	QtLibLocation.."/include/QtCore/",
 	QtLibLocation.."/include/QtWidgets/",
 }
 
@@ -53,4 +55,24 @@ AddFilesToProject
 		"pch.h",
 		"pch.cpp",
 	},
+}
+
+
+
+function QtMoc(files)
+	for i, fileName in ipairs(files) do
+		local command = string.format(
+			"%s -o%s %s",
+			QtMocTool,
+			_WORKING_DIR.."/src/researchUI/"..fileName..".moc",
+			_WORKING_DIR.."/src/researchUI/"..fileName..".cpp")
+		prebuildcommands{command}
+	end
+end
+
+
+
+QtMoc
+{
+	"main",
 }

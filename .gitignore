@@ -3,6 +3,7 @@ bin/*
 lib/*
 make/*
 obj/*
+*.moc
 
 # Large or Copyrighted assets
 data/sponza/*
