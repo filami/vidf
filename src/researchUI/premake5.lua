@@ -1,65 +1,14 @@
-QtLibLocation = "C:/Qt/5.9.1/msvc2017_64/"
-QtOutputPath = _WORKING_DIR.."/bin/ResearchUI/"
-QtMocTool = QtLibLocation.."bin/moc.exe"
-
+dofile "ext/premake-qt.git/qt.lua"
+local qt = premake.extensions.qt
 
 CreateVIDFAppProject("ResearchUI", --[["pch"]] nil, nil, "B1AF6BD6-530C-4224-B5DF-FE3BC0E0D84C")
 
+qtpath "C:/Qt/5.9.1/msvc2017_64/"
+qtprefix "Qt5"
+qtgenerateddir(_WORKING_DIR.."/obj/ResearchUI_moc/")
+qt.enable()
 
-includedirs
-{
-	QtLibLocation.."/include/",
-	QtLibLocation.."/include/QtCore/",
-	QtLibLocation.."/include/QtWidgets/",
-	QtLibLocation.."/include/QtGui/",
-}
-
-
-
-libdirs
-{
-	QtLibLocation.."lib/",
-}
-
-
-
-links
-{
-	"Qt5Core.lib",
-	"Qt5Widgets.lib",
-	"Qt5Gui.lib",
-}
-
-
-
-function QtCopyDll(dllName)
-	os.copyfile(QtLibLocation.."bin/"..dllName..".dll", QtOutputPath..dllName..".dll");
-	os.copyfile(QtLibLocation.."bin/"..dllName..".pdb", QtOutputPath..dllName..".pdb");
-end
-
-QtCopyDll("QtCore");
-QtCopyDll("QtWidgets");
-QtCopyDll("QtGui");
-
-
-
-function QtMoc(files)
-	local mocFiles = {}
-	for i, fileName in ipairs(files) do
-		local command = string.format(
-			"%s -o%s %s",
-			QtMocTool,
-			fileName..".moc.cpp",
-			fileName..".h")
-		prebuildcommands{command};
-		table.insert(mocFiles, fileName..".moc.cpp");
-	end
-	AddFilesToProject
-	{
-		["mocs"] = mocFiles,
-	}
-end
-
+qtmodules { "core", "widgets", "gui" }
 
 
 AddFilesToProject
@@ -83,12 +32,6 @@ AddFilesToProject
 		"tests/lenses.h",
 		"tests/lenses.cpp",
 	},
-}
-
-QtMoc
-{
-	_WORKING_DIR.."/src/researchUI/tests/notepad",
-	_WORKING_DIR.."/src/researchUI/tests/lenses",
 }
 
 -- YASLI
@@ -127,13 +70,4 @@ AddFilesToProject
 		_WORKING_DIR.."/ext/yasli/QPropertyTree/QUIFacade.cpp",
 		_WORKING_DIR.."/ext/yasli/QPropertyTree/QUIFacade.h",
 	},
-}
-
-QtMoc
-{
-	_WORKING_DIR.."/ext/yasli/QPropertyTree/QPropertyTree",
-	_WORKING_DIR.."/ext/yasli/QPropertyTree/QUIFacade",
-	_WORKING_DIR.."/ext/yasli/QPropertyTree/InplaceWidgetComboBox",
-	_WORKING_DIR.."/ext/yasli/QPropertyTree/InplaceWidgetNumber",
-	_WORKING_DIR.."/ext/yasli/QPropertyTree/InplaceWidgetString",
 }
