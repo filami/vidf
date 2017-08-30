@@ -80,12 +80,15 @@ AddFilesToProject
 	{
 		"tests/notepad.h",
 		"tests/notepad.cpp",
+		"tests/lenses.h",
+		"tests/lenses.cpp",
 	},
 }
 
 QtMoc
 {
 	_WORKING_DIR.."/src/researchUI/tests/notepad",
+	_WORKING_DIR.."/src/researchUI/tests/lenses",
 }
 
 -- YASLI
