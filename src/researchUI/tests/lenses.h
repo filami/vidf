@@ -9,6 +9,9 @@
 #include "vidf/common/ray.h"
 
 
+namespace lens
+{
+
 
 enum SurfaceType
 {
@@ -30,7 +33,7 @@ enum SymetryMode
 struct Surface
 {
 	SurfaceType type = SurfaceType_Spherical;
-	float radius = 200.0f;
+	float radius = 100.0f;
 
 	void serialize(yasli::Archive& ar);
 };
@@ -68,7 +71,7 @@ public:
 	SymetryMode symetryMode = SymetryMode_Symetric;
 	float n = 1.5f;
 	float d = 10.0f;
-	float diameter = 25.0f;
+	float diameter = 45.0f;
 
 	virtual void serialize(yasli::Archive& ar);
 	virtual void QtDraw(QPainter& painter, float parentOffset) override;
@@ -77,6 +80,13 @@ public:
 
 private:
 	float LensElement::GetFocusDistance() const;
+};
+
+
+class MarkerElement : public Element
+{
+public:
+	virtual void QtDraw(QPainter& painter, float parentOffset) override;
 };
 
 
@@ -89,26 +99,78 @@ public:
 	virtual bool RayIntersect(const vidf::Rayf& ray, Intersect* intersect, float parentOffset) override;
 	virtual float GetMaxOffset(float parentOffset) const override;
 
-private:
 	std::vector<yasli::SharedPtr<Element>> elements;
+	std::string name;
 };
 
 
 
-class Renderer : public QOpenGLWidget
+struct Sensor
+{
+	float size = 35.0f;
+	float offset = -10.0f;
+	void serialize(yasli::Archive& ar)
+	{
+		ar(size, "size", "Size");
+		ar(offset, "offset", "Offset");
+	}
+};
+
+
+
+enum RayFocusType
+{
+	RayFocusType_RelativePlane,
+	RayFocusType_AbsolutePlane,
+	RayFocusType_Infinite,
+};
+
+
+
+struct RaySources
+{
+	RayFocusType focusType = RayFocusType::RayFocusType_Infinite;
+	float angle = 0.0f;
+	float spread = 0.5f;
+	float offset = 2000.0f;
+	int count = 3;
+	bool enabled = true;
+
+	void serialize(yasli::Archive& ar);
+};
+
+
+
+class Document
 {
 public:
-	Renderer(ElementCompound* _compound);
+	Document();
+
+	ElementCompound elements;
+	Sensor sensor;
+	std::vector<RaySources> raySources;
+
+	void serialize(yasli::Archive& ar);
+};
+
+
+
+// class Renderer : public QOpenGLWidget
+class Renderer : public QWidget
+{
+public:
+	Renderer(Document* _document);
 
 	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void timerEvent(QTimerEvent* event) override;
 
 private:
+	void DrawRaytraceSource(QPainter& painter, const RaySources& source, float frontLensOffset);
 	void DrawRayIntersect(QPainter& painter, const vidf::Rayf& ray);
 
 private:
-	ElementCompound* compounds;
-	QBasicTimer      timer;
+	Document*   document;
+	QBasicTimer timer;
 };
 
 
@@ -121,7 +183,9 @@ public:
 	LensesFrame();
 
 private:
-	ElementCompound elements;
-	QPropertyTree*  simulatorWidget;
-	Renderer*       renderWidget;
+	Document       document;
+	QPropertyTree* simulatorWidget;
+	Renderer*      renderWidget;
 };
+
+}

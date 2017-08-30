@@ -7,6 +7,9 @@
 using namespace vidf;
 
 
+namespace lens
+{
+
 
 YASLI_ENUM_BEGIN(SurfaceType, "SurfaceType")
 YASLI_ENUM(SurfaceType_Flat, "flat", "Flat")
@@ -23,24 +26,31 @@ YASLI_ENUM_END()
 
 
 
+YASLI_ENUM_BEGIN(RayFocusType, "RayFocusType")
+YASLI_ENUM(RayFocusType_RelativePlane, "RelativePlane", "RelativePlane")
+YASLI_ENUM(RayFocusType_AbsolutePlane, "AbsolutePlane", "AbsolutePlane")
+YASLI_ENUM(RayFocusType_Infinite, "Infinite", "Infinite")
+YASLI_ENUM_END()
+
+
+
 YASLI_CLASS(Element, LensElement, "Lens")
+YASLI_CLASS(Element, MarkerElement, "Marker")
 YASLI_CLASS(Element, ElementCompound, "Compound")
 
 
 
-void DrawArc(QPainter& painter, QPointF center, double radius, double t0, double t1, uint segments)
+void AddSurfacePoints(QPainter& painter, QPointF center, double radius, double t0, double t1, uint segments, QVector<QPointF>* points)
 {
-	QVector<QPointF> points;
+	assert(points != nullptr);
 
 	for (uint i = 0; i <= segments; ++i)
 	{
 		const double t = Lerp(t0, t1, i / double(segments));
 		const double x = std::cos(t) * radius + center.x();
 		const double y = std::sin(t) * radius + center.y();
-		points.push_back(QPointF(x, y));
+		points->push_back(QPointF(x, y));
 	}
-
-	painter.drawLines(points);
 }
 
 
@@ -157,9 +167,12 @@ void LensElement::QtDraw(QPainter& painter, float parentOffset)
 	const double t1 = std::asin(diameter * 0.5 / backSurface.radius);
 	const double t2 = std::asin(diameter * 0.5 / frontSurface.radius);
 		
+	QVector<QPointF> points;
 	painter.setPen(QPen(Qt::white, 0.5));
-	DrawArc(painter, c1, backSurface.radius, -t1 + PI, t1 + PI, 64);
-	DrawArc(painter, c2, frontSurface.radius, -t2, t2, 64);
+	painter.setBrush(QBrush(QColor(0, 128, 255, 64)));
+	AddSurfacePoints(painter, c1, backSurface.radius,  -t1 + PI, t1 + PI, 64, &points);
+	AddSurfacePoints(painter, c2, frontSurface.radius, -t2, t2, 64, &points);
+	painter.drawPolygon(points.data(), points.size());
 
 	painter.setPen(QPen(Qt::gray, 0.25));
 	painter.drawLine(
@@ -206,9 +219,20 @@ float LensElement::GetFocusDistance() const
 
 
 
+void MarkerElement::QtDraw(QPainter& painter, float parentOffset)
+{
+	painter.setPen(QPen(Qt::gray, 0.25));
+	painter.drawLine(
+		QPointF(parentOffset + offset,  1000),
+		QPointF(parentOffset + offset, -1000));
+}
+
+
+
 void ElementCompound::serialize(yasli::Archive& ar)
 {
 	Element::serialize(ar);
+	ar(name, "name", "^");
 	ar(elements, "elements", "Elements");
 }
 
@@ -242,13 +266,9 @@ float ElementCompound::GetMaxOffset(float parentOffset) const
 
 
 
-Renderer::Renderer(ElementCompound* _compound)
-	: compounds(_compound)
+Renderer::Renderer(Document* _document)
+	: document(_document)
 {
-	QLinearGradient gradient(QPointF(50, -20), QPointF(80, 20));
-	gradient.setColorAt(0.0, Qt::white);
-	gradient.setColorAt(1.0, QColor(0xa6, 0xce, 0x39));
-
 	timer.start(12, this);
 }
 
@@ -268,7 +288,6 @@ void Renderer::paintEvent(QPaintEvent* event)
 	const Vector2f center = Vector2f(500.0f, 0.0f);
 	const float sizeY = 2000.0f;
 	const float sizeX = sizeY * aspect;
-	const float sensorSize = 36.0f;
 
 	QPainter painter;
 	painter.begin(this);
@@ -280,79 +299,42 @@ void Renderer::paintEvent(QPaintEvent* event)
 	
 	painter.save();
 	painter.setBrush(QBrush());
-	/*
-	painter.setPen(QPen(Qt::darkBlue, 0.5));
-	painter.drawLine(QPointF(0, 0), QPointF(2500, 0));
-	*/
-	painter.setPen(QPen(Qt::white, 1.5));
+
+	painter.setPen(QPen(Qt::white, 0.5));
 	painter.drawLine(
-		QPointF(0, -sensorSize*0.5),
-		QPointF(0,  sensorSize*0.5));
+		QPointF(document->sensor.offset, -document->sensor.size*0.5),
+		QPointF(document->sensor.offset,  document->sensor.size*0.5));
 
-	/*
-	const uint count = 12;
-	const float t1 = -0.5f;
-	const float t2 = 0.5f;
-	painter.setPen(QPen(Qt::red, 0.5));
-	for (uint i = 0; i < count; ++i)
+	const float frontLensOffset = document->elements.GetMaxOffset(0.0f) / 1000.0f;
+	for (const auto& source : document->raySources)
 	{
-		const float t = Lerp(t1, t2, i / float(count - 1));
-		DrawRayIntersect(painter, Rayf{ Vector3f{zero}, Normalize(Vector3f{1.0f, std::tan(t), 0.0f}) });
-	}
-	*/
-	
-	const uint count = 3;
-	painter.setPen(QPen(Qt::red, 0.5));
-	/*
-	for (uint i = 0; i < count; ++i)
-	{
-		const float t = Lerp(-0.02f, 0.02f, i / float(count - 1));
-		DrawRayIntersect(painter, Rayf{ Vector3f{ 25.0f, t, 0.0f }, Vector3f{ -1.0f, 0.0f, 0.0f } });
-	}
-	*/
-
-	/*
-	painter.setPen(QPen(Qt::green, 0.5));
-	for (uint i = 0; i < count; ++i)
-	{
-		const float t = Lerp(-0.25f, 0.25f, i / float(count - 1));
-		DrawRayIntersect(painter, Rayf{ Vector3f{ 0.25f, 0.0f, 0.0f }, Normalize(Vector3f{ -1.0f, std::tan(t), 0.0f }) });
+		if (source.enabled)
+			DrawRaytraceSource(painter, source, frontLensOffset);
 	}
 
-	painter.setPen(QPen(Qt::blue, 0.5));
-	for (uint i = 0; i < count; ++i)
-	{
-		const float t = Lerp(-0.25f, 0.25f, i / float(count - 1));
-		DrawRayIntersect(painter, Rayf{ Vector3f{ 0.25f, -0.01f, 0.0f }, Normalize(Vector3f{ -1.0f, std::tan(t), 0.0f }) });
-	}
-	*/
-
-	const float rayDist = 25.0f;
-	const float aperatureSize = 0.045f;
-	const float aperatureOffset = compounds->GetMaxOffset(0.0f) / 1000.0f;
-	painter.setPen(QPen(Qt::blue, 0.5));
-	for (uint i = 0; i < count; ++i)
-	{
-		// const float th = 0.05f;
-		const float th = Degrees2Radians(27.0f * 0.5f);
-		const float t = Lerp(-aperatureSize*0.5f, aperatureSize*0.5f, i / float(count - 1)) * 0.5f;
-		const Vector3f dir = Normalize(Vector3f{ -1.0f, std::tan(th), 0.0f });
-		const Vector3f orig = Vector3f{ aperatureOffset - dir.x * rayDist, t - dir.y * rayDist, 0.0f };
-		DrawRayIntersect(painter, Rayf{ orig, dir });
-	}
-	painter.setPen(QPen(Qt::green, 0.5));
-	for (uint i = 0; i < count; ++i)
-	{
-		const float th = 0.0f;
-		const float t = Lerp(-aperatureSize*0.5f, aperatureSize*0.5f, i / float(count - 1)) * 0.5f;
-		const Vector3f dir = Normalize(Vector3f{ -1.0f, std::tan(th), 0.0f });
-		const Vector3f orig = Vector3f{ aperatureOffset - dir.x * rayDist, t - dir.y * rayDist, 0.0f };
-		DrawRayIntersect(painter, Rayf{ orig, dir });
-	}
-
-	compounds->QtDraw(painter, 0.0f);
+	document->elements.QtDraw(painter, 0.0f);
 
 	painter.end();
+}
+
+
+
+void Renderer::DrawRaytraceSource(QPainter& painter, const RaySources& source, float frontLensOffset)
+{
+	const float rayDist = 25.0f;
+	const float spread = (source.spread * document->sensor.size * 0.5f) / 1000.0f;
+	const float mult = 1.0f / float(source.count - 1);
+	const float theta = Degrees2Radians(source.angle * 0.5f);
+	const float thetaTan = std::tan(theta);
+
+	painter.setPen(QPen(Qt::blue, 0.5));
+	for (uint i = 0; i < source.count; ++i)
+	{
+		const float t = Lerp(-spread, spread, i * mult);
+		const Vector3f dir = Normalize(Vector3f{ -1.0f, thetaTan, 0.0f });
+		const Vector3f orig = Vector3f{ frontLensOffset - dir.x * rayDist, t - dir.y * rayDist, 0.0f };
+		DrawRayIntersect(painter, Rayf{ orig, dir });
+	}
 }
 
 
@@ -373,7 +355,7 @@ void Renderer::DrawRayIntersect(QPainter& painter, const Rayf& ray)
 	{
 		points.push_back(ToQPoint(curRay.origin) * conv);
 		Intersect intersect;
-		if (!compounds->RayIntersect(curRay, &intersect, 0.0f))
+		if (!document->elements.RayIntersect(curRay, &intersect, 0.0f))
 			break;
 		curRay.origin = curRay.origin + curRay.direction * (intersect.distance + 1.0f / 1024.0f / 1024.0f);
 		curRay.direction = Normalize(Refract(curRay.direction, intersect.normal, curN / intersect.n));
@@ -387,45 +369,38 @@ void Renderer::DrawRayIntersect(QPainter& painter, const Rayf& ray)
 
 
 
-/*
-void Renderer::paintGL()
+void RaySources::serialize(yasli::Archive& ar)
 {
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_LINE_SMOOTH);
-	glEnable(GL_BLEND);
-
-	glClearColor(0.2f, 0.0f, 0.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	const QSize sz = size();
-	const float aspect = sz.width() / float(sz.height());
-	const Vector2f center = Vector2f(500.0f, 0.0f);
-	const float sizeY = 2000.0f;
-	const float sizeX = sizeY * aspect;
-	const float sensorSize = 36.0f;
-
-	glMatrixMode(GL_PROJECTION);
-	gluOrtho2D(
-		center.x - sizeX, center.x + sizeX,
-		center.y - sizeY, center.y + sizeY);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-
-	glLineWidth(1.5f);
-	glColor4ub(0, 0, 255, 255);
-	glBegin(GL_LINES);
-	glVertex2f(0.0f, 0.0f);
-	glVertex2f(2500.0f, 0.0f);
-	glEnd();
-
-	glLineWidth(3.0f);
-	glColor4ub(255, 255, 255, 255);
-	glBegin(GL_LINES);
-	glVertex2f(0.0f, -sensorSize * 0.5f);
-	glVertex2f(0.0f, sensorSize * 0.5f);
-	glEnd();
+	ar(enabled, "enabled", "^");
+	ar(focusType, "focusType", "Type");
+	if (focusType != RayFocusType_Infinite)
+		ar(offset, "offset", "Offset");
+	ar(angle, "angle", "angle");
+	ar(spread, "spread", "spread");
+	ar(count, "count", "count");
 }
-*/
+
+
+
+Document::Document()
+{
+	raySources.emplace_back(RaySources{});
+	raySources.emplace_back(RaySources{});
+	raySources.back().angle = 27.0f;
+
+	elements.elements.emplace_back(new MarkerElement{});
+	elements.elements.emplace_back(new LensElement{});
+	elements.elements.back()->offset = 90.0f;
+}
+
+
+
+void Document::serialize(yasli::Archive& ar)
+{	
+	ar(sensor, "sensor", "Sensor");
+	ar(raySources, "raySources", "Rays");
+	ar(elements, "elements", "Elements");
+}
 
 
 
@@ -435,25 +410,25 @@ LensesFrame::LensesFrame()
 	QBoxLayout* layout = new QBoxLayout(QBoxLayout::LeftToRight);
 	mainWidget->setLayout(layout);
 		
-	renderWidget = new Renderer(&elements);
+	renderWidget = new Renderer(&document);
 	layout->addWidget(renderWidget);
 
 	simulatorWidget = new QPropertyTree();
 	simulatorWidget->setUndoEnabled(true, false);
-	simulatorWidget->attach(yasli::Serializer(elements));
-	simulatorWidget->setMaximumWidth(250);
+	simulatorWidget->attach(yasli::Serializer(document));
+	simulatorWidget->setMaximumWidth(380);
 	layout->addWidget(simulatorWidget);
 
 	setCentralWidget(mainWidget);
 }
 
-
+}
 
 int LensesTest(int argc, char** argv)
 {
 	QApplication app{ argc, argv };
 
-	LensesFrame lenses;
+	lens::LensesFrame lenses;
 	lenses.showMaximized();
 
 	return app.exec();
