@@ -3,6 +3,8 @@
 #include "yasli/Enum.h"
 #include "yasli/STL.h"
 #include "yasli/decorators/Range.h"
+#include "yasli/JSONIArchive.h"
+#include "yasli/JSONOArchive.h"
 
 using namespace vidf;
 
@@ -404,6 +406,34 @@ void Document::serialize(yasli::Archive& ar)
 
 
 
+template<typename Parent, typename Callback>
+void AddMenuAction(Parent* parent, QMenu* menu, const QString& name, Callback callback)
+{
+	QAction* action = new QAction(name, parent);
+	parent->connect(action, &QAction::triggered, parent, callback);
+	menu->addAction(action);
+}
+
+
+
+template<typename SaveCallback>
+bool DialogVerifyCloseDocument(bool documentChanged, SaveCallback saveCallback)
+{
+	if (!documentChanged)
+		return true;
+	QMessageBox msgBox;
+	msgBox.setText("The document has been modified.");
+	msgBox.setInformativeText("Do you want to save your changes?");
+	msgBox.setStandardButtons(QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+	msgBox.setDefaultButton(QMessageBox::Save);
+	int ret = msgBox.exec();
+	if (ret == QMessageBox::Save)
+		saveCallback();
+	return ret != QMessageBox::Cancel;
+}
+
+
+
 LensesFrame::LensesFrame()
 {
 	QWidget* mainWidget = new QWidget();
@@ -417,9 +447,76 @@ LensesFrame::LensesFrame()
 	simulatorWidget->setUndoEnabled(true, false);
 	simulatorWidget->attach(yasli::Serializer(document));
 	simulatorWidget->setMaximumWidth(380);
+	connect(simulatorWidget, &QPropertyTree::signalChanged, this, &LensesFrame::OnChanged);
 	layout->addWidget(simulatorWidget);
 
 	setCentralWidget(mainWidget);
+
+	QMenu* menu = menuBar()->addMenu(tr("&File"));
+	AddMenuAction(this, menu, tr("New"), &LensesFrame::OnNew);
+	AddMenuAction(this, menu, tr("Open"), &LensesFrame::OnOpen);
+	AddMenuAction(this, menu, tr("Save"), &LensesFrame::OnSave);
+	AddMenuAction(this, menu, tr("Save As..."), &LensesFrame::OnSaveAs);
+}
+
+void LensesFrame::OnNew()
+{
+	const bool discardCurrent = DialogVerifyCloseDocument(documentChanged, [this]() { OnSave(); });
+	if (discardCurrent)
+	{
+		document = Document();
+		documentPath.clear();
+		documentChanged = false;
+	}
+}
+
+void LensesFrame::OnOpen()
+{
+	const bool discardCurrent = DialogVerifyCloseDocument(documentChanged, [this]() { OnSave(); });
+	if (!discardCurrent)
+		return;
+	QString path = QFileDialog::getOpenFileName(this, tr("Open..."), QString(), tr("Lenses(*.len)"));
+	if (!path.isEmpty())
+		Open(path);
+}
+
+void LensesFrame::OnSave()
+{
+	if (documentPath.isEmpty())
+		OnSaveAs();
+	else
+		Save();
+}
+
+void LensesFrame::OnSaveAs()
+{
+	documentPath = QFileDialog::getSaveFileName(this, tr("Save..."), QString(), tr("Lenses(*.len)"));
+	if (documentPath.isEmpty())
+		return;
+	Save();
+}
+
+void LensesFrame::OnChanged()
+{
+	documentChanged = true;
+}
+
+void LensesFrame::Save()
+{
+	assert(!documentPath.isEmpty());
+	yasli::JSONOArchive ar;
+	ar(document);
+	ar.save(documentPath.toUtf8().data());
+	documentChanged = false;
+}
+
+void LensesFrame::Open(const QString& path)
+{
+	yasli::JSONIArchive ar;
+	ar.load(path.toUtf8().data());
+	ar(document);
+	documentPath = path;
+	documentChanged = false;
 }
 
 }

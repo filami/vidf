@@ -182,10 +182,23 @@ class LensesFrame : public QMainWindow
 public:
 	LensesFrame();
 
+private slots:
+	void OnNew();
+	void OnOpen();
+	void OnSave();
+	void OnSaveAs();
+	void OnChanged();
+
+private:
+	void Save();
+	void Open(const QString& path);
+
 private:
 	Document       document;
 	QPropertyTree* simulatorWidget;
 	Renderer*      renderWidget;
+	QString        documentPath;
+	bool           documentChanged = false;
 };
 
 }
