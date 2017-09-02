@@ -47,8 +47,7 @@ QString AssetItem::GetFullTypeName() const
 
 
 
-AssetBrowserModel::AssetBrowserModel(AssetItem* _root)
-	: root(_root)
+AssetBrowserModel::AssetBrowserModel()
 {
 }
 
@@ -274,10 +273,9 @@ void AssetItemManager::SortItems(AssetItemPtr item, bool recursive)
 AssetBrowser::AssetBrowser(MainFrame& _mainFrame)
 	: QDockWidget(&_mainFrame)
 	, mainFrame(_mainFrame)
-	, assetItemManager(&assetManager)
-	, assetTreeModel(assetItemManager.root.get())
-	, assetTreeModel2(assetItemManager.root.get())
 {
+	auto& assetManager = GetAssetManager();
+	auto& assetItemManager = GetAssetItemManager();
 	AssetTraitsPtr textureType = assetManager.FindTypeTraits("Texture");
 
 	assetManager.MakeAsset(*textureType, "parent 0/child 0-0");
@@ -305,6 +303,7 @@ AssetBrowser::AssetBrowser(MainFrame& _mainFrame)
 		QSplitter* splitter = new QSplitter(Qt::Horizontal);
 		subLayout->addWidget(splitter);
 
+		assetTreeModel.root = assetItemManager.root.get();
 		assetTreeModel.foldersOnly = true;
 		assetTreeModel.recursive = true;
 		assetTreeView = new QTreeView();
@@ -369,7 +368,7 @@ void AssetBrowser::keyPressEvent(QKeyEvent* event)
 {
 	if (event->key() == Qt::Key_Backspace)
 	{
-		if (assetTreeModel2.root != assetItemManager.root.get())
+		if (assetTreeModel2.root != GetAssetItemManager().root.get())
 			SetSubItemRoot(assetTreeModel2.root->parent.lock().get());
 	}
 }
@@ -399,6 +398,20 @@ void AssetBrowser::QuickEditItem(AssetItem* item)
 
 
 
+AssetManager& AssetBrowser::GetAssetManager()
+{
+	return mainFrame.GetEditor().GetAssetManager();
+}
+
+
+
+AssetItemManager& AssetBrowser::GetAssetItemManager()
+{
+	return mainFrame.GetEditor().GetAssetItemManager();
+}
+
+
+
 AssetEditor::AssetEditor(MainFrame* parent, AssetItem* _assetItem)
 	: QDockWidget(_assetItem->GetFullName() + " (" + _assetItem->GetFullTypeName() + ")", parent)
 	, mainFrame(*parent)
@@ -416,7 +429,8 @@ void AssetEditor::closeEvent(QCloseEvent* event)
 
 
 
-MainFrame::MainFrame()
+MainFrame::MainFrame(VIEditor& _editor)
+	: editor(_editor)
 {
 	setWindowTitle(tr("Volumetric Illusions Editor"));
 	setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
@@ -467,9 +481,9 @@ void MainFrame::AddDockWindow(QDockWidget* dockWindow)
 
 int AssetBrowserTest(int argc, char** argv)
 {
-	QApplication app{ argc, argv };
+	VIEditor app{ argc, argv };
 
-	MainFrame mainFrame;
+	MainFrame mainFrame{ app };
 	mainFrame.showMaximized();
 
 	return app.exec();

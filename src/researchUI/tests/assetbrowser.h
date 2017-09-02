@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QApplication>
 #include <QMainWindow>
 #include <QTreeWidget>
 #include <QListView>
@@ -67,7 +68,7 @@ class AssetBrowserModel : public QAbstractItemModel
 {
 	Q_OBJECT
 public:
-	AssetBrowserModel(AssetItem* root);
+	AssetBrowserModel();
 
 	QVariant data(const QModelIndex& index, int role) const override;
 	Qt::ItemFlags flags(const QModelIndex& index) const override;
@@ -77,7 +78,7 @@ public:
 	int rowCount(const QModelIndex& parent = QModelIndex()) const override;
 	int columnCount(const QModelIndex& parent = QModelIndex()) const override;
 
-	AssetItem* root;
+	AssetItem* root = nullptr;
 	bool foldersOnly = false;
 	bool recursive = true;
 
@@ -91,6 +92,23 @@ private:
 
 
 class MainFrame;
+
+
+
+class VIEditor : public QApplication
+{
+public:
+	VIEditor(int& argc, char** argv, int appFlags = ApplicationFlags)
+		: QApplication(argc, argv, appFlags)
+		, assetItemManager(&assetManager) {}
+
+	AssetManager&     GetAssetManager() { return assetManager; }
+	AssetItemManager& GetAssetItemManager() { return assetItemManager; }
+
+public:
+	AssetManager     assetManager;
+	AssetItemManager assetItemManager;
+};
 
 
 
@@ -121,11 +139,11 @@ private:
 	void SetSubItemRoot(AssetItem* newRoot);
 	void QuickEditItem(AssetItem* item);
 
+	AssetManager&     GetAssetManager();
+	AssetItemManager& GetAssetItemManager();
+
 private:
 	MainFrame&        mainFrame;
-
-	AssetManager      assetManager;
-	AssetItemManager  assetItemManager;
 
 	AssetBrowserModel assetTreeModel;
 	QTreeView*        assetTreeView;
@@ -149,16 +167,18 @@ class MainFrame : public QMainWindow
 {
 	Q_OBJECT
 public:
-	MainFrame();
+	MainFrame(VIEditor& _editor);
 
-	void OpenAssetItem(AssetItem* assetItem);
-	void CloseAssetItem(AssetItem* assetItem);
+	void      OpenAssetItem(AssetItem* assetItem);
+	void      CloseAssetItem(AssetItem* assetItem);
+	VIEditor& GetEditor() { return editor; }
 
 private:
 	void AddDockWindow(QDockWidget* dockWindow);
 
 private:
-	AssetBrowser* assetBrowser;
+	VIEditor&        editor;
+	AssetBrowser*    assetBrowser;
 	std::unordered_map<AssetId, AssetEditor*> assetEditors;
 };
 
