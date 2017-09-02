@@ -7,8 +7,9 @@ namespace vidf
 
 typedef uint64 AssetId;
 class Asset;
-struct AssetTraits;
+class AssetTraits;
 typedef std::shared_ptr<Asset> AssetPtr;
+typedef std::shared_ptr<AssetTraits> AssetTraitsPtr;
 
 
 
@@ -17,18 +18,20 @@ struct AssetRef
 	AssetId      id = -1;
 	std::string  name;
 	AssetPtr     asset;
-	AssetTraits* traits;
+	const AssetTraits* traits;
 };
 
 
 
-struct AssetTraits
+class AssetTraits
 {
+public:
 	virtual ~AssetTraits() {}
-	virtual Asset*       Create(AssetRef& assetRef) = 0;
+	virtual AssetPtr     Create(AssetRef& assetRef) const { return AssetPtr(); }
 	virtual const char*  GetTypeName() const = 0;
 	virtual AssetTraits* GetParent() const { return nullptr; }
 	virtual bool         IsAbstract() const { return false; }
+	std::string          GetFullTypeName() const;
 };
 
 

@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "assetmanager.h"
+#include "texture.h"
 
 namespace vidf
 {
@@ -9,18 +10,37 @@ namespace vidf
 AssetManager::AssetManager()
 	: random(std::time(0))
 {
+	RegisterTextureTypes(this);
 }
 
 
 
-AssetPtr AssetManager::MakeAsset(AssetTraits* traits, const char* name)
+void AssetManager::RegisterType(AssetTraitsPtr type)
 {
+	types[type->GetTypeName()] = type;
+}
+
+
+
+AssetTraitsPtr AssetManager::FindTypeTraits(const char* typeName) const
+{
+	auto it = types.find(typeName);
+	if (it != types.end())
+		return it->second;
+	return AssetTraitsPtr();
+}
+
+
+
+AssetPtr AssetManager::MakeAsset(const AssetTraits& traits, const char* name)
+{
+	assert(!traits.IsAbstract());
 	AssetId id = MakeUniqueId();
 	AssetRef& ref = assets.emplace(id, AssetRef()).first->second;
 	ref.id = id;
 	ref.name = name;
-	ref.traits = traits;
-	ref.asset = std::shared_ptr<Asset>(traits->Create(ref));
+	ref.traits = &traits;
+	ref.asset = traits.Create(ref);
 	return ref.asset;
 }
 

@@ -29,10 +29,10 @@ typedef std::weak_ptr<AssetItem> AssetItemRef;
 struct AssetItem
 {
 	std::vector<AssetItemPtr> children;
-	AssetItemRef parent;
-	std::string  name;
-	AssetRef     assetRef;
-	int          row = 0;
+	AssetItemRef    parent;
+	std::string     name;
+	AssetRef        assetRef;
+	int             row = 0;
 
 	QString GetFullName() const;
 	QString GetFullTypeName() const;
@@ -137,8 +137,6 @@ private:
 
 	QuickSerializerAdapter quickeditAdapter;
 	QPropertyTree*    quickAssetEdit = nullptr;
-
-	AssetTraits* testTraits;
 };
 
 

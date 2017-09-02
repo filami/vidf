@@ -42,7 +42,7 @@ QString AssetItem::GetFullName() const
 
 QString AssetItem::GetFullTypeName() const
 {
-	return QString(assetRef.traits->GetTypeName());
+	return QString(assetRef.traits->GetFullTypeName().c_str());
 }
 
 
@@ -213,9 +213,9 @@ void AssetItemManager::InsertItem(AssetItemPtr parent, const std::string& name, 
 	if (offset == size_t(-1))
 	{
 		AssetItemPtr subItem = std::make_shared<AssetItem>();
-		subItem->assetRef = ref;
 		subItem->parent = parent;
 		subItem->name = name;
+		subItem->assetRef = ref;
 		subItem->row = parent->children.size();
 		parent->children.push_back(subItem);
 	}
@@ -278,14 +278,14 @@ AssetBrowser::AssetBrowser(MainFrame& _mainFrame)
 	, assetTreeModel(assetItemManager.root.get())
 	, assetTreeModel2(assetItemManager.root.get())
 {
-	testTraits = new TextureType();
+	AssetTraitsPtr textureType = assetManager.FindTypeTraits("Texture");
 
-	assetManager.MakeAsset(testTraits, "parent 0/child 0-0");
-	assetManager.MakeAsset(testTraits, "parent 1/child 1-0");
-	assetManager.MakeAsset(testTraits, "parent 1/child 1-1");
-	assetManager.MakeAsset(testTraits, "parent 1/z/b");
-	assetManager.MakeAsset(testTraits, "parent 1/z/a");
-	assetManager.MakeAsset(testTraits, "at the root");
+	assetManager.MakeAsset(*textureType, "parent 0/child 0-0");
+	assetManager.MakeAsset(*textureType, "parent 1/child 1-0");
+	assetManager.MakeAsset(*textureType, "parent 1/child 1-1");
+	assetManager.MakeAsset(*textureType, "parent 1/z/b");
+	assetManager.MakeAsset(*textureType, "parent 1/z/a");
+	assetManager.MakeAsset(*textureType, "at the root");
 	assetItemManager.Update();
 
 	setWindowTitle(tr("Asset Browser"));

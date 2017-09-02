@@ -5,6 +5,17 @@ namespace vidf
 {
 
 
+
+std::string AssetTraits::GetFullTypeName() const
+{
+	AssetTraits* parent = GetParent();
+	if (parent)
+		return parent->GetFullTypeName() + "." + GetTypeName();
+	return GetTypeName();
+}
+
+
+
 Asset::Asset(AssetRef& _assetRef)
 	: assetRef(_assetRef)
 {

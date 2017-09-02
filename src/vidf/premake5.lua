@@ -19,6 +19,8 @@ AddFilesToProject
 		"assets/asset.cpp",
 		"assets/assetmanager.h",
 		"assets/assetmanager.cpp",
+		"assets/texture.h",
+		"assets/texture.cpp",
 	},
 	
 	["Common"] =
