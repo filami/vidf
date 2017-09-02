@@ -27,6 +27,8 @@ AddFilesToProject
 
 	["tests"] =
 	{
+		"tests/assetbrowser.h",
+		"tests/assetbrowser.cpp",
 		"tests/notepad.h",
 		"tests/notepad.cpp",
 		"tests/lenses.h",
