@@ -19,6 +19,9 @@
 #include <queue>
 #include <stack>
 #include <array>
+#include <unordered_map>
+#include <random>
+#include <ctime>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -48,3 +51,5 @@
 #include "vidf/common/utils.h"
 #include "vidf/common/pointer.h"
 #include "vidf/profiler/timeprofiler.h"
+
+#include "yasli/Archive.h"

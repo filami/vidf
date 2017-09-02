@@ -12,6 +12,15 @@ AddFilesToProject
 		"../../premake5.lua",
 		"../build/buildlib.lua",
 	},
+
+	["Assets"] =
+	{
+		"assets/asset.h",
+		"assets/asset.cpp",
+		"assets/assetmanager.h",
+		"assets/assetmanager.cpp",
+	},
+	
 	["Common"] =
 	{
 		"pch.h",

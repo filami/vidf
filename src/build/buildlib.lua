@@ -68,6 +68,8 @@ function ConfigCommon(projName, targetLoc)
 		_WORKING_DIR.."/src/ext/gm/src/platform/win32msvc/",
 		_WORKING_DIR.."/src/ext/gm/src/binds/",
 		_WORKING_DIR.."/ext/include/",
+		_WORKING_DIR.."/ext/include/",
+		_WORKING_DIR.."/ext/yasli",
 	}
 	defines {"VK_USE_PLATFORM_WIN32_KHR", "WIN64"}
 	flags {"NoManifest"}

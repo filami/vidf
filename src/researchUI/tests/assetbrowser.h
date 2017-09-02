@@ -1,8 +1,5 @@
 #pragma once
 
-#include <unordered_map>
-#include <random>
-#include <ctime>
 #include <QMainWindow>
 #include <QTreeWidget>
 #include <QListView>
@@ -14,75 +11,9 @@
 #include <vidf/pch.h>
 #include "QPropertyTree/QPropertyTree.h"
 
-#include <QListWidget>
+#include "vidf/assets/assetmanager.h"
 
 using namespace vidf;
-
-
-typedef uint64 AssetId;
-
-
-class Asset;
-struct AssetTraits;
-typedef std::shared_ptr<Asset> AssetPtr;
-
-
-struct AssetRef
-{
-	AssetId      id = -1;
-	std::string  name;
-	AssetPtr     asset;
-	AssetTraits* traits;
-};
-
-
-
-struct AssetTraits
-{
-	virtual ~AssetTraits() {}
-	virtual Asset*       Create(AssetRef& assetRef) = 0;
-	virtual const char*  GetTypeName() const = 0;
-	virtual AssetTraits* GetParent() const { return nullptr; }
-	virtual bool         IsAbstract() const { return false; }
-};
-
-
-
-class Asset
-{
-public:
-	Asset(AssetRef& _assetRef)
-		: assetRef(_assetRef) {}
-	virtual ~Asset() {}
-
-	virtual void serialize(yasli::Archive& ar) { }
-	virtual void SerializeQuickEdit(yasli::Archive& ar) { serialize(ar); }
-
-	const AssetRef& assetRef;
-};
-
-
-
-class AssetManager
-{
-public:
-	typedef std::unordered_map<AssetId, AssetRef> AssetMap;
-
-public:
-	AssetManager()
-		: random(std::time(0)) {}
-
-	AssetPtr MakeAsset(AssetTraits* traits, const char* name);
-	AssetMap::const_iterator begin() const { return assets.begin(); }
-	AssetMap::const_iterator end() const { return assets.end(); }
-
-private:
-	AssetId MakeUniqueId();
-
-private:
-	AssetMap        assets;
-	std::mt19937_64 random;
-};
 
 
 

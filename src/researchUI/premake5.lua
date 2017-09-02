@@ -38,11 +38,6 @@ AddFilesToProject
 
 -- YASLI
 
-includedirs
-{
-	_WORKING_DIR.."/ext/yasli",
-}
-
 AddFilesToProject
 {
 	["yasli/yasli"] =
