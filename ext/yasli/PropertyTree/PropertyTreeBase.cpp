@@ -38,8 +38,8 @@
 #include <wctype.h> // towlower
 #endif
 
-// #define PROFILE
-#ifdef PROFILE
+// #define PROFILER
+#ifdef PROFILER
 #include <QElapsedTimer>
 #endif
 
@@ -48,7 +48,7 @@ using namespace property_tree;
 
 static int timerLevel;
 DebugTimer::DebugTimer(const char* label, int threshold) : label(label), threshold(threshold) {
-#ifdef PROFILE
+#ifdef PROFILER
 	timespec t;
 	clock_gettime(CLOCK_MONOTONIC, &t);
 	startTime = t.tv_sec * 1000 + t.tv_nsec / 1000000;
@@ -57,7 +57,7 @@ DebugTimer::DebugTimer(const char* label, int threshold) : label(label), thresho
 }
 
 DebugTimer::~DebugTimer() {
-#if PROFILE
+#if PROFILER
 	--timerLevel;
 	timespec t;
 	clock_gettime(CLOCK_MONOTONIC, &t);
@@ -1190,7 +1190,7 @@ void PropertyTreeBase::revert()
 	capturedRow_ = 0;
 	storePersistentFocusElement();
 
-#ifdef PROFILE
+#ifdef PROFILER
 	QElapsedTimer timer;
 	timer.start();
 #endif
@@ -1231,7 +1231,7 @@ void PropertyTreeBase::revert()
 	}
 	else
 		model_->clear();
-#ifdef PROFILE
+#ifdef PROFILER
 	revertTime_ = int(timer.elapsed());
 	printf("Revert time: %d\n", revertTime_);
 #endif
@@ -1305,7 +1305,7 @@ void PropertyTreeBase::revertNoninterrupting()
 void PropertyTreeBase::apply(bool continuous)
 {
 	DebugTimer t("PropertyTreeBase::apply", 10);
-#ifdef PROFILE
+#ifdef PROFILER
 	QElapsedTimer timer;
 	timer.start();
 #endif
@@ -1321,7 +1321,7 @@ void PropertyTreeBase::apply(bool continuous)
 			onSerialized(ia);
 		}
 	}
-#ifdef PROFILE
+#ifdef PROFILER
 	applyTime_ = int(timer.elapsed());
 	printf("Apply time: %d\n", applyTime_);
 #endif

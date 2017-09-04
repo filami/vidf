@@ -16,7 +16,7 @@ public:
 
 	void           RegisterType(AssetTraitsPtr type);
 	AssetTraitsPtr FindTypeTraits(const char* typeName) const;
-	AssetPtr MakeAsset(const AssetTraits& traits, const char* name);
+	AssetPtr       MakeAsset(const AssetTraits& traits, const char* name);
 	AssetMap::const_iterator begin() const { return assets.begin(); }
 	AssetMap::const_iterator end() const { return assets.end(); }
 

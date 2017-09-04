@@ -35,8 +35,10 @@ struct AssetItem
 	AssetRef        assetRef;
 	int             row = 0;
 
+	void    SortChilden(bool recursive);
 	QString GetFullName() const;
 	QString GetFullTypeName() const;
+	void    ChangeName(const QString& name);
 };
 
 
@@ -59,7 +61,6 @@ struct AssetItemManager
 
 	void Update();
 	void InsertItem(AssetItemPtr parent, const std::string& name, const AssetRef& ref);
-	void SortItems(AssetItemPtr item, bool recursive);
 };
 
 
@@ -71,6 +72,7 @@ public:
 	AssetBrowserModel();
 
 	QVariant data(const QModelIndex& index, int role) const override;
+	bool setData(const QModelIndex& index, const QVariant& value, int role);
 	Qt::ItemFlags flags(const QModelIndex& index) const override;
 	QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 	QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;

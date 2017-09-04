@@ -30,6 +30,29 @@ struct TextureType : public AssetTraits
 
 
 
+void AssetItem::SortChilden(bool recursive)
+{
+	std::sort(
+		children.begin(), children.end(),
+		[](AssetItemPtr left, AssetItemPtr right)
+	{
+		if (left->assetRef.asset != nullptr && right->assetRef.asset == nullptr)
+			return false;
+		if (left->assetRef.asset == nullptr && right->assetRef.asset != nullptr)
+			return true;
+		return left->name < right->name;
+	});
+	for (uint i = 0; i < children.size(); ++i)
+		children[i]->row = i;
+	if (recursive)
+	{
+		for (auto child : children)
+			child->SortChilden(true);
+	}
+}
+
+
+
 QString AssetItem::GetFullName() const
 {
 	auto parentPtr = parent.lock();
@@ -43,6 +66,15 @@ QString AssetItem::GetFullName() const
 QString AssetItem::GetFullTypeName() const
 {
 	return QString(assetRef.traits->GetFullTypeName().c_str());
+}
+
+
+
+void AssetItem::ChangeName(const QString& _name)
+{
+	name = _name.toUtf8();
+	if (assetRef.asset)
+		assetRef.name = GetFullName().toUtf8();
 }
 
 
@@ -70,6 +102,7 @@ QVariant AssetBrowserModel::data(const QModelIndex& index, int role) const
 			else
 				return iconsProvider.icon(QFileIconProvider::File);
 		}
+	case Qt::EditRole:
 	case Qt::DisplayRole:
 		if (item->assetRef.asset == nullptr)
 		{
@@ -92,16 +125,37 @@ QVariant AssetBrowserModel::data(const QModelIndex& index, int role) const
 
 
 
+bool AssetBrowserModel::setData(const QModelIndex& index, const QVariant& value, int role)
+{
+	if (index.isValid() && role == Qt::EditRole)
+	{
+		AssetItem* item = GetItem(index);
+		AssetItem* parentItem = item->parent.lock().get();
+		item->ChangeName(value.toString());
+		item->parent.lock()->SortChilden(false);
+		dataChanged(
+			createIndex(0, index.column(), parentItem->children.front().get()),
+			createIndex(parentItem->children.size()-1, index.column(), parentItem->children.back().get()));
+		return true;
+	}
+	return false;
+}
+
+
+
 Qt::ItemFlags AssetBrowserModel::flags(const QModelIndex& index) const
 {
-	return 0; // ??
+	if (!index.isValid() || index.column() != 0)
+		return Qt::ItemIsEnabled;
+	return QAbstractItemModel::flags(index) | Qt::ItemIsEditable;
 }
 
 
 
 QVariant AssetBrowserModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-	if (orientation != Qt::Horizontal && role != Qt::DisplayRole)
+	
+	if (orientation != Qt::Horizontal || role != Qt::DisplayRole)
 		return QVariant();
 	switch (section)
 	{
@@ -200,7 +254,7 @@ void AssetItemManager::Update()
 		InsertItem(root, ref.name, it.second);
 	}
 	const bool recursive = true;
-	SortItems(root, recursive);
+	root->SortChilden(recursive);
 }
 
 
@@ -247,29 +301,6 @@ void AssetItemManager::InsertItem(AssetItemPtr parent, const std::string& name, 
 
 
 
-void AssetItemManager::SortItems(AssetItemPtr item, bool recursive)
-{
-	std::sort(
-		item->children.begin(), item->children.end(),
-		[](AssetItemPtr left, AssetItemPtr right)
-	{
-		if (left->assetRef.asset != nullptr && right->assetRef.asset == nullptr)
-			return false;
-		if (left->assetRef.asset == nullptr && right->assetRef.asset != nullptr)
-			return true;
-		return left->name < right->name;
-	});
-	for (uint i = 0; i < item->children.size(); ++i)
-		item->children[i]->row = i;
-	if (recursive)
-	{
-		for (auto child : item->children)
-			SortItems(child, true);
-	}
-}
-
-
-
 AssetBrowser::AssetBrowser(MainFrame& _mainFrame)
 	: QDockWidget(&_mainFrame)
 	, mainFrame(_mainFrame)
@@ -277,6 +308,11 @@ AssetBrowser::AssetBrowser(MainFrame& _mainFrame)
 	auto& assetManager = GetAssetManager();
 	auto& assetItemManager = GetAssetItemManager();
 	AssetTraitsPtr textureType = assetManager.FindTypeTraits("Texture");
+	AssetTraitsPtr textureSettingsType = assetManager.FindTypeTraits("TextureSettings");
+
+	assetManager.MakeAsset(*textureSettingsType, "System/UncompressedNormal");
+	assetManager.MakeAsset(*textureSettingsType, "System/CompressedDiffuse");
+	assetManager.MakeAsset(*textureSettingsType, "System/CompressedHDR");
 
 	assetManager.MakeAsset(*textureType, "parent 0/child 0-0");
 	assetManager.MakeAsset(*textureType, "parent 1/child 1-0");
@@ -304,14 +340,14 @@ AssetBrowser::AssetBrowser(MainFrame& _mainFrame)
 		subLayout->addWidget(splitter);
 
 		assetTreeModel.root = assetItemManager.root.get();
-		assetTreeModel.foldersOnly = true;
+		assetTreeModel.foldersOnly = false;
 		assetTreeModel.recursive = true;
 		assetTreeView = new QTreeView();
 		splitter->addWidget(assetTreeView);
 		assetTreeView->setModel(&assetTreeModel);
 		assetTreeView->setSelectionMode(QAbstractItemView::SingleSelection);
 		assetTreeView->setSelectionBehavior(QAbstractItemView::SelectRows);
-		assetTreeView->setHeaderHidden(true);
+		// assetTreeView->setHeaderHidden(true);
 		connect(assetTreeView, &QAbstractItemView::clicked, this, &AssetBrowser::OnFolderSelected);
 
 		assetTreeModel2.foldersOnly = false;
@@ -328,7 +364,7 @@ AssetBrowser::AssetBrowser(MainFrame& _mainFrame)
 		quickAssetEdit = new QPropertyTree();
 		subLayout->addWidget(quickAssetEdit);
 		quickAssetEdit->setUndoEnabled(true, false);
-		quickAssetEdit->setMaximumWidth(380);
+		quickAssetEdit->setMinimumWidth(320);
 		quickAssetEdit->attach(yasli::Serializer(quickeditAdapter));
 	}
 
