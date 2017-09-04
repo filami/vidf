@@ -328,54 +328,27 @@ AssetBrowser::AssetBrowser(MainFrame& _mainFrame)
 	QBoxLayout* layout = new QBoxLayout(QBoxLayout::TopToBottom);
 	mainWidget->setLayout(layout);
 
-	pathWidget = new QLabel();
-	pathWidget->setText(QString("test"));
-	layout->addWidget(pathWidget);
+	QSplitter* splitter = new QSplitter(Qt::Vertical);
+	layout->addWidget(splitter);
 
-	{
-		QBoxLayout* subLayout = new QBoxLayout(QBoxLayout::LeftToRight);
-		layout->addLayout(subLayout);
+	assetTreeModel.root = assetItemManager.root.get();
+	assetTreeModel.foldersOnly = false;
+	assetTreeModel.recursive = true;
+	assetTreeView = new QTreeView();
+	splitter->addWidget(assetTreeView);
+	assetTreeView->setModel(&assetTreeModel);
+	assetTreeView->setSelectionMode(QAbstractItemView::SingleSelection);
+	assetTreeView->setSelectionBehavior(QAbstractItemView::SelectRows);
+	connect(assetTreeView, &QAbstractItemView::clicked, this, &AssetBrowser::OnItemClicked);
+	connect(assetTreeView, &QAbstractItemView::activated, this, &AssetBrowser::OnItemActivated);
 
-		QSplitter* splitter = new QSplitter(Qt::Horizontal);
-		subLayout->addWidget(splitter);
-
-		assetTreeModel.root = assetItemManager.root.get();
-		assetTreeModel.foldersOnly = false;
-		assetTreeModel.recursive = true;
-		assetTreeView = new QTreeView();
-		splitter->addWidget(assetTreeView);
-		assetTreeView->setModel(&assetTreeModel);
-		assetTreeView->setSelectionMode(QAbstractItemView::SingleSelection);
-		assetTreeView->setSelectionBehavior(QAbstractItemView::SelectRows);
-		// assetTreeView->setHeaderHidden(true);
-		connect(assetTreeView, &QAbstractItemView::clicked, this, &AssetBrowser::OnFolderSelected);
-
-		assetTreeModel2.foldersOnly = false;
-		assetTreeModel2.recursive = false;
-		assetTreeView2 = new QTreeView();
-		splitter->addWidget(assetTreeView2);
-		assetTreeView2->setModel(&assetTreeModel2);
-		assetTreeView2->setSelectionMode(QAbstractItemView::SingleSelection);
-		assetTreeView2->setSelectionBehavior(QAbstractItemView::SelectRows);
-		SetSubItemRoot(assetItemManager.root.get());
-		connect(assetTreeView2, &QAbstractItemView::clicked, this, &AssetBrowser::OnItemClicked);
-		connect(assetTreeView2, &QAbstractItemView::activated, this, &AssetBrowser::OnItemActivated);
-
-		quickAssetEdit = new QPropertyTree();
-		subLayout->addWidget(quickAssetEdit);
-		quickAssetEdit->setUndoEnabled(true, false);
-		quickAssetEdit->setMinimumWidth(320);
-		quickAssetEdit->attach(yasli::Serializer(quickeditAdapter));
-	}
+	quickAssetEdit = new QPropertyTree();
+	splitter->addWidget(quickAssetEdit);
+	quickAssetEdit->setUndoEnabled(true, false);
+	quickAssetEdit->setMinimumWidth(320);
+	quickAssetEdit->attach(yasli::Serializer(quickeditAdapter));
 
 	setWidget(mainWidget);
-}
-
-
-
-void AssetBrowser::OnFolderSelected(const QModelIndex& index)
-{
-	SetSubItemRoot(assetTreeModel.GetItem(index));
 }
 
 
@@ -383,9 +356,7 @@ void AssetBrowser::OnFolderSelected(const QModelIndex& index)
 void AssetBrowser::OnItemActivated(const QModelIndex& index)
 {
 	AssetItem* item = assetTreeModel.GetItem(index);
-	if (item->assetRef.asset == nullptr)
-		SetSubItemRoot(item);
-	else
+	if (item->assetRef.asset != nullptr)
 		mainFrame.OpenAssetItem(item);
 }
 
@@ -396,27 +367,6 @@ void AssetBrowser::OnItemClicked(const QModelIndex& index)
 	AssetItem* item = assetTreeModel.GetItem(index);
 	if (item->assetRef.asset != nullptr)
 		QuickEditItem(item);
-}
-
-
-
-void AssetBrowser::keyPressEvent(QKeyEvent* event)
-{
-	if (event->key() == Qt::Key_Backspace)
-	{
-		if (assetTreeModel2.root != GetAssetItemManager().root.get())
-			SetSubItemRoot(assetTreeModel2.root->parent.lock().get());
-	}
-}
-
-
-
-void AssetBrowser::SetSubItemRoot(AssetItem* newRoot)
-{
-	assetTreeModel2.root = newRoot;
-	assetTreeView2->reset();
-	pathWidget->setText(newRoot->GetFullName());
-	QuickEditItem(nullptr);
 }
 
 
@@ -449,7 +399,7 @@ AssetItemManager& AssetBrowser::GetAssetItemManager()
 
 
 AssetEditor::AssetEditor(MainFrame* parent, AssetItem* _assetItem)
-	: QDockWidget(_assetItem->GetFullName() + " (" + _assetItem->GetFullTypeName() + ")", parent)
+	: QMainWindow(parent)
 	, mainFrame(*parent)
 	, assetItem(_assetItem)
 {
@@ -460,7 +410,7 @@ AssetEditor::AssetEditor(MainFrame* parent, AssetItem* _assetItem)
 void AssetEditor::closeEvent(QCloseEvent* event)
 {
 	mainFrame.CloseAssetItem(assetItem);
-	QDockWidget::closeEvent(event);
+	QWidget::closeEvent(event);
 }
 
 
@@ -472,20 +422,39 @@ MainFrame::MainFrame(VIEditor& _editor)
 	setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
 
 	assetBrowser = new AssetBrowser(*this);
-	AddDockWindow(assetBrowser);
+	addDockWidget(Qt::LeftDockWidgetArea, assetBrowser);
+
+	mdiArea = new QMdiArea();
+	setCentralWidget(mdiArea);
+	mdiArea->setViewMode(QMdiArea::TabbedView);
+		
+	assetCreators[GetAssetManager().FindTypeTraits("Texture").get()] = &TextureEditor::Create;
 }
 
 
 
 void MainFrame::OpenAssetItem(AssetItem* assetItem)
 {
-	AssetEditor* assetEditor = nullptr;
+	QWidget* assetEditor = nullptr;
 	auto it = assetEditors.find(assetItem->assetRef.id);
 	if (it == assetEditors.end())
 	{
-		assetEditor = new SimpleAssetEditor(this, assetItem);
-		AddDockWindow(assetEditor);
+		auto creatorIt = assetCreators.find(assetItem->assetRef.traits);
+		if (creatorIt != assetCreators.end())
+		{
+			AssetEditorCreatorFn creator = creatorIt->second;
+			assetEditor = (*creator)(this, assetItem);
+			QMdiSubWindow* subWindow = mdiArea->addSubWindow(assetEditor);
+			subWindow->setWindowTitle(assetItem->GetFullName() + " (" + assetItem->GetFullTypeName() + ")");
+		}
+		else
+		{
+			InspectorWidget* inspector = new InspectorWidget(this, assetItem);
+			assetEditor = inspector;
+			addDockWidget(Qt::RightDockWidgetArea, inspector);
+		}
 		assetEditors[assetItem->assetRef.id] = assetEditor;
+		assetEditor->setWindowTitle(assetItem->GetFullName() + " (" + assetItem->GetFullTypeName() + ")");
 	}
 	else
 		assetEditor = it->second;
@@ -506,11 +475,9 @@ void MainFrame::CloseAssetItem(AssetItem* assetItem)
 
 
 
-void MainFrame::AddDockWindow(QDockWidget* dockWindow)
+AssetManager& MainFrame::GetAssetManager()
 {
-	addDockWidget(Qt::LeftDockWidgetArea, dockWindow);
-	if (dockWindow != assetBrowser)
-		tabifyDockWidget(assetBrowser, dockWindow);
+	return editor.GetAssetManager();
 }
 
 

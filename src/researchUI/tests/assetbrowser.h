@@ -9,6 +9,9 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QDockWidget>
+#include <QMdiArea>
+#include <QMdiSubWindow>
+#include <QBoxLayout>
 #include <vidf/pch.h>
 #include "QPropertyTree/QPropertyTree.h"
 
@@ -132,15 +135,11 @@ public:
 	AssetBrowser(MainFrame& _mainFrame);
 
 private slots:
-	void OnFolderSelected(const QModelIndex& index);
 	void OnItemActivated(const QModelIndex& index);
 	void OnItemClicked(const QModelIndex& index);
 
 private:
-	void keyPressEvent(QKeyEvent* event) override;
-	void SetSubItemRoot(AssetItem* newRoot);
-	void QuickEditItem(AssetItem* item);
-
+	void              QuickEditItem(AssetItem* item);
 	AssetManager&     GetAssetManager();
 	AssetItemManager& GetAssetItemManager();
 
@@ -149,12 +148,6 @@ private:
 
 	AssetBrowserModel assetTreeModel;
 	QTreeView*        assetTreeView;
-
-	AssetBrowserModel assetTreeModel2;
-	QTreeView*        assetTreeView2;
-
-	QLabel*           pathWidget;
-
 	QuickSerializerAdapter quickeditAdapter;
 	QPropertyTree*    quickAssetEdit = nullptr;
 };
@@ -168,6 +161,9 @@ class AssetEditor;
 class MainFrame : public QMainWindow
 {
 	Q_OBJECT
+private:
+	typedef AssetEditor*(*AssetEditorCreatorFn)(MainFrame*, AssetItem*);
+
 public:
 	MainFrame(VIEditor& _editor);
 
@@ -176,39 +172,25 @@ public:
 	VIEditor& GetEditor() { return editor; }
 
 private:
-	void AddDockWindow(QDockWidget* dockWindow);
+	AssetManager& GetAssetManager();
 
 private:
 	VIEditor&        editor;
 	AssetBrowser*    assetBrowser;
-	std::unordered_map<AssetId, AssetEditor*> assetEditors;
+	QMdiArea*        mdiArea;
+	std::unordered_map<AssetId, QWidget*> assetEditors;
+	std::unordered_map<const AssetTraits*, AssetEditorCreatorFn> assetCreators;
 };
 
 
 
-class AssetEditor : public QDockWidget
+class InspectorWidget : public QDockWidget
 {
 	Q_OBJECT
 public:
-	AssetEditor(MainFrame* parent, AssetItem* _assetItem);
-	virtual ~AssetEditor() {}
-	AssetItem* assetItem;
-
-private:
-	void AssetEditor::closeEvent(QCloseEvent* event) override;
-
-private:
-	MainFrame& mainFrame;
-};
-
-
-
-class SimpleAssetEditor : public AssetEditor
-{
-	Q_OBJECT
-public:
-	SimpleAssetEditor(MainFrame* parent, AssetItem* _assetItem)
-		: AssetEditor(parent, _assetItem)
+	InspectorWidget(MainFrame* parent, AssetItem* _assetItem)
+		: QDockWidget(parent)
+		, assetItem(_assetItem)
 	{
 		assetEdit = new QPropertyTree();
 		assetEdit->setUndoEnabled(true, false);
@@ -221,5 +203,44 @@ public:
 		assetItem->assetRef.asset->SerializeQuickEdit(ar);
 	}
 
+private:
+	AssetItem*     assetItem;
 	QPropertyTree* assetEdit;
+};
+
+
+
+class AssetEditor : public QMainWindow
+{
+	Q_OBJECT
+public:
+	AssetEditor(MainFrame* parent, AssetItem* _assetItem);
+	virtual ~AssetEditor() { }
+
+private:
+	void AssetEditor::closeEvent(QCloseEvent* event) override;
+
+private:
+	MainFrame& mainFrame;
+	AssetItem* assetItem;
+};
+
+
+
+class TextureEditor : public AssetEditor
+{
+public:
+	TextureEditor(MainFrame* parent, AssetItem* assetItem)
+		: AssetEditor(parent, assetItem)
+	{
+		QWidget* textureViewer = new QWidget();
+		setCentralWidget(textureViewer);
+
+		InspectorWidget* inspector = new InspectorWidget(parent, assetItem);
+		addDockWidget(Qt::RightDockWidgetArea, inspector);
+	}
+
+	static AssetEditor* Create(MainFrame* parent, AssetItem* assetItem) { return new TextureEditor(parent, assetItem); }
+
+private:
 };
