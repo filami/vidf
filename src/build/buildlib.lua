@@ -28,10 +28,12 @@ function CreateProject(projName, projPch, options, projUUID)
 	uuid(projUUID)
 	location(buildLocation)
 	language "c++"
+	--[[
 	if projPch ~= nil then
 		pchheader(projPch..".h")
 		pchsource(projPch..".cpp")
 	end
+	]]
 	if options.pedantic then
 		-- flags {"ExtraWarnings", "FatalWarnings"}
 		flags {"NoWarnings"}

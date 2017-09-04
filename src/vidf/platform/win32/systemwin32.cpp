@@ -36,4 +36,10 @@ namespace vidf
 
 
 
+	void MakeFolder(const char* folderName)
+	{
+	}
+
+
+
 }

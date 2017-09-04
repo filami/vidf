@@ -38,6 +38,7 @@ namespace vidf
 	void PostQuitMessage();
 	SystemMessageResult UpdateSystemMessages();
 	void SetCurrentDirectory(const char* currentDir);
+	void MakeFolder(const char* folderName);
 
 
 }

@@ -9,7 +9,7 @@ class AssetManager
 {
 public:
 	typedef std::unordered_map<std::string, AssetTraitsPtr> AssetTypeMap;
-	typedef std::unordered_map<AssetId, AssetRef> AssetMap;
+	typedef std::unordered_map<AssetId, AssetPtr> AssetMap;
 
 public:
 	AssetManager();
@@ -21,7 +21,9 @@ public:
 	AssetMap::const_iterator end() const { return assets.end(); }
 
 private:
-	AssetId MakeUniqueId();
+	AssetId  MakeUniqueId();
+	void     SaveAsset(AssetPtr asset);
+	AssetPtr LoadAssetFile(const char* filePath);
 
 private:
 	AssetTypeMap    types;

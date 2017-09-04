@@ -109,7 +109,7 @@ struct TextureSettings
 class TextureSettingsAsset : public Asset
 {
 public:
-	TextureSettingsAsset(AssetRef& _assetRef);
+	TextureSettingsAsset();
 
 	void serialize(yasli::Archive& ar) override;
 
@@ -122,7 +122,7 @@ private:
 class Texture : public Asset
 {
 public:
-	Texture(AssetRef& _assetRef);
+	Texture();
 
 	void serialize(yasli::Archive& ar) override;
 

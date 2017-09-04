@@ -13,21 +13,11 @@ typedef std::shared_ptr<AssetTraits> AssetTraitsPtr;
 
 
 
-struct AssetRef
-{
-	AssetId      id = -1;
-	std::string  name;
-	AssetPtr     asset;
-	const AssetTraits* traits;
-};
-
-
-
 class AssetTraits
 {
 public:
 	virtual ~AssetTraits() {}
-	virtual AssetPtr     Create(AssetRef& assetRef) const { return AssetPtr(); }
+	virtual AssetPtr     Create() const { return AssetPtr(); }
 	virtual const char*  GetTypeName() const = 0;
 	virtual AssetTraits* GetParent() const { return nullptr; }
 	virtual bool         IsAbstract() const { return false; }
@@ -39,13 +29,20 @@ public:
 class Asset
 {
 public:
-	Asset(AssetRef& _assetRef);
+	Asset();
 	virtual ~Asset();
 
 	virtual void serialize(yasli::Archive& ar);
 	virtual void SerializeQuickEdit(yasli::Archive& ar);
+	AssetId      GetAssetId() const { return id; }
+	const AssetTraits* GetAssetTraits() const { return traits; }
+	const std::string& GetName() const { return name; }
 
-	const AssetRef& assetRef;
+private:
+	friend class AssetManager;
+	AssetId            id = -1;
+	std::string        name;
+	const AssetTraits* traits;
 };
 
 

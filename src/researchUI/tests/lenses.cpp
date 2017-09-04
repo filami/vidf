@@ -452,7 +452,7 @@ Document::Document()
 
 
 void Document::serialize(yasli::Archive& ar)
-{	
+{
 	ar(sensor, "sensor", "Sensor");
 	ar(raySources, "raySources", "Rays");
 	ar(elements, "elements", "Elements");

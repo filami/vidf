@@ -5,27 +5,6 @@
 
 
 
-class Texture : public Asset
-{
-public:
-	Texture(AssetRef& _assetRef)
-		: Asset(_assetRef) {}
-
-	virtual void serialize(yasli::Archive& ar) { ar(test, "test", "Test"); }
-
-	int test = 0;
-};
-
-
-
-struct TextureType : public AssetTraits
-{
-	virtual Asset*       Create(AssetRef& assetRef) { return new Texture(assetRef); }
-	virtual const char*  GetTypeName() const { return "Texture"; }
-};
-
-
-
 //////////////////////////////////////////////////////////////////////////
 
 
@@ -36,9 +15,9 @@ void AssetItem::SortChilden(bool recursive)
 		children.begin(), children.end(),
 		[](AssetItemPtr left, AssetItemPtr right)
 	{
-		if (left->assetRef.asset != nullptr && right->assetRef.asset == nullptr)
+		if (left->asset != nullptr && right->asset == nullptr)
 			return false;
-		if (left->assetRef.asset == nullptr && right->assetRef.asset != nullptr)
+		if (left->asset == nullptr && right->asset != nullptr)
 			return true;
 		return left->name < right->name;
 	});
@@ -65,7 +44,7 @@ QString AssetItem::GetFullName() const
 
 QString AssetItem::GetFullTypeName() const
 {
-	return QString(assetRef.traits->GetFullTypeName().c_str());
+	return QString(asset->GetAssetTraits()->GetFullTypeName().c_str());
 }
 
 
@@ -73,8 +52,8 @@ QString AssetItem::GetFullTypeName() const
 void AssetItem::ChangeName(const QString& _name)
 {
 	name = _name.toUtf8();
-	if (assetRef.asset)
-		assetRef.name = GetFullName().toUtf8();
+	if (asset)
+		name = GetFullName().toUtf8();
 }
 
 
@@ -97,14 +76,14 @@ QVariant AssetBrowserModel::data(const QModelIndex& index, int role) const
 	case Qt::DecorationRole:
 		if (index.column() == 0)
 		{
-			if (!item->assetRef.asset)
+			if (!item->asset)
 				return iconsProvider.icon(QFileIconProvider::Folder);
 			else
 				return iconsProvider.icon(QFileIconProvider::File);
 		}
 	case Qt::EditRole:
 	case Qt::DisplayRole:
-		if (item->assetRef.asset == nullptr)
+		if (item->asset == nullptr)
 		{
 			if (index.column() == 0)
 				return QString(item->name.c_str());
@@ -115,7 +94,7 @@ QVariant AssetBrowserModel::data(const QModelIndex& index, int role) const
 		{
 		case 0: return QString(item->name.c_str());
 		case 1: return QString(item->GetFullTypeName());
-		case 2: return item->assetRef.id;
+		case 2: return item->asset->GetAssetId();
 		default: return QString();
 		}
 	default:
@@ -181,7 +160,7 @@ QModelIndex AssetBrowserModel::index(int row, int column, const QModelIndex& par
 		parentItem = GetItem(parent);
 
 	AssetItemPtr childItem = parentItem->children[row];
-	if (foldersOnly && childItem->assetRef.asset != nullptr)
+	if (foldersOnly && childItem->asset != nullptr)
 		return QModelIndex();
 
 	return createIndex(row, column, childItem.get());
@@ -218,7 +197,7 @@ int AssetBrowserModel::rowCount(const QModelIndex& parent) const
 	{
 		for (auto it : parentItem->children)
 		{
-			if (it->assetRef.asset == nullptr)
+			if (it->asset == nullptr)
 				return parentItem->children.size();
 		}
 		return 0;
@@ -250,8 +229,8 @@ void AssetItemManager::Update()
 {
 	for (const auto& it : *assetManager)
 	{
-		const AssetRef& ref = it.second;
-		InsertItem(root, ref.name, it.second);
+		AssetPtr asset = it.second;
+		InsertItem(root, asset->GetName(), asset);
 	}
 	const bool recursive = true;
 	root->SortChilden(recursive);
@@ -259,7 +238,7 @@ void AssetItemManager::Update()
 
 
 
-void AssetItemManager::InsertItem(AssetItemPtr parent, const std::string& name, const AssetRef& ref)
+void AssetItemManager::InsertItem(AssetItemPtr parent, const std::string& name, AssetPtr asset)
 {
 	assert(name[0] != '/'); // ?? no name?
 	size_t offset = name.find('/');
@@ -268,7 +247,7 @@ void AssetItemManager::InsertItem(AssetItemPtr parent, const std::string& name, 
 		AssetItemPtr subItem = std::make_shared<AssetItem>();
 		subItem->parent = parent;
 		subItem->name = name;
-		subItem->assetRef = ref;
+		subItem->asset = asset;
 		subItem->row = parent->children.size();
 		parent->children.push_back(subItem);
 	}
@@ -294,8 +273,8 @@ void AssetItemManager::InsertItem(AssetItemPtr parent, const std::string& name, 
 		}
 		else
 			subItem = *it;
-		assert(subItem->assetRef.asset == nullptr);		// sub item has to be a folder and not anohter real asset
-		InsertItem(subItem, restName, ref);
+		assert(subItem->asset == nullptr);		// sub item has to be a folder and not anohter real asset
+		InsertItem(subItem, restName, asset);
 	}
 }
 
@@ -356,7 +335,7 @@ AssetBrowser::AssetBrowser(MainFrame& _mainFrame)
 void AssetBrowser::OnItemActivated(const QModelIndex& index)
 {
 	AssetItem* item = assetTreeModel.GetItem(index);
-	if (item->assetRef.asset != nullptr)
+	if (item->asset != nullptr)
 		mainFrame.OpenAssetItem(item);
 }
 
@@ -365,7 +344,7 @@ void AssetBrowser::OnItemActivated(const QModelIndex& index)
 void AssetBrowser::OnItemClicked(const QModelIndex& index)
 {
 	AssetItem* item = assetTreeModel.GetItem(index);
-	if (item->assetRef.asset != nullptr)
+	if (item->asset != nullptr)
 		QuickEditItem(item);
 }
 
@@ -376,7 +355,7 @@ void AssetBrowser::QuickEditItem(AssetItem* item)
 	if (!quickAssetEdit)
 		return;
 	if (item)
-		quickeditAdapter.asset = item->assetRef.asset;
+		quickeditAdapter.asset = item->asset;
 	else
 		quickeditAdapter.asset = nullptr;
 	quickAssetEdit->revert();
@@ -436,10 +415,10 @@ MainFrame::MainFrame(VIEditor& _editor)
 void MainFrame::OpenAssetItem(AssetItem* assetItem)
 {
 	QWidget* assetEditor = nullptr;
-	auto it = assetEditors.find(assetItem->assetRef.id);
+	auto it = assetEditors.find(assetItem->asset->GetAssetId());
 	if (it == assetEditors.end())
 	{
-		auto creatorIt = assetCreators.find(assetItem->assetRef.traits);
+		auto creatorIt = assetCreators.find(assetItem->asset->GetAssetTraits());
 		if (creatorIt != assetCreators.end())
 		{
 			AssetEditorCreatorFn creator = creatorIt->second;
@@ -453,7 +432,7 @@ void MainFrame::OpenAssetItem(AssetItem* assetItem)
 			assetEditor = inspector;
 			addDockWidget(Qt::RightDockWidgetArea, inspector);
 		}
-		assetEditors[assetItem->assetRef.id] = assetEditor;
+		assetEditors[assetItem->asset->GetAssetId()] = assetEditor;
 		assetEditor->setWindowTitle(assetItem->GetFullName() + " (" + assetItem->GetFullTypeName() + ")");
 	}
 	else
@@ -466,7 +445,7 @@ void MainFrame::OpenAssetItem(AssetItem* assetItem)
 
 void MainFrame::CloseAssetItem(AssetItem* assetItem)
 {
-	auto it = assetEditors.find(assetItem->assetRef.id);
+	auto it = assetEditors.find(assetItem->asset->GetAssetId());
 	if (it == assetEditors.end())
 		return;
 	it->second->close();

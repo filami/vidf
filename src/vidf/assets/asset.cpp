@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "asset.h"
+#include "yasli/Archive.h"
+#include "yasli/STL.h"
 
 namespace vidf
 {
@@ -16,8 +18,7 @@ std::string AssetTraits::GetFullTypeName() const
 
 
 
-Asset::Asset(AssetRef& _assetRef)
-	: assetRef(_assetRef)
+Asset::Asset()
 {
 }
 
@@ -29,6 +30,8 @@ Asset::~Asset() {}
 
 void Asset::serialize(yasli::Archive& ar)
 {
+	ar(id, "id");
+	ar(name, "name");
 }
 
 

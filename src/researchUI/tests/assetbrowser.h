@@ -35,7 +35,7 @@ struct AssetItem
 	std::vector<AssetItemPtr> children;
 	AssetItemRef    parent;
 	std::string     name;
-	AssetRef        assetRef;
+	AssetPtr        asset;
 	int             row = 0;
 
 	void    SortChilden(bool recursive);
@@ -63,7 +63,7 @@ struct AssetItemManager
 	AssetItemPtr  root;
 
 	void Update();
-	void InsertItem(AssetItemPtr parent, const std::string& name, const AssetRef& ref);
+	void InsertItem(AssetItemPtr parent, const std::string& name, AssetPtr asset);
 };
 
 
@@ -200,7 +200,7 @@ public:
 
 	void serialize(yasli::Archive& ar)
 	{
-		assetItem->assetRef.asset->SerializeQuickEdit(ar);
+		assetItem->asset->SerializeQuickEdit(ar);
 	}
 
 private:

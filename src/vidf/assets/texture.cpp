@@ -3,6 +3,7 @@
 #include "assetmanager.h"
 #include "yasli/Enum.h"
 #include "yasli/STL.h"
+#include "yasli/decorators/FileOpen.h"
 
 namespace vidf
 {
@@ -93,8 +94,8 @@ void TextureSettings::serialize(yasli::Archive& ar)
 
 
 
-TextureSettingsAsset::TextureSettingsAsset(AssetRef& _assetRef)
-	: Asset(_assetRef)
+TextureSettingsAsset::TextureSettingsAsset()
+	: Asset()
 {
 }
 
@@ -102,13 +103,13 @@ TextureSettingsAsset::TextureSettingsAsset(AssetRef& _assetRef)
 
 void TextureSettingsAsset::serialize(yasli::Archive& ar)
 {
+	Asset::serialize(ar);
 	settings.serialize(ar);
 }
 
 
 
-Texture::Texture(AssetRef& _assetRef)
-	: Asset(_assetRef)
+Texture::Texture()
 {
 }
 
@@ -116,9 +117,21 @@ Texture::Texture(AssetRef& _assetRef)
 
 void Texture::serialize(yasli::Archive& ar)
 {
-	ar(sourceTexturePath, "sourceTexturePath", "Source");
+	Asset::serialize(ar);
+	const char* imageFilter =
+		"All Images(*.bmp *.jpg *.tga *.png *tif);;"
+		"Bitmap(*.bmp);;"
+		"JPeg(*.jpg);;"
+		"Portable Format(*.png);;"
+		"Tiff(*.tif);;"
+		"Targa(*.tga)";
+	ar(yasli::FileOpen(sourceTexturePath, imageFilter), "sourceTexturePath", "Source");
 }
 
+
+
+YASLI_CLASS(Asset, Texture, "Texture")
+YASLI_CLASS(Asset, TextureSettingsAsset, "TextureSettings")
 
 
 
@@ -126,14 +139,14 @@ void RegisterTextureTypes(AssetManager* manager)
 {
 	class TextureSettingsAssetType : public AssetTraits
 	{
-		AssetPtr    Create(AssetRef& assetRef) const override { return std::make_shared<TextureSettingsAsset>(assetRef); }
+		AssetPtr    Create() const override { return std::make_shared<TextureSettingsAsset>(); }
 		const char* GetTypeName() const override { return "TextureSettings"; }
 	};
 	manager->RegisterType(std::make_shared<TextureSettingsAssetType>());
 
 	class TextureType : public AssetTraits
 	{
-		AssetPtr    Create(AssetRef& assetRef) const override { return std::make_shared<Texture>(assetRef); }
+		AssetPtr    Create() const override { return std::make_shared<Texture>(); }
 		const char* GetTypeName() const override { return "Texture"; }
 	};
 	manager->RegisterType(std::make_shared<TextureType>());

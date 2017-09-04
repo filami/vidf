@@ -135,3 +135,20 @@ AddFilesToProject
 		"proto/text.h",
 	},
 }
+
+
+-- YASLI
+
+AddFilesToProject
+{
+	["yasli/yasli"] =
+	{
+		_WORKING_DIR.."/ext/yasli/yasli/**.h",
+		_WORKING_DIR.."/ext/yasli/yasli/**.cpp",
+	},
+	["yasli/PropertyTree"] =
+	{
+		_WORKING_DIR.."/ext/yasli/PropertyTree/**.h",
+		_WORKING_DIR.."/ext/yasli/PropertyTree/**.cpp",
+	},
+}
