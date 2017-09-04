@@ -283,21 +283,75 @@ void Renderer::timerEvent(QTimerEvent *e)
 
 
 
+void Renderer::mousePressEvent(QMouseEvent* event)
+{
+	if (event->buttons() == Qt::RightButton)
+	{
+		lastPoint = event->pos();
+		event->accept();
+	}
+	QWidget::mousePressEvent(event);
+}
+
+
+
+void Renderer::mouseReleaseEvent(QMouseEvent* event)
+{
+	QWidget::mouseReleaseEvent(event);
+}
+
+
+
+void Renderer::mouseDoubleClickEvent(QMouseEvent* event)
+{
+	QWidget::mouseDoubleClickEvent(event);
+}
+
+
+
+void Renderer::mouseMoveEvent(QMouseEvent* event)
+{
+	if (event->buttons() == Qt::RightButton)
+	{
+		QPoint move = event->pos() - lastPoint;
+		position = position + move;
+		event->accept();
+	}
+	lastPoint = event->pos();
+	QWidget::mouseMoveEvent(event);
+}
+
+
+
+void Renderer::keyPressEvent(QKeyEvent* event)
+{
+	if (event->key() == Qt::Key_Plus)
+	{
+		scale *= 1.5f;
+		return;
+	}
+	if (event->key() == Qt::Key_Minus)
+	{
+		scale /= 1.5f;
+		return;
+	}
+	QWidget::keyPressEvent(event);
+}
+
+
+
 void Renderer::paintEvent(QPaintEvent* event)
 {
 	const QSize sz = size();
 	const float aspect = sz.width() / float(sz.height());
-	const Vector2f center = Vector2f(500.0f, 0.0f);
-	const float sizeY = 2000.0f;
-	const float sizeX = sizeY * aspect;
 
 	QPainter painter;
 	painter.begin(this);
 	painter.setRenderHint(QPainter::Antialiasing);
 
 	painter.fillRect(event->rect(), QBrush(QColor(0, 0, 0)));
-	painter.translate(350, 450);
-	painter.scale(4 * aspect, 4);
+	painter.translate(position.x() + sz.width() * 0.5f, position.y() + sz.height() * 0.5f);
+	painter.scale(scale * aspect, scale);
 	
 	painter.save();
 	painter.setBrush(QBrush());
@@ -457,6 +511,8 @@ LensesFrame::LensesFrame()
 	AddMenuAction(this, menu, tr("Open"), &LensesFrame::OnOpen);
 	AddMenuAction(this, menu, tr("Save"), &LensesFrame::OnSave);
 	AddMenuAction(this, menu, tr("Save As..."), &LensesFrame::OnSaveAs);
+
+	renderWidget->setFocus();
 }
 
 void LensesFrame::OnNew()
@@ -517,6 +573,7 @@ void LensesFrame::Open(const QString& path)
 	ar(document);
 	documentPath = path;
 	documentChanged = false;
+	simulatorWidget->revert();
 }
 
 }

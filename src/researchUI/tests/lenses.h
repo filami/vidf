@@ -161,8 +161,14 @@ class Renderer : public QWidget
 public:
 	Renderer(Document* _document);
 
-	virtual void paintEvent(QPaintEvent* event) override;
-	virtual void timerEvent(QTimerEvent* event) override;
+protected:
+	void paintEvent(QPaintEvent* event) override;
+	void timerEvent(QTimerEvent* event) override;
+	void mousePressEvent(QMouseEvent* event) override;
+	void mouseReleaseEvent(QMouseEvent* event) override;
+	void mouseDoubleClickEvent(QMouseEvent* event) override;
+	void mouseMoveEvent(QMouseEvent* event) override;
+	void keyPressEvent(QKeyEvent* event) override;
 
 private:
 	void DrawRaytraceSource(QPainter& painter, const RaySources& source, float frontLensOffset);
@@ -171,6 +177,9 @@ private:
 private:
 	Document*   document;
 	QBasicTimer timer;
+	QPointF     position = QPointF(350, 450);
+	QPoint      lastPoint;
+	float       scale = 4.0f;
 };
 
 
