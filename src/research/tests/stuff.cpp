@@ -697,10 +697,13 @@ void FlameGPU()
 
 	struct ViewConsts
 	{
+		Matrix44f projViewTM;
+		Vector3f cameraPos;
+		float _;
 		Vector2i viewport;
 		uint rngOffset;
-		uint _;
-		Float2x3 cameraTM;
+		uint __;
+		// Float2x3 cameraTM;
 	};
 
 	ConstantBufferDesc viewCBDesc(sizeof(ViewConsts), "viewCB");
@@ -716,8 +719,13 @@ void FlameGPU()
 	ViewConsts viewConsts;
 	viewConsts.viewport = Vector2i(width, height);
 	viewConsts.rngOffset = 0;
-	viewConsts.cameraTM[0] = { 0.45f * (float(height)/ width), 0.0f, 0.5f };
-	viewConsts.cameraTM[1] = { 0.0f, 0.45f, 0.5f };
+	// viewConsts.cameraTM[0] = { 0.45f * (float(height)/ width), 0.0f, 0.5f };
+	// viewConsts.cameraTM[1] = { 0.0f, 0.45f, 0.5f };
+
+	Matrix44f projTM = PerspectiveFovLH(1.4f, width / float(height), 0.01f, 100.0f);
+	// Matrix44f viewTM = LookAtLH(Vector3f(0.0f, 0.0f, 1.0f), Vector3f(zero), Vector3f(0.0f, 1.0f, 0.0f));
+	Matrix44f viewTM = LookAtLH(Vector3f(0.0f, 1.0f, 0.75f), Vector3f(zero), Vector3f(0.0f, 1.0f, 0.0f));
+	Matrix44f projViewTM = Mul(viewTM, projTM);
 
 	ComputeAverageBrightness computeAverageBrightness;
 	computeAverageBrightness.Prepare(renderDevice, shaderManager, width, height);
@@ -728,6 +736,8 @@ void FlameGPU()
 		
 		if (canvasListener.restartRender)
 			viewConsts.rngOffset = 0;
+		viewConsts.projViewTM = projViewTM;
+		viewConsts.cameraPos = Vector3f(0.0f, 1.0f, 0.75f);
 		viewCB.Update(renderDevice->GetContext(), viewConsts);
 		viewConsts.rngOffset += numThreads * dispatchSize;
 

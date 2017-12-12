@@ -19,9 +19,10 @@ cbuffer viewCB : register(b0)
 {
 	struct
 	{
+		float4x4 projViewTM;
+		float3   cameraPos;
 		uint2    viewport;
 		int      rngOffset;
-		row_major float2x3 cameraTM;
 	} view;
 }
 
