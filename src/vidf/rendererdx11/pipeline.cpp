@@ -88,6 +88,7 @@ namespace vidf { namespace dx11 {
 		pass->dsv = desc.dsv;
 
 		pass->viewport = desc.viewport;
+		pass->hasViewport = (pass->dsv != nullptr || !pass->rtvs.empty());
 
 		return pass;
 	}
@@ -104,7 +105,8 @@ namespace vidf { namespace dx11 {
 	void CommandBuffer::BeginRenderPass(RenderPassPtr renderPass)
 	{
 		PD3D11DeviceContext context = renderDevice->GetContext();		
-		context->RSSetViewports(1, &renderPass->viewport);
+		if (renderPass->hasViewport)
+			context->RSSetViewports(1, &renderPass->viewport);
 		context->OMSetRenderTargetsAndUnorderedAccessViews(
 			renderPass->rtvs.size(), renderPass->rtvs.data(),
 			renderPass->dsv,
@@ -160,7 +162,7 @@ namespace vidf { namespace dx11 {
 
 
 
-	void CommandBuffer::FlushGraphicsState()
+	void CommandBuffer::FlushCommonState()
 	{
 		PD3D11DeviceContext context = renderDevice->GetContext();
 
@@ -170,6 +172,23 @@ namespace vidf { namespace dx11 {
 		std::array<ID3D11ShaderResourceView*, numSrvs> srvsArray;
 		for (uint i = 0; i < numSrvs; ++i)
 			srvsArray[i] = srvs[i];
+
+		context->VSSetConstantBuffers(0, numCBs, cbsArray.data());
+		context->PSSetConstantBuffers(0, numCBs, cbsArray.data());
+		context->VSSetShaderResources(0, numSrvs, srvsArray.data());
+		context->PSSetShaderResources(0, numSrvs, srvsArray.data());
+
+		context->CSSetConstantBuffers(0, numCBs, cbsArray.data());
+		context->CSSetShaderResources(0, numSrvs, srvsArray.data());
+	}
+
+
+
+	void CommandBuffer::FlushGraphicsState()
+	{
+		FlushCommonState();
+
+		PD3D11DeviceContext context = renderDevice->GetContext();
 
 		std::array<ID3D11Buffer*, numVertexStreams> vertexStreamArray;
 		std::array<UINT, numVertexStreams> vertexStrideStrideArray;
@@ -192,10 +211,47 @@ namespace vidf { namespace dx11 {
 		context->VSSetShader(currentGraphicsPSO->vertexShader->GetVertexShader(), nullptr, 0);
 		if (currentGraphicsPSO->pixelShader)
 			context->PSSetShader(currentGraphicsPSO->pixelShader->GetPixelShader(), nullptr, 0);
-		context->VSSetConstantBuffers(0, numCBs, cbsArray.data());
-		context->PSSetConstantBuffers(0, numCBs, cbsArray.data());
-		context->VSSetShaderResources(0, numSrvs, srvsArray.data());
-		context->PSSetShaderResources(0, numSrvs, srvsArray.data());
+	}
+
+
+
+	void CommandBuffer::FlushComputeState()
+	{
+		FlushCommonState();
+		renderDevice->GetContext()->CSSetShader(currentCompute->GetComputeShader(), nullptr, 0);
+	}
+
+
+
+	void CommandBuffer::BeginComputePass(RenderPassPtr renderPass)
+	{
+		PD3D11DeviceContext context = renderDevice->GetContext();
+		std::array<ID3D11UnorderedAccessView*, numUavs> uavArray;
+		for (uint i = 0; i < renderPass->uavs.size(); ++i)
+			uavArray[i] = renderPass->uavs[i];
+		context->CSSetUnorderedAccessViews(renderPass->firstUAV, renderPass->uavs.size(), uavArray.data(), nullptr);
+	}
+
+
+
+	void CommandBuffer::EndComputePass()
+	{
+		EndRenderPass();
+	}
+
+
+
+	void CommandBuffer::SetCompute(ShaderPtr shader)
+	{
+		currentCompute = shader;
+	}
+
+
+
+	void CommandBuffer::Dispatch(Vector3i threadGroupCount)
+	{
+		FlushComputeState();
+		renderDevice->GetContext()->Dispatch(threadGroupCount.x, threadGroupCount.y, threadGroupCount.z);
 	}
 
 

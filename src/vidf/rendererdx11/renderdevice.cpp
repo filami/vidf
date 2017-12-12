@@ -75,9 +75,9 @@ namespace vidf {namespace dx11 {
 
 
 
-	void SwapChain::Present()
+	void SwapChain::Present(bool vsync)
 	{
-		swapChain->Present(1, 0);
+		swapChain->Present(vsync ? 1 : 0, 0);
 	}
 
 

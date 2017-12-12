@@ -80,7 +80,8 @@ namespace vidf { namespace dx11 {
 
 		D3D11_TEXTURE2D_DESC bufferDesc{};
 		bufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
-		bufferDesc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
+		// bufferDesc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
+		bufferDesc.Format = desc.format;
 		bufferDesc.ArraySize = 1;
 		bufferDesc.Width = desc.width;
 		bufferDesc.Height = desc.heigh;

@@ -30,6 +30,14 @@ namespace vidf { namespace dx11 {
 
 
 
+	ID3D11ComputeShader* Shader::GetComputeShader()
+	{
+		assert(type == ShaderType::ComputeShader);
+		return static_cast<ID3D11ComputeShader*>(shader);
+	}
+
+
+
 	void Shader::Compile(RenderDevicePtr renderDevice)
 	{
 		std::wstring wPath = ToWString(filePath.c_str());
@@ -41,6 +49,7 @@ namespace vidf { namespace dx11 {
 		{
 		case ShaderType::VertexShader: target = "vs_5_0"; break;
 		case ShaderType::PixelShader: target = "ps_5_0"; break;
+		case ShaderType::ComputeShader: target = "cs_5_0"; break;
 		};
 
 		UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_WARNINGS_ARE_ERRORS;
@@ -71,6 +80,13 @@ namespace vidf { namespace dx11 {
 		{
 			ID3D11PixelShader* gpuShader{};
 			renderDevice->GetDevice()->CreatePixelShader(_byteCode->GetBufferPointer(), _byteCode->GetBufferSize(), nullptr, &gpuShader);
+			shader = gpuShader;
+			break;
+		}
+		case ShaderType::ComputeShader:
+		{
+			ID3D11ComputeShader* gpuShader{};
+			renderDevice->GetDevice()->CreateComputeShader(_byteCode->GetBufferPointer(), _byteCode->GetBufferSize(), nullptr, &gpuShader);
 			shader = gpuShader;
 			break;
 		}

@@ -30,9 +30,10 @@ namespace vidf { namespace dx11
 	{
 	public:
 		~Shader();
-		ID3D11VertexShader* GetVertexShader();
-		ID3D11PixelShader*  GetPixelShader();
-		PD3DBlob            GetByteCode() { return byteCode; }
+		ID3D11VertexShader*  GetVertexShader();
+		ID3D11PixelShader*   GetPixelShader();
+		ID3D11ComputeShader* GetComputeShader();
+		PD3DBlob             GetByteCode() { return byteCode; }
 
 		void Compile(RenderDevicePtr renderDevice);
 

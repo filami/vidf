@@ -56,7 +56,7 @@ namespace vidf { namespace dx11
 	public:
 		PD3D11RenderTargetView GetBackBufferRTV() { return backBufferRTV; }
 
-		void Present();
+		void Present(bool vsync = true);
 
 	private:
 		friend class RenderDevice;

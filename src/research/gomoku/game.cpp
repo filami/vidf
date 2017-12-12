@@ -11,6 +11,10 @@ namespace
 	const uint tableSize = 15;
 
 
+	vidf::Rand48 rand48;
+	vidf::UniformReal<float> snorm(-1.0f, 1.0f);
+
+
 
 	enum class State : uint8
 	{
@@ -331,6 +335,7 @@ namespace
 			else
 				value = -float(bestBlack.first);
 		}
+
 		return value;
 	}
 
@@ -392,6 +397,8 @@ namespace
 
 void Gomoku()
 {
+	rand48.Seed(uint64(vidf::GetTime().GetTicks()));
+
 /*	TableState tableTest;
 	tableTest.fill(State::Empty);
 	tableTest[0] = State::White;

@@ -66,6 +66,7 @@ namespace vidf { namespace dx11
 		PD3D11DepthStencilView dsv;
 		uint                   firstUAV;
 		D3D11_VIEWPORT         viewport;
+		bool                   hasViewport;
 	};
 
 
@@ -75,6 +76,7 @@ namespace vidf { namespace dx11
 	private:
 		static const uint numCBs           = 8;
 		static const uint numSrvs          = 8;
+		static const uint numUavs          = 8;
 		static const uint numVertexStreams = 8;
 		struct VertexStream
 		{
@@ -88,25 +90,33 @@ namespace vidf { namespace dx11
 
 	public:
 		CommandBuffer(RenderDevicePtr _renderDevice);
+				
+		void SetConstantBuffer(uint index, PD3D11Buffer cb);
+		void SetSRV(uint index, PD3D11ShaderResourceView srv);
 
 		void BeginRenderPass(RenderPassPtr renderPass);
 		void EndRenderPass();
-
 		void SetGraphicsPSO(GraphicsPSOPtr pso);
-		void SetVertexStream(uint index, PD3D11Buffer stream, uint stride, uint offset=0);
-		void SetConstantBuffer(uint index, PD3D11Buffer cb);
-		void SetSRV(uint index, PD3D11ShaderResourceView srv);
+		void SetVertexStream(uint index, PD3D11Buffer stream, uint stride, uint offset = 0);
 		void Draw(uint vertexCount, uint startVertexLocation);
+
+		void BeginComputePass(RenderPassPtr renderPass);
+		void EndComputePass();
+		void SetCompute(ShaderPtr shader);
+		void Dispatch(Vector3i threadGroupCount);
 
 		RenderDevicePtr     GetRenderDevice() const { return renderDevice; }
 		PD3D11DeviceContext GetContext() const { return renderDevice->GetContext(); }
 
 	private:
+		void FlushCommonState();
 		void FlushGraphicsState();
+		void FlushComputeState();
 
 	private:
 		RenderDevicePtr   renderDevice;
 		GraphicsPSOPtr    currentGraphicsPSO;
+		ShaderPtr         currentCompute;
 		CBArray           cbs;
 		SRVArray          srvs;
 		VertexStreamArray vertexStreams;
