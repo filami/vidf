@@ -26,6 +26,7 @@ namespace vidf { namespace dx11
 	};
 
 
+
 	class Shader
 	{
 	public:

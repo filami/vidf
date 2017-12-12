@@ -59,7 +59,7 @@ namespace vidf { namespace dx11 {
 		PD3DBlob output;
 		PD3DBlob _byteCode;
 		HRESULT hr = D3DCompileFromFile(
-			wPath.c_str(), nullptr, nullptr, entryPoint.c_str(), target, flags, 0,
+			wPath.c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, entryPoint.c_str(), target, flags, 0,
 			&_byteCode.Get(), &output.Get());
 		if (output)
 			std::cout << (const char*)output->GetBufferPointer() << std::endl;
