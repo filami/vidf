@@ -4,6 +4,12 @@
 #include "common.hlsl"
 
 
+float3 FlameTransform(const float2x3 tm, float3 p)
+{
+	return float3(mul(tm, float3(p.xy, 1.0)), p.z);
+}
+
+
 void varLinear(inout float3 fp, const float3 ft, const float weigth)
 {
 	fp += ft * weigth;
@@ -47,6 +53,14 @@ void varEyeFish(inout float3 fp, const float3 ft, const float r, const float wei
 
 
 
+void varPreBlur(inout float3 ft, const float weigth)
+{
+	const float u = RandUNorm() * 2 * pi;
+	ft.xy += RandUNorm() * float2(cos(u), sin(u)) * weigth;
+}
+
+
+
 void varBlur(inout float3 fp, const float3 ft, const float weigth)
 {
 	const float u = RandUNorm() * 2 * pi;
@@ -73,6 +87,15 @@ void varZCone(inout float3 fp, const float3 ft, const float r, const float weigt
 void varZScale(inout float3 fp, const float3 ft, const float weigth)
 {
 	fp.z += ft.z * weigth;
+}
+
+
+
+void varHemisphere(inout float3 fp, const float3 ft, const float weigth)
+{
+	const float t = weigth / sqrt(sqr(ft.x) + sqr(ft.y) + 1);
+	fp.xy += ft.xy * t;
+	fp.z += t;
 }
 
 

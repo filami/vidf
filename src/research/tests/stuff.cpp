@@ -699,11 +699,10 @@ void FlameGPU()
 	{
 		Matrix44f projViewTM;
 		Vector3f cameraPos;
-		float _;
+		float time;
 		Vector2i viewport;
 		uint rngOffset;
-		uint __;
-		// Float2x3 cameraTM;
+		float aspectRatio;
 	};
 
 	ConstantBufferDesc viewCBDesc(sizeof(ViewConsts), "viewCB");
@@ -714,40 +713,71 @@ void FlameGPU()
 	TimeCounter counter;
 	
 	const uint numThreads = 64;
-	const uint dispatchSize = 1024 * 8;
+	// const uint dispatchSize = 1024 * 8;
+	const uint dispatchSize = 1024 * 32;
 	
 	ViewConsts viewConsts;
 	viewConsts.viewport = Vector2i(width, height);
 	viewConsts.rngOffset = 0;
+	viewConsts.aspectRatio = width / float(height);
 	// viewConsts.cameraTM[0] = { 0.45f * (float(height)/ width), 0.0f, 0.5f };
 	// viewConsts.cameraTM[1] = { 0.0f, 0.45f, 0.5f };
 
-	Matrix44f projTM = PerspectiveFovLH(1.4f, width / float(height), 0.01f, 100.0f);
-	// Matrix44f viewTM = LookAtLH(Vector3f(0.0f, 0.0f, 1.0f), Vector3f(zero), Vector3f(0.0f, 1.0f, 0.0f));
-	Matrix44f viewTM = LookAtLH(Vector3f(0.0f, 1.0f, 0.75f), Vector3f(zero), Vector3f(0.0f, 1.0f, 0.0f));
-	Matrix44f projViewTM = Mul(viewTM, projTM);
+	// const Vector3f camPos = Vector3f(0.0f, 1.0f, 0.75f);
+	// const Vector3f camTarget = Vector3f(0.0f, 0.0f, 0.0f);
+
+	// const Vector3f camPos = Vector3f(0.0f, 1.0f, 0.35f);
+	// const Vector3f camTarget = Vector3f(0.0f, 0.2f, 0.1f);
+
+	Vector3f camPos = Vector3f(0.0f, 1.0f, 0.75f);
+	Vector3f camTarget = Vector3f(0.0f, -0.2f, 0.1f);
 
 	ComputeAverageBrightness computeAverageBrightness;
 	computeAverageBrightness.Prepare(renderDevice, shaderManager, width, height);
 
+	// bool animate = true;
+	bool animate = false;
+		
+	Time time;
 	while (UpdateSystemMessages() == SystemMessageResult::Continue)
 	{
 		Time deltaTime = counter.GetElapsed();
-		
-		if (canvasListener.restartRender)
-			viewConsts.rngOffset = 0;
-		viewConsts.projViewTM = projViewTM;
-		viewConsts.cameraPos = Vector3f(0.0f, 1.0f, 0.75f);
-		viewCB.Update(renderDevice->GetContext(), viewConsts);
-		viewConsts.rngOffset += numThreads * dispatchSize;
+		time += deltaTime;
 
-		if (canvasListener.restartRender)
+		if (animate || canvasListener.restartRender)
 		{
 			VIDF_GPU_EVENT(renderDevice, ClearHistorgram);
 			const float zero[] = {0, 0, 0, 0};
 			commandBuffer.GetContext()->ClearUnorderedAccessViewFloat(historgram.uav, zero);
+			viewConsts.rngOffset = 0;
 			canvasListener.restartRender = false;
 		}
+
+		if (animate)
+		{
+			time += counter.GetElapsed();
+
+			const float angle = time.AsFloat() * 0.25f;
+			camPos = Vector3f(std::cos(angle)*0.75f, std::sin(angle)*0.75f, 0.5f) * 1.5f;
+			camTarget = Vector3f(0.0f, 0.0f, 0.1f);
+			// camPos = Vector3f(0.5f, 0.5f, 0.15f);
+			// camTarget = Vector3f(0.0f, 0.0f, 0.0f);
+		}
+		else
+		{
+			time = Time(0.0f);
+			// camPos = Vector3f(0.0f, 0.75f, 1.5f) * 1.5f;
+			camPos = Vector3f(0.25f, 0.75f, 0.5f) * 1.75f;
+			camTarget = Vector3f(0.0f, 0.0f, 0.0f);
+		}
+				
+		Matrix44f projTM = PerspectiveFovLH(1.4f, width / float(height), 0.01f, 100.0f);
+		Matrix44f viewTM = LookAtLH(camPos, camTarget, Vector3f(0.0f, 0.0f, 1.0f));
+		viewConsts.projViewTM = Mul(viewTM, projTM);
+		viewConsts.cameraPos = camPos;
+		viewConsts.time = time.AsFloat();
+		viewCB.Update(renderDevice->GetContext(), viewConsts);
+		viewConsts.rngOffset += numThreads * dispatchSize;
 
 		{
 			VIDF_GPU_EVENT(renderDevice, FlameCS);
@@ -779,7 +809,8 @@ void FlameGPU()
 			commandBuffer.EndRenderPass();
 		}
 
-		swapChain->Present(false);
+		const bool vsync = !animate;
+		swapChain->Present(vsync);
 	}
 }
 
