@@ -9,7 +9,7 @@ namespace vidf
 	namespace
 	{
 
-		const char* canvasClassName = "VIDFCanvasClass";
+		const TCHAR* canvasClassName = TEXT("VIDFCanvasClass");
 
 
 
@@ -136,14 +136,14 @@ namespace vidf
 		{
 			HINSTANCE hInstance = GetModuleHandle(0);
 
-			WNDCLASSA wnd = {0};
+			WNDCLASS wnd = {0};
 			wnd.hCursor = LoadCursor(NULL, IDC_ARROW);
 			wnd.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 			wnd.hInstance = hInstance;
 			wnd.lpfnWndProc = (WNDPROC)CanvasProc;
 			wnd.lpszClassName = canvasClassName;
 			wnd.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
-			if (RegisterClassA(&wnd))
+			if (RegisterClass(&wnd))
 				valid = true;
 		}
 
@@ -152,7 +152,7 @@ namespace vidf
 		CanvasClass::~CanvasClass()
 		{
 			HINSTANCE hInstance = GetModuleHandle(0);
-			UnregisterClassA(canvasClassName, hInstance);
+			UnregisterClass(canvasClassName, hInstance);
 		}
 
 
@@ -173,8 +173,8 @@ namespace vidf
 			if (simpleFrame)
 				style = WS_POPUP;
 			LPARAM lparam = reinterpret_cast<LPARAM>(owner.get());
-			HWND hwnd = CreateWindowA(
-				canvasClassName, desc.caption.c_str(),
+			HWND hwnd = CreateWindow(
+				canvasClassName, ToWString(desc.caption.c_str()).c_str(),
 				style,
 				0, 0,
 				desc.width, desc.height,
