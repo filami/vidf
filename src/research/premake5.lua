@@ -57,7 +57,6 @@ AddFilesToProject
 		"tests/voxelizer.cpp",
 		"tests/voxelizer2.cpp",
 		"tests/voxelizer3.cpp",
-		"tests/kerbal.cpp",
 	},
 	
 	["Gomoku"] =

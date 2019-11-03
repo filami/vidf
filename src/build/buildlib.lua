@@ -73,7 +73,6 @@ function ConfigCommon(projName, targetLoc)
 		_WORKING_DIR.."/ext/",
 		_WORKING_DIR.."/ext/include/",
 		_WORKING_DIR.."/ext/yasli",
-		_WORKING_DIR.."/ext/brofiler",
 		_WORKING_DIR.."/ext/json11",
 		_WORKING_DIR.."/ext/dxc",
 	}
@@ -122,7 +121,6 @@ function ConfigVIDFDependencies()
 		"D3DCompiler.lib",
 		"dxguid.lib",
 		"DXGI.lib",
-		"ProfilerCore64.lib",
 		"dxcompiler.lib",
 	}
 	

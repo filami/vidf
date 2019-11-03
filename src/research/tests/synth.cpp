@@ -2,7 +2,6 @@
 #include <complex>
 #include "vidf/common/intersect.h"
 #include "vidf/proto/text.h"
-#include "brofiler.h"
 
 #if 0
 

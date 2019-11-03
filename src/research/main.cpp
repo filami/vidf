@@ -18,7 +18,6 @@ void Synth();
 void Platform();
 void Fractals();
 void KC();
-void Kerbal();
 
 
 int main()
@@ -41,6 +40,5 @@ int main()
 	// Platform();
 	// Fractals();
 	// KC();
-	// Kerbal();
 	return 0;
 }
