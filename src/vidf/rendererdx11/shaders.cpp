@@ -22,6 +22,14 @@ namespace vidf { namespace dx11 {
 
 
 
+	ID3D11GeometryShader* Shader::GetGeometryShader()
+	{
+		assert(type == ShaderType::GeometryShader);
+		return static_cast<ID3D11GeometryShader*>(shader);
+	}
+
+
+
 	ID3D11PixelShader* Shader::GetPixelShader()
 	{
 		assert(type == ShaderType::PixelShader);
@@ -48,13 +56,14 @@ namespace vidf { namespace dx11 {
 		switch (type)
 		{
 		case ShaderType::VertexShader: target = "vs_5_0"; break;
+		case ShaderType::GeometryShader: target = "gs_5_0"; break;
 		case ShaderType::PixelShader: target = "ps_5_0"; break;
 		case ShaderType::ComputeShader: target = "cs_5_0"; break;
 		};
 
-		UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_WARNINGS_ARE_ERRORS;
+		UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 /* | D3DCOMPILE_WARNINGS_ARE_ERRORS */ | D3DCOMPILE_DEBUG /*| D3DCOMPILE_SKIP_OPTIMIZATION*/;
 
-		std::cout << filePath.c_str() << std::endl;
+		VI_INFO(L"Compiling shader \"%0\"\n", filePath.c_str());
 
 		PD3DBlob output;
 		PD3DBlob _byteCode;
@@ -62,7 +71,12 @@ namespace vidf { namespace dx11 {
 			wPath.c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, entryPoint.c_str(), target, flags, 0,
 			&_byteCode.Get(), &output.Get());
 		if (output)
-			std::cout << (const char*)output->GetBufferPointer() << std::endl;
+		{
+			if (hr == S_OK)
+				VI_WARNING(ToWString((const char*)output->GetBufferPointer()).c_str())
+			else
+				VI_ERROR(ToWString((const char*)output->GetBufferPointer()).c_str())
+		}
 		if (hr != S_OK)
 			return;
 
@@ -74,6 +88,13 @@ namespace vidf { namespace dx11 {
 			renderDevice->GetDevice()->CreateVertexShader(_byteCode->GetBufferPointer(), _byteCode->GetBufferSize(), nullptr, &gpuShader);
 			shader = gpuShader;
 			byteCode = _byteCode;
+			break;
+		}
+		case ShaderType::GeometryShader:
+		{
+			ID3D11GeometryShader* gpuShader{};
+			renderDevice->GetDevice()->CreateGeometryShader(_byteCode->GetBufferPointer(), _byteCode->GetBufferSize(), nullptr, &gpuShader);
+			shader = gpuShader;
 			break;
 		}
 		case ShaderType::PixelShader:
@@ -93,6 +114,10 @@ namespace vidf { namespace dx11 {
 		};
 		state = ShaderState::Ready;
 		NameObject(shader, nameBuffer);
+
+		ID3D11ShaderReflection* _reflection;
+		D3DReflect(_byteCode->GetBufferPointer(), _byteCode->GetBufferSize(), IID_ID3D11ShaderReflection, (void**)&_reflection);
+		reflection = _reflection;
 	}
 
 

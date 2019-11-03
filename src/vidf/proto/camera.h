@@ -53,7 +53,7 @@ namespace vidf { namespace proto {
 		CameraOrtho2D(CanvasPtr _canvas, OrthoYAxis orthoYAxis=Upward, CameraListenerType type=CameraListener_Full);
 		~CameraOrtho2D();
 
-		void SetCamera(const Vector2f& camCenter, float camSize);
+		void SetCamera(const Vector2f& camCenter, float camSize, float _angle = 0.0f);
 		CanvasPtr GetCanvas() const {return canvas;}
 
 		void CommitToGL() const;
@@ -71,6 +71,7 @@ namespace vidf { namespace proto {
 		OrthoYAxis yAxis;
 		Vector2f center;
 		float size;
+		float angle = 0.0f;
 	};
 
 

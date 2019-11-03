@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <random>
 #include <ctime>
+#include <deque>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -46,10 +47,16 @@
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 
+namespace vidf
+{
+	using namespace std;
+}
+
 #include "vidf/common/rtti.h"
 #include "vidf/common/types.h"
 #include "vidf/common/utils.h"
 #include "vidf/common/pointer.h"
+#include "vidf/platform/logger.h"
 #include "vidf/profiler/timeprofiler.h"
 
 #include "yasli/Archive.h"

@@ -1,0 +1,41 @@
+{
+	"width": 18,
+	"height": 15,
+	"elements": [
+		{ "Emitter": { "x": 0, "y": 1, "angle": 0.0, "mask": 7 } },
+		{ "Mirror": { "x": 7, "y": 1, "angle": 112.5, "dichroicReflect": 7 } },
+		{ "DichroicPrism": {
+			"x": 7,
+			"y": 4,
+			"angleRed": 0.0,
+			"angleGreen": 90.0,
+			"angleBlue": 180.0,
+			"angleWhite": 270.0} },
+		{ "Difractor": { "x": 7, "y": 7, "angle": 90.0 } },
+		{ "Difractor": { "x": 10, "y": 4, "angle": 180.0 } },
+		{ "Mirror": { "x": 14, "y": 2, "angle": 90.0, "dichroicReflect": 7 } },
+		{ "Mirror": { "x": 14, "y": 6, "angle": 90.0, "dichroicReflect": 7 } },
+		{ "Mirror": { "x": 12, "y": 4, "angle": 90.0, "dichroicReflect": 7 } },
+		{ "Mirror": { "x": 5, "y": 11, "angle": 90.0, "dichroicReflect": 7 } },
+		{ "Mirror": { "x": 9, "y": 11, "angle": 90.0, "dichroicReflect": 7 } },
+		{ "Mirror": { "x": 7, "y": 9, "angle": 0.0, "dichroicReflect": 2 } },
+		{ "Mirror": { "x": 12, "y": 9, "angle": 0.0, "dichroicReflect": 1 } },
+		{ "Mirror": { "x": 2, "y": 4, "angle": 135.0, "dichroicReflect": 7 } },
+		{ "Mirror": { "x": 2, "y": 9, "angle": 0.0, "dichroicReflect": 7 } },
+		{ "Blocker": { "x": 13, "y": 9, "angle": 0.0 } },
+		{ "Blocker": { "x": 14, "y": 9, "angle": 0.0 } },
+		{ "Blocker": { "x": 15, "y": 9, "angle": 0.0 } },
+		{ "Blocker": { "x": 16, "y": 9, "angle": 0.0 } },
+		{ "Sensor": { "x": 5, "y": 14, "angle": -90.0, "mask": 2 } },
+		{ "Sensor": { "x": 9, "y": 14, "angle": -90.0, "mask": 2 } },
+		{ "Sensor": { "x": 17, "y": 2, "angle": 180.0, "mask": 1 } },
+		{ "Sensor": { "x": 17, "y": 6, "angle": 180.0, "mask": 1 } },
+		{ "Receiver": { "x": 17, "y": 9, "angle": 180.0 } }
+	],
+	"connectors": [
+		{ "key": 18, "value": 14 },
+		{ "key": 19, "value": 15 },
+		{ "key": 20, "value": 16 },
+		{ "key": 21, "value": 17 }
+	]
+}

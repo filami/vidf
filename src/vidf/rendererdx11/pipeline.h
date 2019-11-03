@@ -7,6 +7,9 @@ namespace vidf { namespace dx11
 {
 
 
+	struct GPUBuffer;
+
+
 
 	struct GraphicsPSODesc
 	{
@@ -15,12 +18,12 @@ namespace vidf { namespace dx11
 			for (auto& rt : blend.RenderTarget)
 				rt.RenderTargetWriteMask = 0xf;
 		}
-		D3D11_INPUT_ELEMENT_DESC* geometryDesc = nullptr;
-		uint                      numGeomDesc = 0;
+		std::vector<D3D11_INPUT_ELEMENT_DESC> geometryDesc;
 		D3D11_RASTERIZER_DESC2    rasterizer = {};
 		D3D11_DEPTH_STENCIL_DESC  depthStencil = {};
 		D3D11_BLEND_DESC1         blend = {};
 		ShaderPtr                 vertexShader;
+		ShaderPtr                 geometryShader;
 		ShaderPtr                 pixelShader;
 		D3D_PRIMITIVE_TOPOLOGY    topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 	};
@@ -32,6 +35,7 @@ namespace vidf { namespace dx11
 		PD3D11DepthStencilState depthStencil;
 		PD3D11BlendState1       blend;
 		ShaderPtr               vertexShader;
+		ShaderPtr               geometryShader;
 		ShaderPtr               pixelShader;
 		D3D_PRIMITIVE_TOPOLOGY  topology;
 
@@ -84,6 +88,12 @@ namespace vidf { namespace dx11
 			uint stride = 0;
 			uint offset = 0;
 		};
+		struct IndexBuffer
+		{
+			PD3D11Buffer indexBuffer;
+			DXGI_FORMAT  format = DXGI_FORMAT_R16_UINT;
+			uint         offset = 0;
+		};
 		typedef std::array<PD3D11Buffer, numSrvs>             CBArray;
 		typedef std::array<PD3D11ShaderResourceView, numSrvs> SRVArray;
 		typedef std::array<VertexStream, numSrvs>             VertexStreamArray;
@@ -92,13 +102,18 @@ namespace vidf { namespace dx11
 		CommandBuffer(RenderDevicePtr _renderDevice);
 				
 		void SetConstantBuffer(uint index, PD3D11Buffer cb);
+		void SetConstantBuffer(uint index, GPUBuffer& cb);
 		void SetSRV(uint index, PD3D11ShaderResourceView srv);
 
 		void BeginRenderPass(RenderPassPtr renderPass);
 		void EndRenderPass();
 		void SetGraphicsPSO(GraphicsPSOPtr pso);
 		void SetVertexStream(uint index, PD3D11Buffer stream, uint stride, uint offset = 0);
+		void SetIndexBuffer(PD3D11Buffer indexBuffer, DXGI_FORMAT format, uint offset = 0);
+
 		void Draw(uint vertexCount, uint startVertexLocation);
+		void DrawIndexed(uint indexCount, uint startIndexLocation, int baseVertexLocation);
+		void DrawInstanced(uint vertexCountPerInstance, uint instanceCount, uint startVertexLocation, uint startInstanceLocation);
 
 		void BeginComputePass(RenderPassPtr renderPass);
 		void EndComputePass();
@@ -120,6 +135,7 @@ namespace vidf { namespace dx11
 		CBArray           cbs;
 		SRVArray          srvs;
 		VertexStreamArray vertexStreams;
+		IndexBuffer       indexBuffer;
 	};
 
 

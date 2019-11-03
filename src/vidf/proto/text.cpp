@@ -190,7 +190,7 @@ namespace vidf { namespace proto {
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 			Vector2f p = Vector2f(position.x, position.y);
-			size_t strLen = std::strlen(text);
+			size_t strLen = std::strlen(buffer);
 			glBegin(GL_QUADS);
 			for (int i = 0; i < strLen; ++i)
 			{
@@ -248,6 +248,43 @@ namespace vidf { namespace proto {
 		va_end(ap);
 
 		OutputText(Vector2f(position.x, position.y), buffer);
+	}
+
+
+
+	Vector2f Text::CalculateSize(const char* text) const
+	{
+		const char* buffer = text;
+
+		const size_t strLen = std::strlen(text);
+		if (strLen == 0)
+			return Vector2f{ zero };
+		
+		float maxWidth = 0;
+		float lineWidth = 0;
+		float height = size;
+
+		for (int i = 0; i < strLen; ++i)
+		{
+			int charIdx = buffer[i] - firstChar;
+
+			if (charIdx < 0 || charIdx >= numChars)
+			{
+				if (text[i] == '\n')
+				{
+					lineWidth = 0;
+					height += size;
+				}
+			}
+			else
+			{
+				Rectf rect = rects[charIdx];
+				lineWidth += (rect.max.x - rect.min.x) * aspect * scale * size;
+				maxWidth = max(maxWidth, lineWidth);
+			}
+		}
+
+		return Vector2f{ maxWidth , height };
 	}
 
 

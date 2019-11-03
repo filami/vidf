@@ -1,0 +1,23 @@
+{
+	"width": 10,
+	"height": 10,
+	"elements": [
+		{ "Emitter": { "x": 0, "y": 8, "angle": 0.0, "mask": 7 } },
+		{ "Mirror": { "x": 8, "y": 8, "angle": 45.0, "dichroicReflect": 7 } },
+		{ "Mirror": { "x": 8, "y": 6, "angle": -11.25, "dichroicReflect": 7 } },
+		{ "Mirror": { "x": 6, "y": 6, "angle": 45.0, "dichroicReflect": 1 } },
+		{ "Mirror": { "x": 4, "y": 6, "angle": 45.0, "dichroicReflect": 2 } },
+		{ "Mirror": { "x": 2, "y": 6, "angle": 45.0, "dichroicReflect": 7 } },
+		{ "Mirror": { "x": 2, "y": 3, "angle": 11.25, "dichroicReflect": 7 } },
+		{ "Mirror": { "x": 6, "y": 3, "angle": -11.25, "dichroicReflect": 7 } },
+		{ "DichroicPrism": {
+			"x": 4,
+			"y": 3,
+			"angleRed": 0.0,
+			"angleGreen": 90.0,
+			"angleBlue": 180.0,
+			"angleWhite": 270.0} },
+		{ "Receiver": { "x": 4, "y": 0, "angle": 90.0 } }
+	],
+	"connectors": [ ]
+}

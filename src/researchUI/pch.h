@@ -18,3 +18,4 @@
 #include <QMessageBox>
 #include <QTextStream>
 #include <QBoxLayout>
+#include <QPushButton>

@@ -53,22 +53,27 @@ namespace vidf {namespace dx11 {
 
 		DXGI_SWAP_CHAIN_DESC swapChainDesc{};
 		swapChainDesc.BufferCount = 2;
-		swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+		swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		swapChainDesc.BufferDesc.Width = _swapChainDesc.width;
 		swapChainDesc.BufferDesc.Height = _swapChainDesc.height;
-		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_UNORDERED_ACCESS;
 		swapChainDesc.OutputWindow = static_cast<HWND>(_swapChainDesc.windowHandle);
 		swapChainDesc.SampleDesc.Count = 1;
-		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+		// swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_SEQUENTIAL;
 		swapChainDesc.Windowed = true;
 		dxgiFactory->CreateSwapChain(dxgiDevice, &swapChainDesc, &swapChain->swapChain.Get());
 		NameObject(dxgiFactory, "swapChain");
 
-		swapChain->swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&swapChain->backBuffer.Get());
+		swapChain->swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&swapChain->backBuffer.buffer.Get());
 		D3D11_RENDER_TARGET_VIEW_DESC backBufferRTVDesc{};
 		backBufferRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-		device->CreateRenderTargetView(swapChain->backBuffer, &backBufferRTVDesc, &swapChain->backBufferRTV.Get());
-		NameObject(swapChain->backBufferRTV, "backBufferRTV");
+		device->CreateRenderTargetView(swapChain->backBuffer.buffer, &backBufferRTVDesc, &swapChain->backBuffer.rtv.Get());
+
+		D3D11_UNORDERED_ACCESS_VIEW_DESC backBufferUAVDesc{};
+		backBufferUAVDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+		backBufferUAVDesc.Texture2D.MipSlice = 0;
+		device->CreateUnorderedAccessView(swapChain->backBuffer.buffer, &backBufferUAVDesc, &swapChain->backBuffer.uav.Get());
 
 		return swapChain;
 	}

@@ -21,6 +21,7 @@ namespace vidf { namespace proto {
 		void SetGLOrtho2D();
 		void OutputText(const Vector2f& position, const char* text, ...) const;
 		void OutputText(const Vector3f& position, const char* text, ...) const;
+		Vector2f CalculateSize(const char* text) const;
 
 		GLuint texture;
 		float size;

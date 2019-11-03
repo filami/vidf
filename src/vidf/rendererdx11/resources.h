@@ -87,7 +87,9 @@ namespace vidf { namespace dx11 {
 			, name(_name)
 			, dynamic(_dynamic) {}
 
-		const char* name;
+		const char* name = nullptr;
+		void*       dataPtr = nullptr;
+		uint        dataSize = 0;
 		uint        stride;
 		uint        count;
 		bool        dynamic;
@@ -99,6 +101,7 @@ namespace vidf { namespace dx11 {
 		PD3D11ShaderResourceView srv;
 
 		static StructuredBuffer Create(RenderDevicePtr renderDevice, const StructuredBufferDesc& desc);
+		void Update(PD3D11DeviceContext context, const void* data, uint dataSize);
 	};
 
 
@@ -170,6 +173,100 @@ namespace vidf { namespace dx11 {
 		template<typename Type>
 		void Update(PD3D11DeviceContext context, const Type& object) { Update(context, &object, sizeof(Type)); }
 	};
+
+
+
+	////////////////////////////////////////////
+
+
+
+	class GPUBuffer;
+
+
+	enum class GPUBufferType
+	{
+		Undefined,
+		VertexBuffer,
+		IndexBuffer,
+		Texture2D,
+		Texture3D,
+		TextureCube,
+		Structured,
+		ConstantBuffer,
+	};
+
+
+
+	enum GPUBufferUsageFlags
+	{
+		GPUUsage_ShaderResource  = 1 << 0,
+		GPUUsage_RenderTarget    = 1 << 1,
+		GPUUsage_DepthStencil    = 1 << 2,
+		GPUUsage_UnorderedAccess = 1 << 3,
+		GPUUsage_Dynamic         = 1 << 4,
+		GPUUsage_Staging         = 1 << 5,
+	};
+
+
+
+	struct GPUBufferDesc
+	{
+		GPUBufferDesc()
+			: width(1)
+			, height(1)
+			, depth(1)
+			, mipLevels(1)
+			, arraySize(1)
+		{
+		}
+
+		GPUBuffer*    aliasBuffer = nullptr;
+		GPUBufferType type = GPUBufferType::Undefined;
+		union
+		{
+			struct
+			{
+				uint width;
+				uint height;
+				uint depth;
+				uint mipLevels;
+				uint arraySize;
+			};
+			struct
+			{
+				uint elementCount;
+				uint elementStride;
+			};
+		};
+		uint viewMipLevel = 0;
+		int viewArrayLevel = -1;
+		DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
+		uint  usageFlags = 0;
+		void* dataPtr = nullptr;
+		uint  dataSize = 0;
+		uint  dataSlice = 0;
+		bool  stencilSRV = false;
+		const char* name = nullptr;
+	};
+
+
+	struct GPUBuffer
+	{
+		GPUBufferDesc       desc;
+		PD3D11Resource      buffer;
+		PD3D11UnorderedAccessView uav;
+		PD3D11ShaderResourceView  srv;
+		PD3D11RenderTargetView    rtv;
+		PD3D11DepthStencilView    dsv;
+
+		PD3D11Buffer GetBuffer() { return reinterpret_cast<ID3D11Buffer*>(buffer.Get()); }
+
+		static GPUBuffer Create(RenderDevicePtr renderDevice, const GPUBufferDesc& desc);
+		void Update(PD3D11DeviceContext context, const void* data, uint dataSize);
+		template<typename Type>
+		void Update(PD3D11DeviceContext context, const Type& object) { Update(context, &object, sizeof(Type)); }
+	};
+
 
 
 } }

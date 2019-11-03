@@ -1,0 +1,15 @@
+# hand made by filami
+
+newmtl whiteWall
+	Kd 0.5880 0.5880 0.5880
+	
+newmtl redWall
+	Kd 0.7880 0.08 0.08
+	
+newmtl greenWall
+	Kd 0.08 0.7880 0.08
+	
+newmtl light
+	Kd 0.0 0.0 0.0
+#	Ke 250.0 250.0 250.0
+	Ke 2500.0 2500.0 2500.0

@@ -1,3 +1,7 @@
 [submodule "ext/premake-qt.git"]
 	path = ext/premake-qt.git
 	url = https://github.com/dcourtois/premake-qt.git
+
+[submodule "ext/json11.git"]
+	path = ext/json11.git
+	url = https://github.com/dropbox/json11.git

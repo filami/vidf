@@ -31,10 +31,12 @@ namespace vidf { namespace dx11
 	{
 	public:
 		~Shader();
-		ID3D11VertexShader*  GetVertexShader();
-		ID3D11PixelShader*   GetPixelShader();
-		ID3D11ComputeShader* GetComputeShader();
-		PD3DBlob             GetByteCode() { return byteCode; }
+		ID3D11VertexShader*    GetVertexShader();
+		ID3D11GeometryShader*  GetGeometryShader();
+		ID3D11PixelShader*     GetPixelShader();
+		ID3D11ComputeShader*   GetComputeShader();
+		PD3D11ShaderReflection GetReflection() { return reflection; }
+		PD3DBlob               GetByteCode() { return byteCode; }
 
 		void Compile(RenderDevicePtr renderDevice);
 
@@ -43,12 +45,13 @@ namespace vidf { namespace dx11
 
 	private:
 		friend class ShaderManager;
-		std::string        filePath;
-		std::string        entryPoint;
-		ID3D11DeviceChild* shader = nullptr;
-		ShaderType         type = ShaderType::Unknown;
-		ShaderState        state = ShaderState::Undefined;
-		PD3DBlob           byteCode;
+		std::string            filePath;
+		std::string            entryPoint;
+		ID3D11DeviceChild*     shader = nullptr;
+		PD3D11ShaderReflection reflection;
+		ShaderType             type = ShaderType::Unknown;
+		ShaderState            state = ShaderState::Undefined;
+		PD3DBlob               byteCode;
 	};
 
 

@@ -27,10 +27,11 @@ namespace vidf { namespace proto {
 
 
 
-	void CameraOrtho2D::SetCamera(const Vector2f& camCenter, float camSize)
+	void CameraOrtho2D::SetCamera(const Vector2f& camCenter, float camSize, float _angle)
 	{
 		center = camCenter;
 		size = camSize;
+		angle = _angle;
 	}
 
 
@@ -43,6 +44,7 @@ namespace vidf { namespace proto {
 
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
+		glRotatef(Radians2Degrees(angle), 0.0f, 0.0f, 1.0f);
 		if (yAxis == Upward)
 		{
 			gluOrtho2D(
@@ -179,7 +181,7 @@ namespace vidf { namespace proto {
 	void OrbitalCamera::SetCamera(const Vector3f& _target, const Quaternionf& _rotation, float _distance)
 	{
 		target = _target;
-		rotation = _rotation;
+		rotation = Normalize(_rotation);
 		distance = _distance;
 	}
 

@@ -1,3 +1,4 @@
+#include "flameCS.hlsl"
 
 Texture2D srv0 : register(t0);
 Texture2D srv1 : register(t1);
@@ -13,18 +14,6 @@ cbuffer cabCB : register(b0)
 	} cab;
 }
 
-
-
-cbuffer viewCB : register(b0)
-{
-	struct
-	{
-		float4x4 projViewTM;
-		float3   cameraPos;
-		uint2    viewport;
-		int      rngOffset;
-	} view;
-}
 
 
 struct VSOutput
@@ -113,13 +102,8 @@ float3 hsv2rgb(float3 c)
 
 
 
-float4 psDisplay(VSOutput input) : SV_Target
+float4 psFinalize(VSOutput input) : SV_Target
 {
-	const float brightness = 5.0;
-	const float saturation = 0.9;
-	const float vibrance = 1.5;
-	const float gamma = 2.5;
-
 	const float4 histogram = srv0[uint2(input.hPosition.xy)];
 	const float maxValue = srv1[uint2(0, 0)].r;
 	
@@ -133,4 +117,22 @@ float4 psDisplay(VSOutput input) : SV_Target
 	color = hsv2rgb(hsv);
 	
 	return float4(color, 1.0);
+}
+
+
+
+cbuffer dispCB : register(b0)
+{
+	struct
+	{
+		float4 disp;
+	} disp;
+}
+
+
+
+float4 psDisplay(VSOutput input) : SV_Target
+{
+	const float3 final = srv0[uint2(disp.disp.xy + input.hPosition.xy * disp.disp.zw)].rgb;
+	return float4(final, 1.0);
 }

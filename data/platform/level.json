@@ -1,0 +1,14 @@
+{
+	"name" : "Level",
+	"guid" : "5F72DFC9-C1CA-428A-956B-691D269A5211",
+	
+	"assets" :
+	{
+		"LevelData" :
+		{
+			"name" : "Level",
+			"guid" : "F81123E9-BE86-463D-9EC0-3E96483D6C8C",
+			"layers" : [ "4F2F934D-D9B5-413D-8CFC-00DF24B031B8" ]
+		}
+	}
+}

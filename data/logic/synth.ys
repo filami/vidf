@@ -1,0 +1,51 @@
+# read design
+read_verilog parameters.v
+read_verilog registerbank.v
+read_verilog programcounter.v
+read_verilog alu.v
+read_verilog control.v
+read_verilog cpu.v
+hierarchy -check
+
+# high-level synthesis
+proc; opt;
+fsm; opt;
+memory; opt
+tribuf; opt
+
+# high level dot
+show -colors 10 -width -stretch -prefix kc8_tech
+# write_json kc8_tech.json
+
+# low-level synthesis
+flatten; opt
+techmap; opt
+abc -g AND,NAND,OR,NOR,XOR,XNOR,MUX; opt
+
+# split larger signals
+splitnets -ports -format : ; opt
+
+# write output
+write_json kc8.json
+qwp -dump qwp.html
+stat
+
+# show -colors 10 -width -stretch -prefix kc8_tech
+
+
+###################
+
+# read design
+# read_verilog parameters.v
+# read_verilog registerbank.v
+# read_verilog programcounter.v
+# read_verilog alu.v
+# read_verilog control.v
+# read_verilog cpu.v
+# read_verilog test.v
+# 
+# synth -top ProgramCounter -flatten
+# splitnets -ports -format : ; opt
+# 
+# write_json kc8.json
+# show -colors 10 -width -stretch -prefix kc8_tech

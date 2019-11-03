@@ -16,8 +16,8 @@ namespace vidf
 		Vector2(const Vector2<T>& v)
 			:	x(v.x), y(v.y) {}
 
-		template<typename U>
-		explicit Vector2(U _x, U _y)
+		template<typename U0, typename U1>
+		explicit Vector2(U0 _x, U1 _y)
 			:	x((T)_x), y((T)_y) {}
 
 		template<typename U>

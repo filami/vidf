@@ -118,5 +118,13 @@ namespace h2
 	};
 
 
+	template<typename TStream>
+	StreamResult Stream(TStream& stream, std::vector<char>& value)
+	{
+		stream.read(value.data(), value.size());
+		return StreamResult::Ok;
+	};
+
+
 
 }

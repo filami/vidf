@@ -28,6 +28,7 @@ function CreateProject(projName, projPch, options, projUUID)
 	uuid(projUUID)
 	location(buildLocation)
 	language "c++"
+	cppdialect "C++17"
 	--[[
 	if projPch ~= nil then
 		pchheader(projPch..".h")
@@ -69,16 +70,23 @@ function ConfigCommon(projName, targetLoc)
 		_WORKING_DIR.."/src/ext/gm/src/gm/",
 		_WORKING_DIR.."/src/ext/gm/src/platform/win32msvc/",
 		_WORKING_DIR.."/src/ext/gm/src/binds/",
-		_WORKING_DIR.."/ext/include/",
+		_WORKING_DIR.."/ext/",
 		_WORKING_DIR.."/ext/include/",
 		_WORKING_DIR.."/ext/yasli",
+		_WORKING_DIR.."/ext/brofiler",
+		_WORKING_DIR.."/ext/json11",
+		_WORKING_DIR.."/ext/dxc",
 	}
-	defines {"VK_USE_PLATFORM_WIN32_KHR", "WIN64"}
+	defines {
+		"VK_USE_PLATFORM_WIN32_KHR",
+		"WIN64",
+	}
 	flags {"NoManifest"}
 	rtti "off"
 	symbols "on"
 
-	systemversion "10.0.15063.0"
+	-- systemversion "10.0.15063.0"
+	systemversion "10.0.17763.0"
 	
 	-- debug
 	configuration(debugConfig)
@@ -102,14 +110,20 @@ function ConfigVIDFDependencies()
 	{
 		_WORKING_DIR.."/lib/",
 		_WORKING_DIR.."/ext/lib/vulkan/",
+		_WORKING_DIR.."/ext/brofiler/",
+		_WORKING_DIR.."/ext/dxc/",
 	}
 
 	links
 	{
 		-- "viext",
 		"d3d11.lib",
+		"d3d12.lib",
 		"D3DCompiler.lib",
 		"dxguid.lib",
+		"DXGI.lib",
+		"ProfilerCore64.lib",
+		"dxcompiler.lib",
 	}
 	
 	configuration(debugConfig)

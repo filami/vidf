@@ -27,6 +27,15 @@ namespace vidf
 			a += rhv.a;
 			return *this;
 		}
+
+		uint32 AsRGBA8() const
+		{
+			return
+				(uint8(a * 255) << 24) |
+				(uint8(b * 255) << 16) |
+				(uint8(g * 255) << 8) |
+				uint8(r * 255);
+		}
 	};
 
 
@@ -53,7 +62,18 @@ namespace vidf
 	}
 
 	template<typename T>
-	inline Color operator *= (Color& lhv, T rhv)
+	inline Color operator / (const Color& lhv, T rhv)
+	{
+		return Color(lhv.r/(T)rhv, lhv.g/(T)rhv, lhv.b/(T)rhv, lhv.a/(T)rhv);
+	}
+	template<typename T>
+	inline Color operator / (T rhv, const Color& lhv)
+	{
+		return lhv / (T)rhv;
+	}
+
+	template<typename T>
+	inline Color operator += (Color& lhv, T rhv)
 	{
 		lhv.r += rhv;
 		lhv.g += rhv;
@@ -67,6 +87,12 @@ namespace vidf
 	inline Color operator * (const Color& rhv, const Color& lhv)
 	{
 		return Color(lhv.r*rhv.r, lhv.g*rhv.g, lhv.b*rhv.b, lhv.a*rhv.a);
+	}
+
+
+	inline Color operator / (const Color& rhv, const Color& lhv)
+	{
+		return Color(lhv.r/rhv.r, lhv.g/rhv.g, lhv.b/rhv.b, lhv.a/rhv.a);
 	}
 
 

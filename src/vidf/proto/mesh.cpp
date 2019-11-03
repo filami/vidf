@@ -223,11 +223,10 @@ namespace vidf { namespace proto {
 					line >> v;
 					if (v == ~0)
 						break;
-					if (outData->HasTexCoords())
-					{
+					if (outData->HasNormals())
 						line >> b;
+					if (outData->HasTexCoords())
 						line >> vt;
-					}
 					if (outData->HasNormals())
 					{
 						line >> b;

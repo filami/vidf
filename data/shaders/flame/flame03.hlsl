@@ -1,4 +1,14 @@
 
+
+static const float focalDist = 1.55;
+static const float cocSize = 0.025;
+
+static const float brightness = 5.0;
+static const float saturation = 0.9;
+static const float vibrance = 1.5;
+static const float gamma = 2.5;
+
+
 void Iterate(inout float3 p, inout float c)
 {
 	const float f = RandUNorm() * 12.0;

@@ -1,0 +1,8 @@
+# read design
+read_verilog parameters.v
+read_verilog registerbank.v
+read_verilog programcounter.v
+read_verilog alu.v
+read_verilog control.v
+read_verilog cpu.v
+hierarchy -check

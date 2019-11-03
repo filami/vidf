@@ -1,0 +1,24 @@
+{
+	"name" : "level_frontlayer",
+	"guid" : "4F2F934D-D9B5-413D-8CFC-00DF24B031B8",
+	
+	"assets" :
+	{
+		"LevelLayerData" :
+		{
+			"name" : "level_frontlayer",
+			"guid" : "4F2F934D-D9B5-413D-8CFC-00DF24B031B8",
+			"instances" :
+			[
+				{
+					"ref" : "376EA660-DF1B-4E14-AC31-F5F21B0572A0",
+					"position" : {"x" : "0.0", "y" : "0.0" }
+				},
+				{
+					"ref" : "376EA660-DF1B-4E14-AC31-F5F21B0572A0",
+					"position" : {"x" : "4.0", "y" : "0.0" }
+				}
+			]
+		}
+	}
+}

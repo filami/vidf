@@ -22,6 +22,7 @@ namespace vidf { namespace dx11
 	typedef Pointer<ID3D11Buffer>              PD3D11Buffer;
 	typedef Pointer<ID3D11VertexShader>        PD3D11VertexShader;
 	typedef Pointer<ID3D11PixelShader>         PD3D11PixelShader;
+	typedef Pointer<ID3D11ShaderReflection>    PD3D11ShaderReflection;
 	typedef Pointer<ID3D11InputLayout>         PD3D11InputLayout;
 	typedef Pointer<ID3D11RasterizerState>     PD3D11RasterizerState;
 	typedef Pointer<ID3D11RasterizerState1>    PD3D11RasterizerState1;
@@ -29,7 +30,9 @@ namespace vidf { namespace dx11
 	typedef Pointer<ID3D11BlendState1>         PD3D11BlendState1;
 	typedef Pointer<ID3D11DepthStencilState>   PD3D11DepthStencilState;
 	typedef Pointer<ID3D11SamplerState>        PD3D11SamplerState;
+	typedef Pointer<ID3D11Resource>            PD3D11Resource;
 	typedef Pointer<ID3DBlob>                  PD3DBlob;
+	typedef Pointer<ID3D11Query>               PD3D11Query;
 
 
 

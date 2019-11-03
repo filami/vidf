@@ -1,6 +1,13 @@
 #include "variables.hlsl"
 
+struct Sample
+{
+	float2 sPoint;
+	uint rngSeed;
+};
+
 Texture2D paletteSRV : register(t0);
+StructuredBuffer<Sample> samplesSRV : register(t1);
 SamplerState paletteSS : register(s0);
 RWTexture2D<float4> histogramUAV : register(u0);
 
@@ -20,16 +27,18 @@ cbuffer viewCB : register(b0)
 
 
 
+#include "flame01.hlsl"
+// #include "flame02.hlsl"
+// #include "flame03.hlsl"
+// #include "flame04.hlsl"
+
+
+
 void AddPoint(const float3 p, const float3 color)
 {
 	const float4 hPosition = mul(view.projViewTM, float4(p, 1));
 	const float2 screenCoord = hPosition.xy / hPosition.w * float2(1, -1);
 
-	// const float focalDist = 1.4;
-	const float focalDist = 1.55;
-	// const float cocSize = 0.035;
-	const float cocSize = 0.025;
-	// const float cocSize = 0.0;
 	const float dist = distance(p, view.cameraPos);
 	const float coc = (-1.0/dist + 1.0/focalDist) * cocSize;
 	
@@ -46,19 +55,11 @@ void AddPoint(const float3 p, const float3 color)
 
 
 
-// #include "flame01.hlsl"
-// #include "flame02.hlsl"
-#include "flame03.hlsl"
-
-
-
-
 [numthreads(64, 1, 1)]
 void csFlame(uint3 threadId : SV_DispatchThreadID)
 {
-	rngState = threadId.x + view.rngOffset;
-	
-	float3 p = float3(RandSNorm(), RandSNorm(), 0.0);
+	float3 p = float3(samplesSRV[threadId.x].sPoint.xy, 0.0);
+	rngState = samplesSRV[threadId.x].rngSeed;
 	const float3 ip = p;
 	float c = RandUNorm();
 

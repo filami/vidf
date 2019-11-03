@@ -1,4 +1,7 @@
 #include "pch.h"
+
+#if 0
+
 #include "vidf/rendererdx11/renderdevice.h"
 #include "vidf/rendererdx11/debug.h"
 #include "vidf/rendererdx11/resources.h"
@@ -245,3 +248,5 @@ void TestDx11()
 		swapChain->Present();
 	}
 }
+
+#endif

@@ -56,7 +56,7 @@ public:
 	float offset = 0.0f;
 
 	virtual void serialize(yasli::Archive& ar);
-	virtual void QtDraw(QPainter& painter, float parentOffset) {}
+	virtual void QtDraw(QPainter& painter, float parentOffset, float pixelSize) {}
 	virtual bool RayIntersect(const vidf::Rayf& ray, Intersect* intersect, float parentOffset) { return false; }
 	virtual float GetMaxOffset(float parentOffset) const { return parentOffset; }
 };
@@ -74,7 +74,7 @@ public:
 	float diameter = 45.0f;
 
 	virtual void serialize(yasli::Archive& ar);
-	virtual void QtDraw(QPainter& painter, float parentOffset) override;
+	virtual void QtDraw(QPainter& painter, float parentOffset, float pixelSize) override;
 	virtual bool RayIntersect(const vidf::Rayf& ray, Intersect* intersect, float parentOffset) override;
 	virtual float GetMaxOffset(float parentOffset) const override;
 
@@ -86,7 +86,7 @@ private:
 class MarkerElement : public Element
 {
 public:
-	virtual void QtDraw(QPainter& painter, float parentOffset) override;
+	virtual void QtDraw(QPainter& painter, float parentOffset, float pixelSize) override;
 };
 
 
@@ -95,7 +95,7 @@ class ElementCompound : public Element
 {
 public:
 	void serialize(yasli::Archive& ar);
-	virtual void QtDraw(QPainter& painter, float parentOffset) override;
+	virtual void QtDraw(QPainter& painter, float parentOffset, float pixelSize) override;
 	virtual bool RayIntersect(const vidf::Rayf& ray, Intersect* intersect, float parentOffset) override;
 	virtual float GetMaxOffset(float parentOffset) const override;
 
@@ -132,7 +132,7 @@ struct RaySources
 	RayFocusType focusType = RayFocusType::RayFocusType_Infinite;
 	float angle = 0.0f;
 	float spread = 0.5f;
-	float offset = 2000.0f;
+	float offset = 0.0f;
 	int count = 3;
 	bool enabled = true;
 
@@ -155,7 +155,6 @@ public:
 
 
 
-// class Renderer : public QOpenGLWidget
 class Renderer : public QWidget
 {
 public:
@@ -168,17 +167,21 @@ protected:
 	void mouseReleaseEvent(QMouseEvent* event) override;
 	void mouseDoubleClickEvent(QMouseEvent* event) override;
 	void mouseMoveEvent(QMouseEvent* event) override;
+	void wheelEvent(QWheelEvent* event) override;
 	void keyPressEvent(QKeyEvent* event) override;
 
 private:
-	void DrawRaytraceSource(QPainter& painter, const RaySources& source, float frontLensOffset);
+	void DrawRaytraceSource(QPainter& painter, const RaySources& source, float frontLensOffset, float pixelSize);
 	void DrawRayIntersect(QPainter& painter, const vidf::Rayf& ray);
 
 private:
 	Document*   document;
 	QBasicTimer timer;
-	QPointF     position = QPointF(350, 450);
+//	QPointF     position = QPointF(350, 450);
+	QPointF     position = QPointF(0, 0);
 	QPoint      lastPoint;
+	float       _size = 100.0f;
+
 	float       scale = 4.0f;
 };
 

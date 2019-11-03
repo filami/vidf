@@ -1,0 +1,11 @@
+{
+	"width": 7,
+	"height": 12,
+	"elements": [
+		{ "Emitter": { "x": 1, "y": 11, "angle": 270.0, "mask": 7 } },
+		{ "Mirror": { "x": 1, "y": 9, "angle": -11.25, "dichroicReflect": 7 } },
+		{ "Mirror": { "x": 4, "y": 3, "angle": 11.25, "dichroicReflect": 7 } },
+		{ "Receiver": { "x": 6, "y": 3, "angle": 180.0 } }
+	],
+	"connectors": [ ]
+}

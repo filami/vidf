@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "resources.h"
 
 namespace vidf { namespace dx11
 {
@@ -54,15 +55,16 @@ namespace vidf { namespace dx11
 	class SwapChain
 	{
 	public:
-		PD3D11RenderTargetView GetBackBufferRTV() { return backBufferRTV; }
+		PD3D11RenderTargetView    GetBackBufferRTV() { return backBuffer.rtv; }
+		PD3D11UnorderedAccessView GetBackBufferUAV() { return backBuffer.uav; }
+		GPUBuffer                 GetBackBuffer()    { return backBuffer; }
 
 		void Present(bool vsync = true);
 
 	private:
 		friend class RenderDevice;
-		PDXGISwapChain         swapChain;
-		PD3D11Texture2D        backBuffer;
-		PD3D11RenderTargetView backBufferRTV;
+		PDXGISwapChain swapChain;
+		GPUBuffer      backBuffer;
 	};
 
 

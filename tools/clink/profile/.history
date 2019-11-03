@@ -1,0 +1,19 @@
+vi
+vi
+tools\premake\premake5.exe
+tools\premake\premake5.exe premake5.lua
+p4 logout 
+tools\premake\premake5.exe vs2017
+msbuild
+set
+C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Tools\vsdevcmd\core\msbuild.bat
+"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Tools\vsdevcmd\core\msbuild.bat" 
+"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe"
+"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe" "C:\Users\Filami\Documents\code\vidf\make\vidf.sln" -property:Configuration=Debug
+"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe" "C:\Users\Filami\Documents\code\vidf\make\vidf.sln" -property:Configuration=Release
+"C:\Users\Filami\Documents\code\vidf\make\vidf.sln"
+"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe" "C:\Users\Filami\Documents\code\vidf\make\vidf.sln" -property:Configuration=profile
+premake
+premakevs.bat 
+dir
+premakevs

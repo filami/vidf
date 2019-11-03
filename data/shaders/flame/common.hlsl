@@ -45,7 +45,7 @@ float sqr(float x)
 
 float2x3 MakeTransform(const float2 translation, const float angle, const float2 scale)
 {
-	const float2 sc = float2(sin(angle), cos(angle)) * scale;
+	const float2 sc = float2(sin(angle)*scale.x, cos(angle)*scale.y);
 	float2x3 output;
 	output[0] = float3(sc.y, -sc.x, translation.x);
 	output[1] = float3(sc.x,  sc.y, translation.y);

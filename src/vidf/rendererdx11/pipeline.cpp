@@ -2,6 +2,7 @@
 #include "shaders.h"
 #include "pipeline.h"
 #include "renderdevice.h"
+#include "resources.h"
 
 namespace vidf { namespace dx11 {
 
@@ -19,11 +20,11 @@ namespace vidf { namespace dx11 {
 		PD3D11Device3 device = renderDevice->GetDevice3();
 		GraphicsPSOPtr pso = std::make_shared<GraphicsPSO>();
 
-		if (desc.geometryDesc && desc.numGeomDesc)
+		if (!desc.geometryDesc.empty())
 		{
 			PD3DBlob code = desc.vertexShader->GetByteCode();
 			renderDevice->GetDevice()->CreateInputLayout(
-				desc.geometryDesc, desc.numGeomDesc,
+				desc.geometryDesc.data(), desc.geometryDesc.size(),
 				code->GetBufferPointer(), code->GetBufferSize(),
 				&pso->inputAssembly.Get());
 		}
@@ -31,6 +32,7 @@ namespace vidf { namespace dx11 {
 		device->CreateDepthStencilState(&desc.depthStencil, &pso->depthStencil.Get());
 		device->CreateBlendState1(&desc.blend, &pso->blend.Get());
 		pso->vertexShader = desc.vertexShader;
+		pso->geometryShader = desc.geometryShader;
 		pso->pixelShader = desc.pixelShader;
 		pso->topology = desc.topology;
 
@@ -140,9 +142,26 @@ namespace vidf { namespace dx11 {
 
 
 
+	void CommandBuffer::SetIndexBuffer(PD3D11Buffer _indexBuffer, DXGI_FORMAT format, uint offset)
+	{
+		indexBuffer.indexBuffer = _indexBuffer;
+		indexBuffer.format = format;
+		indexBuffer.offset = offset;
+	}
+
+
+
 	void CommandBuffer::SetConstantBuffer(uint index, PD3D11Buffer cb)
 	{
 		cbs[index] = cb;
+	}
+
+
+
+	void CommandBuffer::SetConstantBuffer(uint index, GPUBuffer& cb)
+	{
+		assert(cb.desc.type == GPUBufferType::ConstantBuffer);
+		cbs[index] = reinterpret_cast<ID3D11Buffer*>(cb.buffer.Get());
 	}
 
 
@@ -162,6 +181,22 @@ namespace vidf { namespace dx11 {
 
 
 
+	void CommandBuffer::DrawIndexed(uint indexCount, uint startIndexLocation, int baseVertexLocation)
+	{
+		FlushGraphicsState();
+		renderDevice->GetContext()->DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
+	}
+
+
+
+	void CommandBuffer::DrawInstanced(uint vertexCountPerInstance, uint instanceCount, uint startVertexLocation, uint startInstanceLocation)
+	{
+		FlushGraphicsState();
+		renderDevice->GetContext()->DrawInstanced(vertexCountPerInstance, instanceCount, startVertexLocation, startInstanceLocation);
+	}
+
+
+
 	void CommandBuffer::FlushCommonState()
 	{
 		PD3D11DeviceContext context = renderDevice->GetContext();
@@ -174,8 +209,10 @@ namespace vidf { namespace dx11 {
 			srvsArray[i] = srvs[i];
 
 		context->VSSetConstantBuffers(0, numCBs, cbsArray.data());
+		context->GSSetConstantBuffers(0, numCBs, cbsArray.data());
 		context->PSSetConstantBuffers(0, numCBs, cbsArray.data());
 		context->VSSetShaderResources(0, numSrvs, srvsArray.data());
+		context->GSSetShaderResources(0, numSrvs, srvsArray.data());
 		context->PSSetShaderResources(0, numSrvs, srvsArray.data());
 
 		context->CSSetConstantBuffers(0, numCBs, cbsArray.data());
@@ -204,11 +241,16 @@ namespace vidf { namespace dx11 {
 		context->IASetVertexBuffers(
 			0, numVertexStreams, vertexStreamArray.data(), vertexStrideStrideArray.data(),
 			vertexStreamOffsetArray.data());
+		context->IASetIndexBuffer(indexBuffer.indexBuffer, indexBuffer.format, indexBuffer.offset);
 		context->OMSetDepthStencilState(currentGraphicsPSO->depthStencil, 0);
 		context->RSSetState(currentGraphicsPSO->rasterizer);
 		context->OMSetBlendState(currentGraphicsPSO->blend, nullptr, ~0);
 		context->IASetPrimitiveTopology(currentGraphicsPSO->topology);
 		context->VSSetShader(currentGraphicsPSO->vertexShader->GetVertexShader(), nullptr, 0);
+		if (currentGraphicsPSO->geometryShader)
+			context->GSSetShader(currentGraphicsPSO->geometryShader->GetGeometryShader(), nullptr, 0);
+		else
+			context->GSSetShader(nullptr, nullptr, 0);
 		if (currentGraphicsPSO->pixelShader)
 			context->PSSetShader(currentGraphicsPSO->pixelShader->GetPixelShader(), nullptr, 0);
 	}

@@ -15,9 +15,21 @@
 #include <vidf/pch.h>
 #include "QPropertyTree/QPropertyTree.h"
 
+#include "yasli/Enum.h"
+#include "yasli/STL.h"
+#include "yasli/decorators/Range.h"
+#include "yasli/JSONIArchive.h"
+#include "yasli/JSONOArchive.h"
+
+#include "vidf/common/color.h"
 #include "vidf/assets/assetmanager.h"
+#include "vidf/rendererdx11/resources.h"
+#include "vidf/rendererdx11/shaders.h"
+#include "vidf/rendererdx11/pipeline.h"
+#include "vidf/rendererdx11/debug.h"
 
 using namespace vidf;
+using namespace dx11;
 
 
 
@@ -100,6 +112,23 @@ class MainFrame;
 
 
 
+class Renderer
+{
+public:
+	Renderer();
+
+	RenderDevicePtr  GetRenderDevice() { return renderDevice; }
+	ShaderManagerPtr GetShaderManager() { return shaderManager; }
+	CommandBufferPtr GetCommandBuffer() { return commandBuffer; }
+
+private:
+	RenderDevicePtr  renderDevice;
+	ShaderManagerPtr shaderManager;
+	CommandBufferPtr commandBuffer;
+};
+
+
+
 class VIEditor : public QApplication
 {
 public:
@@ -109,10 +138,12 @@ public:
 
 	AssetManager&     GetAssetManager() { return assetManager; }
 	AssetItemManager& GetAssetItemManager() { return assetItemManager; }
+	Renderer&         GetRenderer() { return renderer; }
 
 public:
 	AssetManager     assetManager;
 	AssetItemManager assetItemManager;
+	Renderer         renderer;
 };
 
 
@@ -137,6 +168,7 @@ public:
 private slots:
 	void OnItemActivated(const QModelIndex& index);
 	void OnItemClicked(const QModelIndex& index);
+	void OnImportClicked();
 
 private:
 	void              QuickEditItem(AssetItem* item);
@@ -241,6 +273,106 @@ public:
 	}
 
 	static AssetEditor* Create(MainFrame* parent, AssetItem* assetItem) { return new TextureEditor(parent, assetItem); }
+
+private:
+};
+
+
+class ShaderGraphEditor : public AssetEditor
+{
+public:
+	ShaderGraphEditor(MainFrame* parent, AssetItem* assetItem);
+
+	static AssetEditor* Create(MainFrame* parent, AssetItem* assetItem) { return new ShaderGraphEditor(parent, assetItem); }
+
+private:
+};
+
+
+
+enum class ShapeType
+{
+	Solid,
+	Trigger,
+};
+
+
+
+struct Shape
+{
+	vector<Vector2i> points;
+	ShapeType type = ShapeType::Solid;
+
+	void serialize(yasli::Archive& ar)
+	{
+	//	ar(points, "points", "Points");
+	}
+};
+
+
+
+enum class MaterialType
+{
+	Solid,
+	Transparent,
+	Medium,
+};
+
+
+struct Material
+{
+	vidf::Color  baseColor;
+	MaterialType type = MaterialType::Solid;
+	float        metalicity = 0.0f;
+	float        roughtness = 0.0f;
+	float        transmitance = 0.0f;
+	float        emittance = 0.0f;
+
+	void serialize(yasli::Archive& ar)
+	{
+		ar(metalicity, "metalicity", "Metalicity");
+		ar(roughtness, "roughtness", "Roughtness");
+		ar(transmitance, "transmitance", "Transmitance");
+		ar(emittance, "emittance", "Emittance");
+	}
+};
+
+typedef array<Material, 256> MaterialPalette;
+
+
+
+struct VoxelPaletteEntry
+{
+	string name;
+	vector<Shape> shapes;
+
+	void serialize(yasli::Archive& ar)
+	{
+		ar(name, "name", "Name");
+		ar(shapes, "shapes", "Shapes");
+	}
+};
+
+
+
+class VoxelPaletteAsset : public Asset
+{
+public:
+	void serialize(yasli::Archive& ar) override;
+
+private:
+	vector<VoxelPaletteEntry> entries;
+	MaterialPalette materials;
+};
+
+
+
+class VoxelPaletteEditor : public AssetEditor
+{
+public:
+	VoxelPaletteEditor(MainFrame* parent, AssetItem* assetItem);
+
+	static AssetEditor* Create(MainFrame* parent, AssetItem* assetItem) { return new VoxelPaletteEditor(parent, assetItem); }
 
 private:
 };

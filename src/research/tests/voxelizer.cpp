@@ -15,7 +15,7 @@ using namespace dx11;
 
 //////////////////////////////////////////////////////////////////////////
 
-// const float voxelSize = 50.0f;
+// const float voxelSize = 20.0f;
 
 const float voxelSize = 2.0f;
 typedef uint8 SparceMapData;
@@ -430,13 +430,14 @@ void Voxelizer()
 		wikiDraw.PushWorldTM(Matrix44f(zero));
 
 		Time time = GetTime();
-		Matrix44f objectTM = ToMatrix44(QuaternionAxisAngle(Vector3f(0.0f, 1.0f, 0.0f), time.AsFloat()*0.15f));
+	//	Matrix44f objectTM = ToMatrix44(QuaternionAxisAngle(Vector3f(0.0f, 1.0f, 0.0f), time.AsFloat()*0.15f));
+		Matrix44f objectTM = ToMatrix44(QuaternionAxisAngle(Vector3f(0.0f, 1.0f, 0.0f), 0.0f));
 		
-		raster.fragments.clear();
-		SparceTreeClearData(&sparceMap);
-		RasterizeModel(&raster, *model, objectTM);
-		for (auto fragment : raster.fragments)
-			SparceTreeInsertPoint(&sparceMap, sparceMapBox, fragment.position, sparceMapLevels);
+	//	raster.fragments.clear();
+	//	SparceTreeClearData(&sparceMap);
+	//	RasterizeModel(&raster, *model, objectTM);
+	//	for (auto fragment : raster.fragments)
+	//		SparceTreeInsertPoint(&sparceMap, sparceMapBox, fragment.position, sparceMapLevels);
 
 		FLOAT white[] = {1.0f, 1.0f, 1.0f, 1.0f};
 		renderDevice->GetContext()->ClearRenderTargetView(swapChain->GetBackBufferRTV(), white);

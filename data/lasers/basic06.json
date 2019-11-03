@@ -1,0 +1,23 @@
+{
+	"width": 12,
+	"height": 10,
+	"elements": [
+		{ "Sensor": { "x": 11, "y": 7, "angle": 180.0, "mask": 7 } },
+		{ "Blocker": { "x": 10, "y": 1, "angle": 0.0 } },
+		
+		{ "Sensor": { "x": 11, "y": 1, "angle": 180.0, "mask": 7 } },
+		{ "Blocker": { "x": 10, "y": 4, "angle": 0.0 } },
+	
+		{ "Emitter": { "x": 1, "y": 9, "angle": 270.0, "mask": 7 } },		
+		{ "Receiver": { "x": 11, "y": 4, "angle": 180.0 } }
+		
+		{ "Mirror": { "x": 1, "y": 4, "angle": 11.25, "dichroicReflect": 7 } },
+		{ "Difractor": { "x": 3, "y": 4, "angle": 0.0 } },
+		{ "Mirror": { "x": 9, "y": 7, "angle": -11.25, "dichroicReflect": 7 } },
+		{ "Mirror": { "x": 9, "y": 1, "angle": 11.25, "dichroicReflect": 7 } },
+	],
+	"connectors": [
+		{ "key": 0, "value": 1 },
+		{ "key": 2, "value": 3 },
+	]
+}

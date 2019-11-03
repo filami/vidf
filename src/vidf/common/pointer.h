@@ -18,6 +18,8 @@ namespace vidf
 		Pointer(SmartType2* _smartPointer)
 			:	smartPointer(_smartPointer)
 		{
+			if (smartPointer)
+				smartPointer->AddRef();
 		}
 
 		Pointer(const Pointer<SmartType>& pointer)

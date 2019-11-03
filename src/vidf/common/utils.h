@@ -33,9 +33,30 @@ namespace vidf
 	inline T Min(T v1, T v2){
 		return v1 > v2 ? v2 : v1;
 	}
-template
+
+
+	template<typename T>
+	inline T Square(T v1)
+	{
+		return v1 * v1;
+	}
+
+
+	template<typename T>
+	inline T Cube(T v1)
+	{
+		return v1 * v1 * v1;
+	}
+
+
+	template<typename A0, typename A1>
+	A0 DivUp(A0 quocient, A1 divider)
+	{
+		return (quocient % A0(divider) != 0) ? ((quocient + A0(divider)) / A0(divider)) : (quocient / A0(divider));
+	}
+
 	
-<typename T>
+	template<typename T>
 	void Swap(T& a, T& b)
 	{
 		T t = a;
@@ -54,6 +75,14 @@ template
 	template<typename T>
 	inline T Saturate(T v){
 		return v<0?0:v>(T)1?(T)1:v;
+	}
+
+
+
+	template<typename T>
+	inline T SignSaturate(T v)
+	{
+		return v < T(-1) ? T(-1) : v > T(1) ? T(1) : v;
 	}
 
 
@@ -235,6 +264,20 @@ template
 		while (*str != 0)
 			out.push_back(std::tolower(*str++));
 		return out;
+	}
+
+
+
+	template<typename Char, uint N>
+	void Format(Char output[N], const Char* format)
+	{
+		strcpy_s<N>(output, format);
+	}
+
+	template<typename Char, uint N, typename Car, typename ... Cdr>
+	void Format(Char output[N], const Char* format, Car car, Cdr ... cdr)
+	{
+		strcpy_s<N>(output, format);
 	}
 
 

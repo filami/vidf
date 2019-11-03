@@ -68,7 +68,7 @@ Vector3f Refract(Vector3f I, Vector3f N, float eta)
 
 
 
-bool RaySphereIntersect(const Rayf& ray, const Vector3f center, const float radius, const float n, Intersect* intersect)
+bool RaySphereIntersect(const Rayf& ray, const Vector3f center, const float radius, Intersect* intersect)
 {
 	const Vector3f q = center - ray.origin;
 	const float c = Length(q);
@@ -86,17 +86,16 @@ bool RaySphereIntersect(const Rayf& ray, const Vector3f center, const float radi
 		intersect->distance = dist;
 		intersect->normal = Normalize((ray.origin + ray.direction * dist) - center);
 		intersect->normal = intersect->normal * (d0 < 0.0f ? -1.0f : 1.0f);
-		intersect->n = (d0 < 0.0f && radius > 0.0f) ? 1.0f : n;
 	}
 	return true;
 }
 
 
 
-bool RaySphereIntersect(const Rayf& ray, const Vector3f center, const float radius, Vector3f axis, float theta, const float n, Intersect* intersect)
+bool RaySphereIntersect(const Rayf& ray, const Vector3f center, const float radius, Vector3f axis, float theta, Intersect* intersect)
 {
 	Intersect _intersect;
-	const bool _result = RaySphereIntersect(ray, center, radius, n, &_intersect);
+	const bool _result = RaySphereIntersect(ray, center, radius, &_intersect);
 	if (!_result)
 		return false;
 
@@ -120,7 +119,7 @@ void Surface::serialize(yasli::Archive& ar)
 {
 	ar(type, "type", "^");
 	if (type != SurfaceType_Flat)
-		ar(radius, "radius", "^");
+		ar(yasli::Range(radius, -200.0f, 200.0f), "radius", "^");
 }
 
 
@@ -161,7 +160,7 @@ void LensElement::serialize(yasli::Archive& ar)
 
 
 
-void LensElement::QtDraw(QPainter& painter, float parentOffset)
+void LensElement::QtDraw(QPainter& painter, float parentOffset, float pixelSize)
 {
 	const QPointF c1 = QPointF( backSurface.radius - d * 0.5 + (parentOffset + offset), 0.0);
 	const QPointF c2 = QPointF(-frontSurface.radius + d * 0.5 + (parentOffset + offset), 0.0);
@@ -170,13 +169,13 @@ void LensElement::QtDraw(QPainter& painter, float parentOffset)
 	const double t2 = std::asin(diameter * 0.5 / frontSurface.radius);
 		
 	QVector<QPointF> points;
-	painter.setPen(QPen(Qt::white, 0.5));
+	painter.setPen(QPen(Qt::white, pixelSize * 1.5f));
 	painter.setBrush(QBrush(QColor(0, 128, 255, 64)));
 	AddSurfacePoints(painter, c1, backSurface.radius,  -t1 + PI, t1 + PI, 64, &points);
 	AddSurfacePoints(painter, c2, frontSurface.radius, -t2, t2, 64, &points);
 	painter.drawPolygon(points.data(), points.size());
 
-	painter.setPen(QPen(Qt::gray, 0.25));
+	painter.setPen(QPen(Qt::gray, pixelSize));
 	painter.drawLine(
 		QPointF(parentOffset + offset,  diameter * 0.5),
 		QPointF(parentOffset + offset, -diameter * 0.5));
@@ -193,9 +192,13 @@ bool LensElement::RayIntersect(const Rayf& ray, Intersect* intersect, float pare
 	const float t1 = std::asin(diameter * conv * 0.5f / std::abs(backSurface.radius * conv));
 	const float t2 = std::asin(diameter * conv * 0.5f / std::abs(frontSurface.radius * conv));
 
-	bool result = false;
-	result |= RaySphereIntersect(ray, center1, backSurface.radius * conv, Vector3f(-1.0f, 0.0f, 0.0f), t1, n, intersect);
-	result |= RaySphereIntersect(ray, center2, frontSurface.radius * conv, Vector3f(1.0f, 0.0f, 0.0f), t2, n, intersect);
+	const bool back = RaySphereIntersect(ray, center1, backSurface.radius * conv, Vector3f(-1.0f, 0.0f, 0.0f), t1, intersect);
+	const bool front = RaySphereIntersect(ray, center2, frontSurface.radius * conv, Vector3f(1.0f, 0.0f, 0.0f), t2, intersect);
+	const bool result = back || front;
+	if (front)
+		intersect->n = n;
+	else if (back)
+		intersect->n = 1.0f;
 
 	return result;
 }
@@ -215,15 +218,15 @@ float LensElement::GetFocusDistance() const
 	const float invConv = 1.0f / conv;
 	const float _d = d * invConv;
 	const float _r1 = backSurface.radius * invConv;
-	const float _r2 = frontSurface.radius * invConv;
+	const float _r2 = -frontSurface.radius * invConv;
 	return (1.0f / ((n - 1.0f)*(1.0f / _r1 - 1.0f / _r2 + (n - 1.0f)*_d / (n*_r1*_r2)))) * conv;
 }
 
 
 
-void MarkerElement::QtDraw(QPainter& painter, float parentOffset)
+void MarkerElement::QtDraw(QPainter& painter, float parentOffset, float pixelSize)
 {
-	painter.setPen(QPen(Qt::gray, 0.25));
+	painter.setPen(QPen(Qt::gray, pixelSize));
 	painter.drawLine(
 		QPointF(parentOffset + offset,  1000),
 		QPointF(parentOffset + offset, -1000));
@@ -240,10 +243,13 @@ void ElementCompound::serialize(yasli::Archive& ar)
 
 
 
-void ElementCompound::QtDraw(QPainter& painter, float parentOffset)
+void ElementCompound::QtDraw(QPainter& painter, float parentOffset, float pixelSize)
 {
 	for (auto& element : elements)
-		element->QtDraw(painter, parentOffset + offset);
+	{
+		if (element->enabled)
+			element->QtDraw(painter, parentOffset + offset, pixelSize);
+	}
 }
 
 
@@ -252,7 +258,10 @@ bool ElementCompound::RayIntersect(const Rayf& ray, Intersect* intersect, float 
 {
 	bool result = false;
 	for (auto& element : elements)
-		result |= element->RayIntersect(ray, intersect, parentOffset + offset);
+	{
+		if (element->enabled)
+			result |= element->RayIntersect(ray, intersect, parentOffset + offset);
+	}
 	return result;
 }
 
@@ -262,7 +271,10 @@ float ElementCompound::GetMaxOffset(float parentOffset) const
 {
 	float maxOffset = parentOffset;
 	for (auto& element : elements)
-		maxOffset = Max(maxOffset, element->GetMaxOffset(parentOffset + offset));
+	{
+		if (element->enabled)
+			maxOffset = Max(maxOffset, element->GetMaxOffset(parentOffset + offset));
+	}
 	return maxOffset;
 }
 
@@ -323,6 +335,23 @@ void Renderer::mouseMoveEvent(QMouseEvent* event)
 
 
 
+void Renderer::wheelEvent(QWheelEvent* event)
+{
+//	if (event->delta() > 0)
+//		_size *= 1.5f;
+//	else
+//		_size /= 1.5f;
+//	event->accept();
+
+	if (event->delta() > 0)
+		scale *= 1.5f;
+	else
+		scale /= 1.5f;
+	event->accept();
+}
+
+
+
 void Renderer::keyPressEvent(QKeyEvent* event)
 {
 	if (event->key() == Qt::Key_Plus)
@@ -342,21 +371,45 @@ void Renderer::keyPressEvent(QKeyEvent* event)
 
 void Renderer::paintEvent(QPaintEvent* event)
 {
+	/*/
 	const QSize sz = size();
 	const float aspect = sz.width() / float(sz.height());
+	const float pixelSize = 1.0f / sz.height() * _size;
 
 	QPainter painter;
 	painter.begin(this);
 	painter.setRenderHint(QPainter::Antialiasing);
+	
+	QPointF sizeF = QPointF(_size * aspect, _size) * 0.5f;
+	QPointF minPt = position - sizeF;
+	QPointF maxPt = position + sizeF;
 
 	painter.fillRect(event->rect(), QBrush(QColor(0, 0, 0)));
-	painter.translate(position.x() + sz.width() * 0.5f, position.y() + sz.height() * 0.5f);
+//	painter.translate(minPt / pixelSize);
+//	painter.scale((1.0 / pixelSize) * aspect, 1.0 / pixelSize);
+
+	painter.translate(QPointF(minPt.x() * (sz.width() / _size), minPt.y() * (sz.height() / _size)));
+	painter.scale(1 / (_size / sz.width()), 1 / (_size / sz.height()));
+	/**/
+
+	/**/
+	const QSize sz = size();
+	const float aspect = sz.width() / float(sz.height());
+	const float pixelSize = 1.0f / sz.height() * _size;
+
+	QPainter painter;
+	painter.begin(this);
+	painter.setRenderHint(QPainter::Antialiasing);
+	painter.fillRect(event->rect(), QBrush(QColor(0, 0, 0)));
+
+	painter.translate(position.x() + 1000.0, position.y());
 	painter.scale(scale * aspect, scale);
-	
+	/**/
+
 	painter.save();
 	painter.setBrush(QBrush());
-
-	painter.setPen(QPen(Qt::white, 0.5));
+	
+	painter.setPen(QPen(Qt::white, pixelSize * 1.5f));
 	painter.drawLine(
 		QPointF(document->sensor.offset, -document->sensor.size*0.5),
 		QPointF(document->sensor.offset,  document->sensor.size*0.5));
@@ -365,30 +418,40 @@ void Renderer::paintEvent(QPaintEvent* event)
 	for (const auto& source : document->raySources)
 	{
 		if (source.enabled)
-			DrawRaytraceSource(painter, source, frontLensOffset);
+			DrawRaytraceSource(painter, source, frontLensOffset, pixelSize);
 	}
 
-	document->elements.QtDraw(painter, 0.0f);
+	document->elements.QtDraw(painter, 0.0f, pixelSize);
 
 	painter.end();
 }
 
 
 
-void Renderer::DrawRaytraceSource(QPainter& painter, const RaySources& source, float frontLensOffset)
+void Renderer::DrawRaytraceSource(QPainter& painter, const RaySources& source, float frontLensOffset, float pixelSize)
 {
-	const float rayDist = 25.0f;
+	// const float rayDist = 25.0f;
+	const float rayDist = 1.5f;
 	const float spread = (source.spread * document->sensor.size * 0.5f) / 1000.0f;
 	const float mult = 1.0f / float(source.count - 1);
 	const float theta = Degrees2Radians(source.angle * 0.5f);
 	const float thetaTan = std::tan(theta);
-
-	painter.setPen(QPen(Qt::blue, 0.5));
+		
 	for (uint i = 0; i < source.count; ++i)
 	{
+		/*
+		if (i == source.count - 1)
+			painter.setPen(QPen(Qt::green, pixelSize * 1.5f));
+		else
+			painter.setPen(QPen(Qt::blue, pixelSize * 1.5f));
+			*/
+		painter.setPen(QPen(Qt::blue, pixelSize * 1.5f));
 		const float t = Lerp(-spread, spread, i * mult);
 		const Vector3f dir = Normalize(Vector3f{ -1.0f, thetaTan, 0.0f });
-		const Vector3f orig = Vector3f{ frontLensOffset - dir.x * rayDist, t - dir.y * rayDist, 0.0f };
+		const Vector3f orig = Vector3f{
+			frontLensOffset - dir.x * rayDist,
+			t - dir.y * rayDist + source.offset * document->sensor.size * 0.5f / 1000.0f,
+			0.0f };
 		DrawRayIntersect(painter, Rayf{ orig, dir });
 	}
 }
@@ -399,6 +462,7 @@ void Renderer::DrawRayIntersect(QPainter& painter, const Rayf& ray)
 {
 	const float conv = 1000.0;
 	const float invConv = 1.0 / 1000.0;
+	const float epsilon = 1.0f / (1024.0f * 16.0f);
 
 	auto ToQPoint = [](Vector3f v) { return QPointF(v.x, v.y); };
 
@@ -413,7 +477,8 @@ void Renderer::DrawRayIntersect(QPainter& painter, const Rayf& ray)
 		Intersect intersect;
 		if (!document->elements.RayIntersect(curRay, &intersect, 0.0f))
 			break;
-		curRay.origin = curRay.origin + curRay.direction * (intersect.distance + 1.0f / 1024.0f / 1024.0f);
+		// const float intersectDir = (intersect.n == 1.0f ? -1.0f : 1.0f);
+		curRay.origin = curRay.origin + curRay.direction * (intersect.distance + epsilon);
 		curRay.direction = Normalize(Refract(curRay.direction, intersect.normal, curN / intersect.n));
 		curN = intersect.n;
 		points.push_back(ToQPoint(curRay.origin) * conv);
@@ -421,6 +486,9 @@ void Renderer::DrawRayIntersect(QPainter& painter, const Rayf& ray)
 	points.push_back(ToQPoint(curRay.origin + curRay.direction * 2500.0) * conv);
 
 	painter.drawLines(points);
+
+	painter.setPen(QPen(Qt::red, 0.2f));
+	painter.drawPoints(points);
 }
 
 
@@ -429,7 +497,7 @@ void RaySources::serialize(yasli::Archive& ar)
 {
 	ar(enabled, "enabled", "^");
 	ar(focusType, "focusType", "Type");
-	if (focusType != RayFocusType_Infinite)
+	// if (focusType != RayFocusType_Infinite)
 		ar(offset, "offset", "Offset");
 	ar(angle, "angle", "angle");
 	ar(spread, "spread", "spread");

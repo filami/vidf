@@ -392,8 +392,379 @@ namespace
 	}
 
 
+
+	bool IsValidSpot(const TableState& tableState, Vector2i position)
+	{
+		if (position.x < 0 || position.y < 0)
+			return false;
+		if (position.x >= tableSize || position.y >= tableSize)
+			return false;
+		return tableState[position.x + position.y*tableSize] == State::Empty;
+	};
+
+
+
+	/////////////////////////////////////////////////////////////////
+
+
+	template<typename T>
+	class range
+	{
+	public:
+		range() = default;
+		range(T* __begin, T* __end)
+			: _begin(__begin)
+			, _end(__end) {}
+
+		T* begin() { return _begin; }
+		T* end() { return _end; }
+		T* cbegin() const { return _begin; }
+		T* cend() const { return _end; }
+		size_t size() const { return _end - _begin; }
+		T& operator[] (size_t idx) { assert(idx < size()); return _begin[idx]; }
+		const T operator[] (size_t idx) const { assert(idx < size()); return _begin[idx]; }
+
+	private:
+		T* _begin;
+		T* _end;
+	};
+
+
+	struct NeuralNetworkDesc
+	{
+		uint numInputs = 0;
+		uint numOutputs = 0;
+		uint neuronsPerLayer = 0;
+		uint numLayers = 0;
+		uint numFeedbackNeurons = 0;
+	};
+
+
+	template<typename T>
+	class NeuralNetwork
+	{
+	public:
+		NeuralNetwork()
+		{
+		}
+
+		void Create(const NeuralNetworkDesc& _desc)
+		{
+			desc = _desc;
+			feedbackInputOffset = desc.numInputs;
+			outputOffset = desc.numInputs + desc.numFeedbackNeurons + desc.neuronsPerLayer * desc.numLayers;
+			feedbackOutputOffset = outputOffset + desc.numOutputs + desc.numFeedbackNeurons;
+			const uint numNeurons = feedbackOutputOffset + desc.numFeedbackNeurons;
+			neurons.resize(numNeurons);
+
+			uint numWeigths =
+				(desc.numInputs + desc.numFeedbackNeurons) * desc.neuronsPerLayer +
+				(desc.numOutputs + desc.numFeedbackNeurons) * desc.neuronsPerLayer;
+			for (uint l = 0; l < desc.numLayers - 1; ++l)
+				numWeigths += desc.neuronsPerLayer * desc.neuronsPerLayer;
+			weigths.resize(numWeigths);
+		}
+
+		range<T> GetInputNeurons()
+		{
+			return range<T>(neurons.data(), neurons.data() + desc.numInputs);
+		}
+
+		range<const T> GetOutputNeurons() const
+		{
+			return range<const T>(neurons.data() + outputOffset, neurons.data() + outputOffset + desc.numOutputs);
+		}
+
+		range<T> GetWeigths()
+		{
+			return range<T>(weigths.data(), weigths.data() + weigths.size());
+		}
+
+		void Update()
+		{
+			memcpy(neurons.data() + feedbackInputOffset, neurons.data() + feedbackOutputOffset, sizeof(T) * desc.numFeedbackNeurons);
+
+			range<T> inputRange = range<T>(neurons.data(), neurons.data() + desc.numInputs + desc.numFeedbackNeurons);
+			range<T> outputRange = range<T>(inputRange.end(), inputRange.end() + desc.neuronsPerLayer);
+			range<T> weightsRange = range<T>(weigths.data(), weigths.data() + (desc.numInputs + desc.numFeedbackNeurons) * desc.neuronsPerLayer);
+			UpdateLayer(inputRange, outputRange, weightsRange);
+
+			for (uint l = 0; l < desc.numLayers - 1; ++l)
+			{
+				inputRange = outputRange;
+				outputRange = range<T>(outputRange.end(), outputRange.end() + desc.neuronsPerLayer);
+				weightsRange = range<T>(weightsRange.end(), weightsRange.end() + desc.neuronsPerLayer * desc.neuronsPerLayer);
+				UpdateLayer(inputRange, outputRange, weightsRange);
+			}
+
+			inputRange = outputRange;
+			outputRange = range<T>(outputRange.end(), outputRange.end() + desc.numOutputs + desc.numFeedbackNeurons);
+			weightsRange = range<T>(weightsRange.end(), weightsRange.end() + (desc.numOutputs + desc.numFeedbackNeurons) * desc.neuronsPerLayer);
+			UpdateLayer(inputRange, outputRange, weightsRange);
+		}
+
+	private:
+		void UpdateLayer(range<T> inputs, range<T> outputs, range<T> weigths)
+		{
+			uint wIdx = 0;
+			for (uint o = 0; o < outputs.size(); ++o)
+			{
+				T w = 0.0f;
+				for (uint i = 0; i < outputs.size(); ++i)
+					w += inputs[i] * weigths[wIdx++];
+				outputs[o] = w;
+			}
+		}
+
+	private:
+		NeuralNetworkDesc desc;
+		uint feedbackInputOffset = 0;
+		uint feedbackOutputOffset = 0;
+		uint outputOffset = 0;
+		std::vector<T> neurons;
+		std::vector<T> weigths;
+	};
+
+
+
+	/////////////////////////////////////////////////////////////////
+
+
+
+	class Player
+	{
+	public:
+		Player(State _thisPlayer)
+			: thisPlayer(_thisPlayer)
+			, otherPlayer(OtherPlayer(_thisPlayer)) {}
+
+		virtual bool Update(TableState* tableState) = 0;
+
+		virtual void Draw(const TableState& tableState, const TableMarks& tableMarks) {}
+
+		const State thisPlayer;
+		const State otherPlayer;
+	};
+
+
+
+	class HumanPlayer : public Player
+	{
+	public:
+		HumanPlayer(State _thisPlayer, const CameraOrtho2D& _camera)
+			: Player(_thisPlayer)
+			, camera(_camera)
+			, lbuttonWasDown(false) {}
+
+		bool Update(TableState* tableState) override
+		{
+			bool played = false;
+
+			const Vector2f mousePos = camera.CursorPosition();
+			const Vector2i cursorPos = Vector2i(uint(mousePos.x + 0.5f), uint(mousePos.y + 0.5f));
+			const bool isValidSpot = IsValidSpot(*tableState, cursorPos);
+
+			const bool lbuttonDown = GetAsyncKeyState(VK_LBUTTON) & 0x8000;
+			if (!lbuttonDown)
+			{
+				lbuttonWasDown = false;
+			}
+			else if (lbuttonDown && !lbuttonWasDown)
+			{
+				lbuttonWasDown = true;
+				if (isValidSpot)
+				{
+					(*tableState)[cursorPos.x + cursorPos.y*tableSize] = thisPlayer;
+					played = true;
+				}
+			}
+
+			return played;
+		}
+
+		void Draw(const TableState& tableState, const TableMarks& tableMarks) override
+		{
+			const Vector2f mousePos = camera.CursorPosition();
+			const Vector2i cursorPos = Vector2i(uint(mousePos.x + 0.5f), uint(mousePos.y + 0.5f));
+			const bool isValidSpot = IsValidSpot(tableState, cursorPos);
+			DrawTable(tableState, tableMarks, thisPlayer, cursorPos, isValidSpot);
+		}
+
+	private:
+		const CameraOrtho2D& camera;
+		bool lbuttonWasDown;
+	};
+
+
+
+	class AlphaBetaPlayer : public Player
+	{
+	public:
+		AlphaBetaPlayer(State _thisPlayer)
+			: Player(_thisPlayer)
+		{
+			Vector2i center = Vector2i(tableSize / 2, tableSize / 2);
+			alphaBetaPoints[0] = center;
+			uint idx = 1;
+			for (int i = 1; i <= center.x; ++i)
+			{
+				for (int j = -i; j < i; ++j)
+					alphaBetaPoints[idx++] = center + Vector2i(j, i);
+				for (int j = i; j > -i; --j)
+					alphaBetaPoints[idx++] = center + Vector2i(i, j);
+				for (int j = i; j > -i; --j)
+					alphaBetaPoints[idx++] = center + Vector2i(j, -i);
+				for (int j = -i; j < i; ++j)
+					alphaBetaPoints[idx++] = center + Vector2i(-i, j);
+			}
+		}
+
+		bool Update(TableState* tableState) override
+		{
+			const auto play = AlphaBeta(alphaBetaPoints, *tableState, 3, -infinity, infinity, thisPlayer, true);
+			(*tableState)[play.position.x + play.position.y*tableSize] = thisPlayer;
+			return true;
+		}
+
+		void Draw(const TableState& tableState, const TableMarks& tableMarks) override
+		{
+			DrawTable(tableState, tableMarks, thisPlayer, Vector2i{zero}, false);
+		}
+
+	private:
+		AlphaBetaPoints alphaBetaPoints;
+	};
+
+
+
+	class NeuralPlayer : public Player
+	{
+	public:
+		NeuralPlayer(State _thisPlayer)
+			: Player(_thisPlayer)
+		{
+			const uint numPlaces = tableSize * tableSize;
+			NeuralNetworkDesc nnDesc;
+			nnDesc.numInputs = nnDesc.numOutputs = numPlaces;
+			nnDesc.numFeedbackNeurons = tableSize;
+			nnDesc.neuronsPerLayer = numPlaces + tableSize;
+			nnDesc.numLayers = 2;
+			neuralNetwork.Create(nnDesc);
+
+			auto weigths = neuralNetwork.GetWeigths();
+			for (uint i = 0; i < weigths.size(); ++i)
+				weigths[i] = snorm(rand48);
+		}
+
+		bool Update(TableState* tableState) override
+		{
+			const uint numPlaces = tableSize * tableSize;
+			auto inputs = neuralNetwork.GetInputNeurons();
+			for (uint i = 0; i < numPlaces; ++i)
+			{
+				if ((*tableState)[i] == thisPlayer)
+					inputs[i] = 1.0f;
+				if ((*tableState)[i] == otherPlayer)
+					inputs[i] = -1.0f;
+				else
+					inputs[i] = 0.0f;
+			}
+			neuralNetwork.Update();
+			auto outputs = neuralNetwork.GetOutputNeurons();
+			float bestWeigth = -std::numeric_limits<float>::max();
+			Vector2i bestPos = Vector2i{ zero };
+			for (uint y = 0; y < tableSize; ++y)
+			{
+				for (uint x = 0; x < tableSize; ++x)
+				{
+					if (!IsValidSpot(*tableState, Vector2i(x, y)))
+						continue;
+					if (outputs[x + y*tableSize] > bestWeigth)
+					{
+						bestWeigth = outputs[x + y*tableSize];
+						bestPos = Vector2i(x, y);
+					}
+				}
+			}
+			(*tableState)[bestPos.x + bestPos.y*tableSize] = thisPlayer;
+			return true;
+		}
+
+		void Draw(const TableState& tableState, const TableMarks& tableMarks) override
+		{
+			DrawTable(tableState, tableMarks, thisPlayer, Vector2i{ zero }, false);
+		}
+
+	private:
+		NeuralNetwork<float> neuralNetwork;
+	};
+
+
+
+	struct MatchResult
+	{
+		State winner = State::Empty;
+		uint numPlays = 0;
+	};
+
+
+
+	std::mutex coutMtx;
+
+
+
+	void OutputResult(const MatchResult& result, uint matchIndex)
+	{
+		std::lock_guard<std::mutex> guard(coutMtx);
+
+		std::cout << "match " << matchIndex << " - ";
+		switch (result.winner)
+		{
+		case State::Black:
+			std::cout << "BLACK won";
+			break;
+		case State::White:
+			std::cout << "WHITE won";
+			break;
+		default:
+			std::cout << "TIE";
+			break;
+		}
+		std::cout << " after " << result.numPlays << " plays" << std::endl;
+	}
+
+
+	MatchResult GomokuMatch(NeuralPlayer* player0, NeuralPlayer* player1)
+	{
+		MatchResult result;
+
+		TableState tableState;
+		TableMarks tableMarks;
+		tableState.fill(State::Empty);
+		tableState[tableSize / 2 + tableSize / 2 * tableSize] = State::White;
+		tableMarks.fill(0);
+
+		State finishedState = State::Empty;
+
+		Player* currentPlayer = player0;
+		Player* otherPlayer = player1;
+
+		while (result.winner == State::Empty)
+		{
+			currentPlayer->Update(&tableState);
+			std::swap(currentPlayer, otherPlayer);
+			result.winner = FinishedStateAndMArk(tableState, &tableMarks);
+			result.numPlays++;
+		}
+
+		return result;
+	}
+
+
 }
 
+
+#if 0
 
 void Gomoku()
 {
@@ -453,29 +824,20 @@ void Gomoku()
 	State currentPlayer = State::Black;
 	bool lbuttonWasDown = false;
 
-	auto IsValidSpot = [](const TableState& tableState, Vector2i position)
-	{
-		if (position.x < 0 || position.y < 0)
-			return false;
-		if (position.x >= tableSize || position.y >= tableSize)
-			return false;
-		return tableState[position.x + position.y*tableSize] == State::Empty;
-	};
-
 	State finishedState = State::Empty;
 	uint scoreBlack = 0;
 	uint scoreWhite = 0;
 
 	while (protoGL.Update())
 	{
-		
+		/*
 		const bool isPlayer = (currentPlayer == State::Black);
 		const bool isAI = (currentPlayer == State::White);
+		*/
 		
-		/*
 		const bool isPlayer = false;
 		const bool isAI = currentPlayer != State::Empty;
-		*/
+		
 		bool isValidSpot = false;
 		Vector2i cursorPos;
 
@@ -517,6 +879,195 @@ void Gomoku()
 		camera.CommitToGL();
 
 		DrawTable(tableState, tableMarks, currentPlayer, cursorPos, isPlayer && isValidSpot);
+
+		protoGL.Swap();
+	}
+}
+#endif
+
+
+
+class TaskManager
+{
+public:
+	typedef std::function<void()> Task;
+	typedef std::deque<Task> Tasks;
+
+public:
+	TaskManager(uint numThreads)
+		: threads(numThreads)
+	{
+		int threadId = 0;
+		for (auto& thread : threads)
+		{
+			thread = std::thread([threadId, this]{ this->TaskLoop(threadId); });
+			++threadId;
+		}
+	}
+
+	~TaskManager()
+	{
+		WaitForAll();
+		running = false;
+		newTaskNotify.notify_all();
+		for (auto& thread : threads)
+			thread.join();
+	}
+
+	void AddTask(Task task)
+	{
+		{
+			std::lock_guard<std::mutex> guard(tasksMutex);
+			tasks.push_back(task);
+		}
+		newTaskNotify.notify_one();
+	}
+
+	void WaitForAll()
+	{
+		while (HasTasksLeft())
+		{
+			std::unique_lock<std::mutex> removedTaskLoc(removedTaskMutex);
+			removedTaskNotify.wait(removedTaskLoc);
+		}
+	}
+
+private:
+	bool HasTasksLeft() const
+	{
+		std::lock_guard<std::mutex> guard(tasksMutex);
+		return !tasks.empty();
+	}
+
+	Task PopTask()
+	{
+		std::lock_guard<std::mutex> guard(tasksMutex);
+		Task task = tasks.front();
+		tasks.pop_front();
+		removedTaskNotify.notify_all();
+		return task;
+	}
+
+	void TaskLoop(uint threadId)
+	{
+		while (running)
+		{
+			if (HasTasksLeft())
+			{
+				Task task = PopTask();
+				task();
+			}
+			else
+			{
+				std::unique_lock<std::mutex> newTaskLoc(newTaskMutex);
+				newTaskNotify.wait(newTaskLoc);
+			}
+		}
+	}
+
+	std::vector<std::thread> threads;
+	Tasks tasks;
+
+	mutable std::mutex tasksMutex;
+	mutable std::mutex newTaskMutex;
+	mutable std::mutex removedTaskMutex;
+	std::condition_variable newTaskNotify;
+	std::condition_variable removedTaskNotify;
+	std::atomic<bool> running = true;
+};
+
+
+void Gomoku()
+{
+	/*
+	{
+		const uint numCpus = std::thread::hardware_concurrency();
+		::TaskManager taskManager{ numCpus };
+
+		const uint numPlays = 100;
+		std::cout << "Match" << std::endl;
+		for (uint i = 0; i < numPlays; ++i)
+		{
+			taskManager.AddTask([i](){
+				{
+					std::lock_guard<std::mutex> guard(coutMtx);
+					std::cout << "starting match " << i << std::endl;
+				}
+				MatchResult result = GomokuMatch();
+				OutputResult(result, i);
+			});
+		}
+	}
+	*/
+
+	/*
+	{
+		const uint numCpus = std::thread::hardware_concurrency();
+		::TaskManager taskManager{ numCpus };
+
+		const uint numPlayers = 50;
+		std::vector<NeuralPlayer> players;
+		players.resize(numPlayers);
+		std::cout << "Match" << std::endl;
+		for (uint i = 0; i < numPlayers; ++i)
+		{
+			for (uint j = numPlayers + 1; j < numPlayers; ++j)
+			{
+				taskManager.AddTask([&players, i, j]() {
+					{
+						std::lock_guard<std::mutex> guard(coutMtx);
+						std::cout << "starting match " << i << std::endl;
+					}
+					MatchResult result = GomokuMatch(&players[i], &players[j]);
+					OutputResult(result, i);
+				});
+			}
+		}
+	}
+	*/
+	
+	ProtoGL protoGL;
+	protoGL.Initialize(ProtoGLDesc(1280, 720));
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_LINE_SMOOTH);
+	glEnable(GL_BLEND);
+
+	CameraOrtho2D camera(protoGL.GetCanvas(), CameraOrtho2D::Upward, CameraListener_None);
+	camera.SetCamera(Vector2f(tableSize*0.5f, tableSize*0.5f), tableSize*1.25f);
+
+	TableState tableState;
+	TableMarks tableMarks;
+	tableState.fill(State::Empty);
+	tableState[tableSize / 2 + tableSize / 2 * tableSize] = State::White;
+	tableMarks.fill(0);
+
+	State finishedState = State::Empty;
+
+//	HumanPlayer player0{ State::Black, camera };
+//	NeuralPlayer player0{ State::Black };
+	AlphaBetaPlayer player0{ State::Black };
+	AlphaBetaPlayer player1{ State::White };
+//	NeuralPlayer player1{ State::White };
+	Player* currentPlayer = &player0;
+	Player* otherPlayer = &player1;
+
+	while (protoGL.Update())
+	{
+		if (finishedState == State::Empty)
+		{
+			if (currentPlayer->Update(&tableState))
+			{
+				std::swap(currentPlayer, otherPlayer);
+				finishedState = FinishedStateAndMArk(tableState, &tableMarks);
+			}
+		}
+
+		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		camera.CommitToGL();
+
+		currentPlayer->Draw(tableState, tableMarks);
 
 		protoGL.Swap();
 	}
