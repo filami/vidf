@@ -121,7 +121,6 @@ function ConfigVIDFDependencies()
 		"D3DCompiler.lib",
 		"dxguid.lib",
 		"DXGI.lib",
-		"dxcompiler.lib",
 	}
 	
 	configuration(debugConfig)

@@ -144,9 +144,16 @@ namespace vidf::dx12
 
 	ShaderManager::ShaderManager()
 	{
-		DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library.Get()));
-		DxcCreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator.Get()));
-		DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler.Get()));
+		HMODULE dxilModule = LoadLibraryA(".\\data\\dxil.dll");
+		HMODULE dxcModule = LoadLibraryA(".\\data\\dxcompiler.dll");
+		if (!dxcModule || !dxilModule)
+			__debugbreak();
+		auto dxcCreateInstance = (DxcCreateInstanceProc)(GetProcAddress(dxcModule, "DxcCreateInstance"));
+		if (!dxcCreateInstance)
+			__debugbreak();
+		dxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library.Get()));
+		dxcCreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator.Get()));
+		dxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler.Get()));
 	}
 
 
