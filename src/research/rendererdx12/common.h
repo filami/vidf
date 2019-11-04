@@ -45,6 +45,7 @@ namespace vidf::dx12
 	class Compute;
 	class ResourceSet;
 	class ResourceLayout;
+	class RenderContext;
 	typedef shared_ptr<RenderDevice>    RenderDevicePtr;
 	typedef shared_ptr<SwapChain>       SwapChainPtr;
 	typedef shared_ptr<GPUBuffer>       GPUBufferPtr;
@@ -54,6 +55,7 @@ namespace vidf::dx12
 	typedef shared_ptr<GraphicsPSO>     GraphicsPSOPtr;
 	typedef shared_ptr<ResourceSet>     ResourceSetPtr;
 	typedef shared_ptr<ResourceLayout>  ResourceLayoutPtr;
+	typedef shared_ptr<RenderContext>   RenderContextPtr;
 
 
 

@@ -38,6 +38,8 @@ AddFilesToProject
 		"rendererdx12/descriptorheap.cpp",
 		"rendererdx12/pipeline.h",
 		"rendererdx12/pipeline.cpp",
+		"rendererdx12/rendercontext.h",
+		"rendererdx12/rendercontext.cpp",
 		"rendererdx12/renderdevice.h",
 		"rendererdx12/renderdevice.cpp",
 		"rendererdx12/resources.h",

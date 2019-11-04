@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "renderdevice.h"
+#include "rendercontext.h"
 
 
 namespace vidf::dx12
@@ -399,11 +400,8 @@ RenderDevicePtr RenderDevice::Create(const RenderDeviceDesc& desc, const SwapCha
 	AssertHr(renderDevice->device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&renderDevice->allocatorDirect.Get())));
 
 	// Create the command list.
-	AssertHr(renderDevice->device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, renderDevice->allocatorDirect, nullptr, IID_PPV_ARGS(&renderDevice->commandList.Get())));
-	renderDevice->commandList->Close();
 	AssertHr(renderDevice->device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, renderDevice->allocatorDirect, nullptr, IID_PPV_ARGS(&renderDevice->submitCL.Get())));
 	renderDevice->submitCL->Close();
-	renderDevice->renderContext.commandList = renderDevice->commandList;
 
 	// Create frame fence
 	renderDevice->frameFence = renderDevice->CreateFence();
@@ -913,6 +911,62 @@ void RenderDevice::PrepareResourceLayout(ResourceLayoutPtr rl)
 		IID_PPV_ARGS(&rl->rootSignature.Get())));
 
 	rl->dirty = false;
+}
+
+
+
+RenderContextPtr RenderDevice::BeginRenderContext()
+{
+	RenderContextPtr renderContext;
+
+	if (freeCLs.empty())
+	{
+		PD3D12GraphicsCommandList commandList;
+		AssertHr(device->CreateCommandList(
+			0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+			allocatorDirect, nullptr,
+			IID_PPV_ARGS(&commandList.Get())));
+
+		renderContext = make_shared<RenderContext>();
+		renderContext->commandList = commandList;
+	}
+	else
+	{
+		renderContext = freeCLs.back();
+		freeCLs.pop_back();
+		renderContext->commandList->Reset(allocatorDirect, nullptr);
+	}
+
+	commitedCLs.push_back(renderContext);
+
+	return renderContext;
+}
+
+
+
+void RenderDevice::EndRenderContext(RenderContextPtr context)
+{
+	context->commandList->Close();
+}
+
+
+
+void RenderDevice::SetFence(RenderFence& fence)
+{
+	fence.waitValue = fence.value;
+	AssertHr(commandQueue->Signal(fence.fence, fence.waitValue));
+	fence.value++;
+}
+
+
+
+void RenderDevice::WaitForFence(RenderFence& fence)
+{
+	if (fence.fence->GetCompletedValue() < fence.waitValue)
+	{
+		AssertHr(fence.fence->SetEventOnCompletion(fence.waitValue, fence.event));
+		WaitForSingleObject(fence.event, INFINITE);
+	}
 }
 
 

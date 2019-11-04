@@ -11,7 +11,8 @@
 #include <vector>
 
 #include "rendererdx12/common.h"
-#include "rendererdx12/renderDevice.h"
+#include "rendererdx12/renderdevice.h"
+#include "rendererdx12/rendercontext.h"
 #include "rendererdx12/shadermanager.h"
 #include "rendererdx12/resources.h"
 
@@ -98,256 +99,6 @@ public:
 			PostQuitMessage();
 	}
 };
-
-
-
-void RenderContext::SetFence(RenderFence& fence)
-{
-	fence.waitValue = fence.value;
-	AssertHr(commandQueue->Signal(fence.fence, fence.waitValue));
-	fence.value++;
-}
-
-
-
-void RenderContext::WaitForFence(RenderFence& fence)
-{
-	if (fence.fence->GetCompletedValue() < fence.waitValue)
-	{
-		AssertHr(fence.fence->SetEventOnCompletion(fence.waitValue, fence.event));
-		WaitForSingleObject(fence.event, INFINITE);
-	}
-}
-
-
-
-void RenderContext::ClearRenderTarget(GPUBufferPtr buffer, Color color)
-{
-	Assert((buffer->desc.usage & GPUUsage_RenderTarget) != 0);
-	AddResourceBarrier(buffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	FlushResourceBarriers();
-	commandList->ClearRenderTargetView(buffer->rtvs[frameIndex].cpu, &color.r, 0, nullptr);
-}
-
-
-
-void RenderContext::ClearDepthStencilTarget(GPUBufferPtr buffer)
-{
-	Assert((buffer->desc.usage & GPUUsage_DepthStencil) != 0);
-	AddResourceBarrier(buffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-	FlushResourceBarriers();
-	commandList->ClearDepthStencilView(buffer->dsv.cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-}
-
-
-
-void RenderContext::BeginRenderPass(RenderPassPtr renderPass)
-{
-	D3D12_CPU_DESCRIPTOR_HANDLE* dsv = nullptr;
-	if (renderPass->dsv.ptr != 0)
-	{
-		dsv = &renderPass->dsv;
-		AddResourceBarrier(renderPass->desc.dsv, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-	}
-	for (uint i = 0; i < renderPass->desc.rtvs.size(); ++i)
-		AddResourceBarrier(renderPass->desc.rtvs[i], D3D12_RESOURCE_STATE_RENDER_TARGET);
-	commandList->OMSetRenderTargets(
-		renderPass->rtvs[frameIndex].size(), renderPass->rtvs[frameIndex].data(),
-		false, dsv);
-	commandList->RSSetViewports(1, &renderPass->desc.viewport);
-	commandList->RSSetScissorRects(1, &renderPass->scissor);
-}
-
-
-
-void RenderContext::EndRenderPass()
-{
-}
-
-
-
-void RenderContext::SetResourceSet(uint index, const ResourceSetPtr set)
-{
-	// TODO : add this in flush instead
-	// TODO : add GPUBuffer usage flag immutable which means that barriers will not be needed
-	Assert(set->dirty == false);
-	if (set->cb)
-		AddResourceBarrier(set->cb, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-	// TODO : create correct barrier
-//	if (set.srv)
-//		AddResourceBarrier(set.srv, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	if (set->uav)
-		AddResourceBarrier(set->uav, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	FlushResourceBarriers();
-	commandList->SetGraphicsRootDescriptorTable(index, set->descTable.gpu);
-}
-
-
-
-void RenderContext::SetFrameBuffer(GPUBufferPtr frameBuffer)
-{
-	AddResourceBarrier(frameBuffer, D3D12_RESOURCE_STATE_PRESENT);
-	FlushResourceBarriers();
-}
-
-
-
-void RenderContext::Draw(const DrawBatch& batch)
-{
-	if (rootSignature != batch.pso->rootSignature)
-	{
-		commandList->SetGraphicsRootSignature(batch.pso->rootSignature);
-		rootSignature = batch.pso->rootSignature;
-	}
-	if (pipelineState != batch.pso->pipelineState)
-	{
-		commandList->SetPipelineState(batch.pso->pipelineState);
-		pipelineState = batch.pso->pipelineState;
-	}
-	if (topology != batch.topology)
-	{
-		commandList->IASetPrimitiveTopology(batch.topology);
-		topology = batch.topology;
-	}
-	bool setVBs = false;
-	for (uint i = 0; i < batch.vertexStream.size(); ++i)
-	{
-		AddResourceBarrier(batch.vertexBuffers[i], D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-		if (vertexBuffers[i] != batch.vertexBuffers[i]->resource[0].resource)
-		{
-			setVBs = true;
-			vertexBuffers[i] = batch.vertexBuffers[i]->resource[0].resource;
-		}
-	}
-	if (setVBs)
-		commandList->IASetVertexBuffers(0, batch.vertexStream.size(), batch.vertexStream.data());
-
-	if (batch.indexBuffer)
-	{
-		AddResourceBarrier(batch.indexBuffer, D3D12_RESOURCE_STATE_INDEX_BUFFER);
-		if (indexBuffer != batch.indexBuffer->resource[0].resource)
-		{
-			commandList->IASetIndexBuffer(&batch.indexBuffer->ibv);
-			indexBuffer = batch.indexBuffer->resource[0].resource;
-		}
-	}
-
-	FlushResourceBarriers();
-
-	switch (batch.mode)
-	{
-	case DrawBatchMode::Draw:
-		commandList->DrawInstanced(
-			batch.vertexCountPerInstance, 1,
-			batch.startVertexLocation, 0);
-		break;
-	case DrawBatchMode::DrawInstanced:
-		commandList->DrawInstanced(
-			batch.vertexCountPerInstance, batch.instanceCount,
-			batch.startVertexLocation, batch.startInstanceLocation);
-		break;
-	case DrawBatchMode::DrawIndexed:
-		commandList->DrawIndexedInstanced(
-			batch.vertexCountPerInstance, 1,
-			batch.startVertexLocation,
-			batch.baseVertexLocation, 0);
-		break;
-	case DrawBatchMode::DrawIndexedInstanced:
-		commandList->DrawIndexedInstanced(
-			batch.vertexCountPerInstance, batch.instanceCount,
-			batch.startVertexLocation,
-			batch.baseVertexLocation, batch.startInstanceLocation);
-		break;
-	default:
-		__debugbreak(); // unknown
-		break;
-	}
-}
-
-
-
-void RenderContext::ComputeDispatch(ComputePtr compute, uint x, uint y, uint z)
-{
-	commandList->SetComputeRootSignature(compute->rl->rootSignature);
-	commandList->SetPipelineState(compute->pso);
-	for (uint i = 0; i < compute->rl->sets.size(); ++i)
-	{
-		const auto& set = *compute->rl->sets[i];
-		commandList->SetComputeRootDescriptorTable(i, set.descTable.gpu);
-		for (uint j = 0; j < set.entries.size(); ++j)
-		{
-			const auto& entry = set.entries[j];
-			D3D12_RESOURCE_STATES state;
-			switch (entry.type)
-			{
-			case D3D12_DESCRIPTOR_RANGE_TYPE_SRV: state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE; break;
-			case D3D12_DESCRIPTOR_RANGE_TYPE_UAV: state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS; break;
-			case D3D12_DESCRIPTOR_RANGE_TYPE_CBV: state = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER; break;
-			}
-			AddResourceBarrier(entry.buffer, state);
-		}
-	}
-	FlushResourceBarriers();
-	commandList->Dispatch(x, y, z);
-}
-
-
-
-void RenderContext::AddResourceBarrier(GPUBufferPtr buffer, D3D12_RESOURCE_STATES state)
-{
-	if (buffer->resource[frameIndex].state != state)
-	{
-		D3D12_RESOURCE_BARRIER barrier{};
-		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = buffer->resource[frameIndex].resource;
-		barrier.Transition.StateBefore = buffer->resource[frameIndex].state;
-		barrier.Transition.StateAfter = state;
-		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		buffer->resource[frameIndex].state = state;
-		barriers.push_back(barrier);
-	}
-}
-
-
-
-void RenderContext::FlushResourceBarriers()
-{
-	if (barriers.empty())
-		return;
-	commandList->ResourceBarrier(
-		barriers.size(),
-		barriers.data());
-	barriers.clear();
-}
-
-
-
-void RenderContext::CopyResource(GPUBufferPtr buffer, const void* dataPtr, uint dataSize)
-{
-	AddResourceBarrier(buffer, D3D12_RESOURCE_STATE_COPY_DEST);
-	FlushResourceBarriers();
-
-	D3D12_SUBRESOURCE_DATA data{};
-	data.pData = dataPtr;
-	data.RowPitch = dataSize;
-	data.SlicePitch = 0;
-	UpdateSubresources(
-		commandList, buffer->resource[0].resource,
-		buffer->copyBuffer, 0, 0, 1, &data);
-}
-
-
-
-void DrawBatch::AddVertexBuffer(GPUBufferPtr buffer)
-{
-	D3D12_VERTEX_BUFFER_VIEW view;
-	view.BufferLocation = buffer->gpuHandle;
-	view.SizeInBytes = buffer->desc.dataSize;
-	view.StrideInBytes = buffer->desc.dataStride;
-	vertexStream.push_back(view);
-	vertexBuffers.push_back(buffer);
-}
 
 
 
@@ -1157,7 +908,7 @@ void H2Dx12()
 	Quaternionf camRot;
 	FileManager::PakFileHandle map;
 	float camDist = 10.0f;
-	/*
+	
 	{
 		map = fileManager.OpenFile("maps/ssdocks.bsp");
 		camTarget = Vector3f(
@@ -1172,8 +923,8 @@ void H2Dx12()
 		camDist = 31.8663692f;
 		hasCamera = true;
 	}
-	*/
-	map = fileManager.OpenFile("maps/sstown.bsp");
+	
+	// map = fileManager.OpenFile("maps/sstown.bsp");
 	// map = fileManager.OpenFile("maps/sspalace.bsp");
 	// map = fileManager.OpenFile("maps/andplaza.bsp");
 	// map = fileManager.OpenFile("maps/andslums.bsp");
@@ -1358,9 +1109,6 @@ void H2Dx12()
 
 	RenderDevicePtr renderDevice = RenderDevice::Create(renderDeviceDesc, swapChainDesc);
 	SwapChainPtr swapChain =  renderDevice->CreateSwapChain(swapChainDesc);
-	RenderContext renderContext;
-	renderContext.commandQueue = renderDevice->commandQueue;
-	renderContext.commandList = renderDevice->commandList;
 
 	// create some resources
 	ShaderManager shaderManager;
@@ -1724,9 +1472,9 @@ void H2Dx12()
 		Assert(renderDevice->submiting);
 		renderDevice->submitCL->Close();
 		ID3D12CommandList* submitCL = renderDevice->submitCL.Get();
-		renderContext.commandQueue->ExecuteCommandLists(1, &submitCL);
-		renderContext.SetFence(renderDevice->frameFence);
-		renderContext.WaitForFence(renderDevice->frameFence);
+		renderDevice->commandQueue->ExecuteCommandLists(1, &submitCL);
+		renderDevice->SetFence(renderDevice->frameFence);
+		renderDevice->WaitForFence(renderDevice->frameFence);
 		renderDevice->submiting = false;
 	}
 
@@ -1743,7 +1491,6 @@ void H2Dx12()
 		Count,
 	};
 	PD3D12Device5 device5;
-	PD3D12GraphicsCommandList4 commandList4;
 	PD3D12Resource scratchResource0;
 	PD3D12Resource scratchResource1;
 	PD3D12Resource bottomLevelAccelerationStructure;
@@ -1767,7 +1514,6 @@ void H2Dx12()
 	ResourceSetPtr rayGenRS;
 	{
 		AssertHr(renderDevice->device->QueryInterface(IID_PPV_ARGS(&device5.Get())));
-		AssertHr(renderDevice->commandList->QueryInterface(IID_PPV_ARGS(&commandList4.Get())));
 
 		// prepare resources
 		{
@@ -2051,8 +1797,12 @@ void H2Dx12()
 	// build raytrace AS
 	{
 		renderDevice->allocatorDirect->Reset();
-		renderContext.frameIndex = renderDevice->frameIndex;
-		commandList4->Reset(renderDevice->allocatorDirect, nullptr);
+
+		auto renderContext = renderDevice->BeginRenderContext();
+		PD3D12GraphicsCommandList4 commandList4;
+		AssertHr(renderContext->commandList->QueryInterface(IID_PPV_ARGS(&commandList4.Get())));
+
+		renderContext->frameIndex = renderDevice->frameIndex;
 		
 		vector<D3D12_RAYTRACING_GEOMETRY_DESC> geomDescs;
 		D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc{};
@@ -2094,18 +1844,19 @@ void H2Dx12()
 		topLevelBuildDesc.ScratchAccelerationStructureData = scratchResource1->GetGPUVirtualAddress();
 		topLevelBuildDesc.DestAccelerationStructureData = topLevelAccelerationStructure->GetGPUVirtualAddress();
 
-		renderContext.AddResourceBarrier(vertexBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-		renderContext.AddResourceBarrier(indexBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-		renderContext.FlushResourceBarriers();
+		renderContext->AddResourceBarrier(vertexBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		renderContext->AddResourceBarrier(indexBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		renderContext->FlushResourceBarriers();
 		commandList4->BuildRaytracingAccelerationStructure(&bottomLevelBuildDesc, 0, nullptr);
 		commandList4->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(bottomLevelAccelerationStructure));
 		commandList4->BuildRaytracingAccelerationStructure(&topLevelBuildDesc, 0, nullptr);
 
-		commandList4->Close();
+		renderDevice->EndRenderContext(renderContext);
+
 		ID3D12CommandList* cl = commandList4;
-		renderContext.commandQueue->ExecuteCommandLists(1, &cl);
-		renderContext.SetFence(renderDevice->frameFence);
-		renderContext.WaitForFence(renderDevice->frameFence);
+		renderDevice->commandQueue->ExecuteCommandLists(1, &cl);
+		renderDevice->SetFence(renderDevice->frameFence);
+		renderDevice->WaitForFence(renderDevice->frameFence);
 	}
 
 	//
@@ -2144,64 +1895,68 @@ void H2Dx12()
 		// Render
 
 		Assert(!renderDevice->submiting);
-		Pointer<ID3D12GraphicsCommandList> commandList = renderDevice->commandList;
 		GPUBufferPtr frameBuffer = renderDevice->frameBuffer;
 		uint frameIndex = renderDevice->frameIndex;
 
+		renderDevice->allocatorDirect->Reset();
+
+		auto renderContext = renderDevice->BeginRenderContext();
+		Pointer<ID3D12GraphicsCommandList> commandList = renderContext->commandList;
+		PD3D12GraphicsCommandList4 commandList4;
+		AssertHr(renderContext->commandList->QueryInterface(IID_PPV_ARGS(&commandList4.Get())));
+
 		// Populate command list
 		{
-			renderDevice->allocatorDirect->Reset();
-			commandList->Reset(renderDevice->allocatorDirect, nullptr);
-			renderContext.rootSignature = nullptr;
-			renderContext.pipelineState = nullptr;
-			renderContext.indexBuffer = nullptr;
-			renderContext.vertexBuffers.fill(nullptr);
-			renderContext.topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
-			renderContext.frameIndex = frameIndex;
+			renderContext->rootSignature = nullptr;
+			renderContext->pipelineState = nullptr;
+			renderContext->indexBuffer = nullptr;
+			renderContext->vertexBuffers.fill(nullptr);
+			renderContext->topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+			renderContext->frameIndex = frameIndex;
 			
 			ID3D12DescriptorHeap* heaps[] = { renderDevice->viewTableHeap->GetHeap(), renderDevice->samplerHeap->GetHeap() };
 			commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 
 			// update viewCB
-			renderContext.CopyResource(viewCB, viewConsts);
+			renderContext->CopyResource(viewCB, viewConsts);
 
 			// set and clear render target
-			renderContext.ClearRenderTarget(finalBuffer, Color(0.2f, 0.5f, 1.0f));
-			renderContext.ClearDepthStencilTarget(depthBuffer);
-			renderContext.BeginRenderPass(renderPass);
+			renderContext->ClearRenderTarget(finalBuffer, Color(0.2f, 0.5f, 1.0f));
+			renderContext->ClearDepthStencilTarget(depthBuffer);
+			renderContext->BeginRenderPass(renderPass);
 
 			// draw
 			commandList->SetGraphicsRootSignature(drawBatches[0].pso->rootSignature);
 			commandList->SetPipelineState(drawBatches[0].pso->pipelineState);
-			renderContext.SetResourceSet(0, viewRS);
+			renderContext->SetResourceSet(0, viewRS);
 			commandList->SetGraphicsRootDescriptorTable(2, sampler.gpu);
 						
 			// for (const auto& batch : drawBatches)
 			for (uint i = 0; i < solidBatches.size(); ++i)
 			{
-				renderContext.SetResourceSet(1, batchesRSs[solidBatches[i].textureId]);
-				renderContext.Draw(drawBatches[i]);
+				renderContext->SetResourceSet(1, batchesRSs[solidBatches[i].textureId]);
+				renderContext->Draw(drawBatches[i]);
 			}
 			
-			renderContext.EndRenderPass();
+			renderContext->EndRenderPass();
 
 			// do raytracing
 			{
 				uint clearTemporal = 0;
 				if (resetTemporal)
 				{
-					renderContext.ClearRenderTarget(temporalOut, Color(0.0f, 0.0f, 0.0f));
-					renderContext.ClearRenderTarget(momentsBuffer, Color(0.0f, 0.0f, 0.0f));
+					renderContext->ClearRenderTarget(temporalOut, Color(0.0f, 0.0f, 0.0f));
+					renderContext->ClearRenderTarget(momentsBuffer, Color(0.0f, 0.0f, 0.0f));
 					clearTemporal = 1;
 				}
-				renderContext.CopyResource(temporalCB, clearTemporal);
+				renderContext->CopyResource(temporalCB, clearTemporal);
 
-				renderContext.AddResourceBarrier(dxrOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-				renderContext.FlushResourceBarriers();
+				renderContext->AddResourceBarrier(dxrOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+				renderContext->FlushResourceBarriers();
 				
 				commandList4->SetPipelineState1(stateObject);
 				commandList4->SetComputeRootSignature(raytracingGlobalRootSignature);
-				renderContext.rootSignature = raytracingGlobalRootSignature;
+				renderContext->rootSignature = raytracingGlobalRootSignature;
 				commandList4->SetComputeRootDescriptorTable(0, globalRS->descTable.gpu);
 				commandList4->SetComputeRootShaderResourceView(1, topLevelAccelerationStructure->GetGPUVirtualAddress());
 
@@ -2221,43 +1976,43 @@ void H2Dx12()
 			}
 
 			{
-				renderContext.ComputeDispatch(svgfTemporalPass, DivUp(width, 8), DivUp(height, 8), 1);
+				renderContext->ComputeDispatch(svgfTemporalPass, DivUp(width, 8), DivUp(height, 8), 1);
 
-				renderContext.ComputeDispatch(svgfAtrousPasses[0], DivUp(width, 8), DivUp(height, 8), 1);
+				renderContext->ComputeDispatch(svgfAtrousPasses[0], DivUp(width, 8), DivUp(height, 8), 1);
 				
-				renderContext.AddResourceBarrier(temporalCpySrc, D3D12_RESOURCE_STATE_COPY_SOURCE);
-				renderContext.AddResourceBarrier(temporalOut, D3D12_RESOURCE_STATE_COPY_DEST);
-				renderContext.FlushResourceBarriers();
+				renderContext->AddResourceBarrier(temporalCpySrc, D3D12_RESOURCE_STATE_COPY_SOURCE);
+				renderContext->AddResourceBarrier(temporalOut, D3D12_RESOURCE_STATE_COPY_DEST);
+				renderContext->FlushResourceBarriers();
 				commandList->CopyResource(temporalOut->resource[frameIndex].resource, temporalCpySrc->resource[frameIndex].resource);
 				
 				for (uint i = 1; i < svgfAtrousPasses.size(); ++i)
-					renderContext.ComputeDispatch(svgfAtrousPasses[i], DivUp(width, 8), DivUp(height, 8), 1);
+					renderContext->ComputeDispatch(svgfAtrousPasses[i], DivUp(width, 8), DivUp(height, 8), 1);
 			}
 
-			renderContext.ComputeDispatch(finalizePass, DivUp(width, 64), height, 1);
+			renderContext->ComputeDispatch(finalizePass, DivUp(width, 64), height, 1);
 
-			renderContext.AddResourceBarrier(finalBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE);
-			renderContext.AddResourceBarrier(frameBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
-			renderContext.FlushResourceBarriers();
+			renderContext->AddResourceBarrier(finalBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE);
+			renderContext->AddResourceBarrier(frameBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
+			renderContext->FlushResourceBarriers();
 			commandList->CopyResource(frameBuffer->resource[frameIndex].resource, finalBuffer->resource[frameIndex].resource);
 
 			// finalize
-			renderContext.SetFrameBuffer(frameBuffer);
-
-			commandList->Close();
+			renderContext->SetFrameBuffer(frameBuffer);
 		}
 
 		// Execute the command list.
+		renderDevice->EndRenderContext(renderContext);
+
 		commandLists.push_back(commandList);
-		renderContext.commandQueue->ExecuteCommandLists(commandLists.size(), commandLists.data());
+		renderDevice->commandQueue->ExecuteCommandLists(commandLists.size(), commandLists.data());
 		commandLists.clear();
 		
 		// Present the frame.
 		AssertHr(renderDevice->swapChain3->Present(1, 0));
-		renderContext.SetFence(renderDevice->frameFence);
+		renderDevice->SetFence(renderDevice->frameFence);
 		
 		// Wait for frame
-		renderContext.WaitForFence(renderDevice->frameFence);
+		renderDevice->WaitForFence(renderDevice->frameFence);
 		renderDevice->frameIndex = renderDevice->swapChain3->GetCurrentBackBufferIndex();
 		
 		renderDevice->pendingResources.clear();
