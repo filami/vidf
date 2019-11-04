@@ -158,7 +158,8 @@ public:
 	void              PrepareResourceLayout(ResourceLayoutPtr rl);
 
 	RenderContextPtr  BeginRenderContext();
-	void              EndRenderContext(RenderContextPtr context);
+	void              Flush();
+	void              Present();
 
 	void SetFence(RenderFence& fence);
 	void WaitForFence(RenderFence& fence);
@@ -175,9 +176,10 @@ public:
 	deque<PD3D12Resource>  pendingResources;
 	bool                   submiting = false;
 
-	PD3D12CommandQueue       commandQueue;
-	vector<RenderContextPtr> freeCLs;
-	vector<RenderContextPtr> commitedCLs;
+	PD3D12CommandQueue         commandQueue;
+	vector<RenderContextPtr>   freeContexts;
+	vector<RenderContextPtr>   commitedContexts;
+	vector<ID3D12CommandList*> commitedCLs;
 
 	Pointer<IDXGIFactory4> dxgiFactory;
 	Pointer<IDXGIAdapter1> dxgiAdapter;

@@ -919,7 +919,10 @@ RenderContextPtr RenderDevice::BeginRenderContext()
 {
 	RenderContextPtr renderContext;
 
-	if (freeCLs.empty())
+	if (commitedContexts.empty())
+		allocatorDirect->Reset();
+
+	if (freeContexts.empty())
 	{
 		PD3D12GraphicsCommandList commandList;
 		AssertHr(device->CreateCommandList(
@@ -932,21 +935,62 @@ RenderContextPtr RenderDevice::BeginRenderContext()
 	}
 	else
 	{
-		renderContext = freeCLs.back();
-		freeCLs.pop_back();
+		renderContext = freeContexts.back();
+		freeContexts.pop_back();
 		renderContext->commandList->Reset(allocatorDirect, nullptr);
 	}
 
-	commitedCLs.push_back(renderContext);
+	commitedContexts.push_back(renderContext);
+	commitedCLs.push_back(renderContext->commandList);
 
 	return renderContext;
 }
 
 
 
-void RenderDevice::EndRenderContext(RenderContextPtr context)
+void RenderDevice::Flush()
 {
-	context->commandList->Close();
+	for (auto& renderContext : commitedContexts)
+	{
+		renderContext->commandList->Close();
+		freeContexts.push_back(renderContext);
+	}
+	commandQueue->ExecuteCommandLists(commitedCLs.size(), commitedCLs.data());
+	commitedContexts.clear();
+	commitedCLs.clear();
+
+	// Set Fence
+	SetFence(frameFence);
+
+	// Wait for frame
+	WaitForFence(frameFence);
+	frameIndex = swapChain3->GetCurrentBackBufferIndex();
+
+	pendingResources.clear();
+}
+
+
+
+void RenderDevice::Present()
+{
+	for (auto& renderContext : commitedContexts)
+	{
+		renderContext->commandList->Close();
+		freeContexts.push_back(renderContext);
+	}
+	commandQueue->ExecuteCommandLists(commitedCLs.size(), commitedCLs.data());
+	commitedContexts.clear();
+	commitedCLs.clear();
+
+	// Present the frame.
+	AssertHr(swapChain3->Present(1, 0));
+	SetFence(frameFence);
+
+	// Wait for frame
+	WaitForFence(frameFence);
+	frameIndex = swapChain3->GetCurrentBackBufferIndex();
+
+	pendingResources.clear();
 }
 
 

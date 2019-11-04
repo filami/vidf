@@ -1475,6 +1475,7 @@ void H2Dx12()
 		renderDevice->commandQueue->ExecuteCommandLists(1, &submitCL);
 		renderDevice->SetFence(renderDevice->frameFence);
 		renderDevice->WaitForFence(renderDevice->frameFence);
+		renderDevice->Flush();
 		renderDevice->submiting = false;
 	}
 
@@ -1850,17 +1851,11 @@ void H2Dx12()
 		commandList4->BuildRaytracingAccelerationStructure(&bottomLevelBuildDesc, 0, nullptr);
 		commandList4->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(bottomLevelAccelerationStructure));
 		commandList4->BuildRaytracingAccelerationStructure(&topLevelBuildDesc, 0, nullptr);
-
-		renderDevice->EndRenderContext(renderContext);
-
-		ID3D12CommandList* cl = commandList4;
-		renderDevice->commandQueue->ExecuteCommandLists(1, &cl);
-		renderDevice->SetFence(renderDevice->frameFence);
-		renderDevice->WaitForFence(renderDevice->frameFence);
+				
+		renderDevice->Flush();
 	}
 
 	//
-	vector<ID3D12CommandList*> commandLists;
 
 	OrbitalCamera camera(canvas);
 	camera.SetPerspective(1.4f, 1.0f / 64.0f, 10000.0f);
@@ -1897,8 +1892,6 @@ void H2Dx12()
 		Assert(!renderDevice->submiting);
 		GPUBufferPtr frameBuffer = renderDevice->frameBuffer;
 		uint frameIndex = renderDevice->frameIndex;
-
-		renderDevice->allocatorDirect->Reset();
 
 		auto renderContext = renderDevice->BeginRenderContext();
 		Pointer<ID3D12GraphicsCommandList> commandList = renderContext->commandList;
@@ -2000,21 +1993,6 @@ void H2Dx12()
 			renderContext->SetFrameBuffer(frameBuffer);
 		}
 
-		// Execute the command list.
-		renderDevice->EndRenderContext(renderContext);
-
-		commandLists.push_back(commandList);
-		renderDevice->commandQueue->ExecuteCommandLists(commandLists.size(), commandLists.data());
-		commandLists.clear();
-		
-		// Present the frame.
-		AssertHr(renderDevice->swapChain3->Present(1, 0));
-		renderDevice->SetFence(renderDevice->frameFence);
-		
-		// Wait for frame
-		renderDevice->WaitForFence(renderDevice->frameFence);
-		renderDevice->frameIndex = renderDevice->swapChain3->GetCurrentBackBufferIndex();
-		
-		renderDevice->pendingResources.clear();
+		renderDevice->Present();
 	}
 }
