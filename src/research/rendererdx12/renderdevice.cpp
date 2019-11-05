@@ -396,11 +396,15 @@ RenderDevicePtr RenderDevice::Create(const RenderDeviceDesc& desc, const SwapCha
 	renderDevice->frameBuffer->desc.usage = GPUUsage_ShaderResource | GPUUsage_RenderTarget;
 	renderDevice->frameBuffer->desc.format = dxSwapChainDesc.Format;
 
-	// create command allocator
-	AssertHr(renderDevice->device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&renderDevice->allocatorDirect.Get())));
+	// Create the submit command list.
+	AssertHr(renderDevice->device->CreateCommandAllocator(
+		D3D12_COMMAND_LIST_TYPE_DIRECT,
+		IID_PPV_ARGS(&renderDevice->submitCLAlloc.Get())));
 
-	// Create the command list.
-	AssertHr(renderDevice->device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, renderDevice->allocatorDirect, nullptr, IID_PPV_ARGS(&renderDevice->submitCL.Get())));
+	AssertHr(renderDevice->device->CreateCommandList(
+		0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+		renderDevice->submitCLAlloc, nullptr,
+		IID_PPV_ARGS(&renderDevice->submitCL.Get())));
 	renderDevice->submitCL->Close();
 
 	// Create frame fence
@@ -662,12 +666,13 @@ GPUBufferPtr RenderDevice::CreateBuffer(const GPUBufferDesc& desc)
 
 	if (desc.dataPtr)
 	{
-		if (!submiting)
+		if (!submitingResources)
 		{
-			allocatorDirect->Reset();
-			submitCL->Reset(allocatorDirect, nullptr);
+			submitCLAlloc->Reset();
+			submitCL->Reset(submitCLAlloc, nullptr);
+			commitedCLs.insert(commitedCLs.begin(), submitCL);
 		}
-		submiting = true;
+		submitingResources = true;
 
 		array<D3D12_SUBRESOURCE_DATA, 16> data;
 		uint firstResource = 0;
@@ -919,25 +924,30 @@ RenderContextPtr RenderDevice::BeginRenderContext()
 {
 	RenderContextPtr renderContext;
 
-	if (commitedContexts.empty())
-		allocatorDirect->Reset();
-
 	if (freeContexts.empty())
 	{
+		PD3D12CommandAllocator    commandAllocator;
 		PD3D12GraphicsCommandList commandList;
+
+		AssertHr(device->CreateCommandAllocator(
+			D3D12_COMMAND_LIST_TYPE_DIRECT,
+			IID_PPV_ARGS(&commandAllocator.Get())));
+
 		AssertHr(device->CreateCommandList(
 			0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-			allocatorDirect, nullptr,
+			commandAllocator, nullptr,
 			IID_PPV_ARGS(&commandList.Get())));
 
 		renderContext = make_shared<RenderContext>();
+		renderContext->commandAllocator = commandAllocator;
 		renderContext->commandList = commandList;
 	}
 	else
 	{
 		renderContext = freeContexts.back();
 		freeContexts.pop_back();
-		renderContext->commandList->Reset(allocatorDirect, nullptr);
+		renderContext->commandAllocator->Reset();
+		renderContext->commandList->Reset(renderContext->commandAllocator, nullptr);
 	}
 
 	commitedContexts.push_back(renderContext);
@@ -950,6 +960,9 @@ RenderContextPtr RenderDevice::BeginRenderContext()
 
 void RenderDevice::Flush()
 {
+	if (submitingResources)
+		submitCL->Close();
+
 	for (auto& renderContext : commitedContexts)
 	{
 		renderContext->commandList->Close();
@@ -958,6 +971,7 @@ void RenderDevice::Flush()
 	commandQueue->ExecuteCommandLists(commitedCLs.size(), commitedCLs.data());
 	commitedContexts.clear();
 	commitedCLs.clear();
+	submitingResources = false;
 
 	// Set Fence
 	SetFence(frameFence);
@@ -973,6 +987,9 @@ void RenderDevice::Flush()
 
 void RenderDevice::Present()
 {
+	if (submitingResources)
+		submitCL->Close();
+
 	for (auto& renderContext : commitedContexts)
 	{
 		renderContext->commandList->Close();
@@ -981,6 +998,7 @@ void RenderDevice::Present()
 	commandQueue->ExecuteCommandLists(commitedCLs.size(), commitedCLs.data());
 	commitedContexts.clear();
 	commitedCLs.clear();
+	submitingResources = false;
 
 	// Present the frame.
 	AssertHr(swapChain3->Present(1, 0));

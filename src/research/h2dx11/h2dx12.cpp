@@ -1467,18 +1467,6 @@ void H2Dx12()
 		lightManager.CreateBuffers(renderDevice);
 	}
 
-	// finalizing submiting resources
-	{
-		Assert(renderDevice->submiting);
-		renderDevice->submitCL->Close();
-		ID3D12CommandList* submitCL = renderDevice->submitCL.Get();
-		renderDevice->commandQueue->ExecuteCommandLists(1, &submitCL);
-		renderDevice->SetFence(renderDevice->frameFence);
-		renderDevice->WaitForFence(renderDevice->frameFence);
-		renderDevice->Flush();
-		renderDevice->submiting = false;
-	}
-
 	// Prepare raytracing resources
 	enum class GlobalRootSignatureParams
 	{
@@ -1797,8 +1785,6 @@ void H2Dx12()
 
 	// build raytrace AS
 	{
-		renderDevice->allocatorDirect->Reset();
-
 		auto renderContext = renderDevice->BeginRenderContext();
 		PD3D12GraphicsCommandList4 commandList4;
 		AssertHr(renderContext->commandList->QueryInterface(IID_PPV_ARGS(&commandList4.Get())));
@@ -1889,7 +1875,6 @@ void H2Dx12()
 
 		// Render
 
-		Assert(!renderDevice->submiting);
 		GPUBufferPtr frameBuffer = renderDevice->frameBuffer;
 		uint frameIndex = renderDevice->frameIndex;
 

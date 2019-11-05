@@ -166,15 +166,16 @@ public:
 
 	// private:
 	PD3D12Device           device;
-	PD3D12CommandAllocator allocatorDirect;
 	unique_ptr<DescriptorHeap> viewHeap;
 	unique_ptr<DescriptorHeap> viewTableHeap;
 	unique_ptr<DescriptorHeap> rtvHeap;
 	unique_ptr<DescriptorHeap> dsvHeap;
 	unique_ptr<DescriptorHeap> samplerHeap;
+
+	PD3D12CommandAllocator    submitCLAlloc;
 	PD3D12GraphicsCommandList submitCL;
 	deque<PD3D12Resource>  pendingResources;
-	bool                   submiting = false;
+	bool                   submitingResources = false;
 
 	PD3D12CommandQueue         commandQueue;
 	vector<RenderContextPtr>   freeContexts;
