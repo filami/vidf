@@ -73,6 +73,7 @@ public:
 	DescriptorHandle          srv{};
 	DescriptorHandle          uav{};
 	GPUBufferDesc             desc{};
+	uint                      frameIndex = 0;
 };
 
 

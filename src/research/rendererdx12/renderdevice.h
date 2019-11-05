@@ -144,9 +144,9 @@ private:
 class RenderDevice
 {
 public:
-	static RenderDevicePtr Create(const RenderDeviceDesc& desc, const SwapChainDesc& swapChainDesc);
-	SwapChainPtr CreateSwapChain(const SwapChainDesc& swapChainDesc);
+	static RenderDevicePtr Create(const RenderDeviceDesc& desc);
 
+	SwapChainPtr      CreateSwapChain(const SwapChainDesc& swapChainDesc);
 	RenderFence       CreateFence();
 	GPUBufferPtr      CreateBuffer(const GPUBufferDesc& desc);
 	RenderPassPtr     CreateRenderPass(const RenderPassDesc& desc, const char* name);
@@ -158,18 +158,16 @@ public:
 	void              PrepareResourceSet(ResourceSetPtr rs);
 	void              PrepareResourceLayout(ResourceLayoutPtr rl);
 
+	void              BeginRender(SwapChainPtr swapChain);
 	RenderContextPtr  BeginRenderContext();
-	void              Flush();
 	void              Present();
+
+	void              SetFence(RenderFence& fence);
+	void              WaitForFence(RenderFence& fence);
 
 	// TODO - remove when not needed
 	PD3D12Device  GetDevice() const { return device; }
 	PD3D12Device5 GetDevice5() const { return device5; }
-	GPUBufferPtr GetFrameBuffer() const { return frameBuffer; }
-
-private:
-	void SetFence(RenderFence& fence);
-	void WaitForFence(RenderFence& fence);
 
 private:
 	PD3D12Device  device;
@@ -190,15 +188,13 @@ private:
 	vector<RenderContextPtr>   commitedContexts;
 	vector<ID3D12CommandList*> commitedCLs;
 
-	Pointer<IDXGIFactory4> dxgiFactory;
-	Pointer<IDXGIAdapter1> dxgiAdapter;
-	Pointer<ID3D12Debug> debugController;
-	Pointer<IDXGISwapChain3> swapChain3;
-	GPUBufferPtr frameBuffer;
-	uint rtvDescriptorSize;
-	uint frameIndex;
-	RenderFence frameFence;
+	PDXGIFactory4   dxgiFactory;
+	PDXGIAdapter1   dxgiAdapter;
+	PD3D12Debug     debugController;
+
 	PD3DUserDefinedAnnotation userAnnotations;
+
+	SwapChainPtr curSwapChain;
 };
 
 
@@ -206,15 +202,20 @@ private:
 class SwapChain
 {
 public:
-	void Present(bool vsync = true);
+	SwapChain(const SwapChainDesc& swapChainDesc, ID3D12Device* device, IDXGIFactory4* dxgiFactory, DescriptorHeap* rtvHeap, RenderDevice* renderDevice, ID3D12CommandQueue* commandQueue);
 
-	GPUBufferPtr GetBackBuffer() { return backBuffer; }
+	GPUBufferPtr GetBackBuffer() const { return frameBuffer; }
 
 private:
 	friend class RenderDevice;
-	PDXGISwapChain3 swapChain;
-	GPUBufferPtr    backBuffer;
-	uint            frameIndex = 0;
+	void Present(RenderDevice* renderDevice);
+	uint GetFrameIndex() const { return frameBuffer->frameIndex; }
+
+private:
+	PDXGISwapChain3 swapChain3;
+	GPUBufferPtr    frameBuffer;
+	uint rtvDescriptorSize;
+	RenderFence frameFence;
 };
 
 

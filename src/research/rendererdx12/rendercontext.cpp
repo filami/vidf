@@ -71,14 +71,6 @@ void RenderContext::SetResourceSet(uint index, const ResourceSetPtr set)
 
 
 
-void RenderContext::SetFrameBuffer(GPUBufferPtr frameBuffer)
-{
-	AddResourceBarrier(frameBuffer, D3D12_RESOURCE_STATE_PRESENT);
-	FlushResourceBarriers();
-}
-
-
-
 void RenderContext::Draw(const DrawBatch& batch)
 {
 	if (rootSignature != batch.pso->rootSignature)

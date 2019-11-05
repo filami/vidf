@@ -292,7 +292,7 @@ DXGI_FORMAT GetUAVFormat(DXGI_FORMAT format)
 
 
 // TODO : should not have swap chain desc as input here
-RenderDevicePtr RenderDevice::Create(const RenderDeviceDesc& desc, const SwapChainDesc& swapChainDesc)
+RenderDevicePtr RenderDevice::Create(const RenderDeviceDesc& desc)
 {
 	RenderDevicePtr renderDevice = make_shared<RenderDevice>();
 
@@ -340,28 +340,6 @@ RenderDevicePtr RenderDevice::Create(const RenderDeviceDesc& desc, const SwapCha
 	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 	AssertHr(renderDevice->device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&renderDevice->commandQueue.Get())));
 
-	// create swap chain
-	DXGI_SWAP_CHAIN_DESC1 dxSwapChainDesc{};
-	dxSwapChainDesc.BufferCount = frameCount;
-	dxSwapChainDesc.Width = swapChainDesc.width;
-	dxSwapChainDesc.Height = swapChainDesc.height;
-	dxSwapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	dxSwapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	dxSwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	dxSwapChainDesc.SampleDesc.Count = 1;
-
-	Pointer<IDXGISwapChain1> swapChain;
-	AssertHr(renderDevice->dxgiFactory->CreateSwapChainForHwnd(
-		renderDevice->commandQueue,        // Swap chain needs the queue so that it can force a flush on it.
-		HWND(swapChainDesc.windowHandle),
-		&dxSwapChainDesc,
-		nullptr,
-		nullptr,
-		&swapChain.Get()));
-	AssertHr(renderDevice->dxgiFactory->MakeWindowAssociation(HWND(swapChainDesc.windowHandle), DXGI_MWA_NO_ALT_ENTER));
-	renderDevice->swapChain3 = QueryInterface<IDXGISwapChain3>(swapChain);
-	renderDevice->frameIndex = renderDevice->swapChain3->GetCurrentBackBufferIndex();
-
 	// create descriptor heaps
 	renderDevice->rtvHeap = make_unique<DescriptorHeap>(
 		renderDevice->device,
@@ -384,19 +362,6 @@ RenderDevicePtr RenderDevice::Create(const RenderDeviceDesc& desc, const SwapCha
 		D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
 		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 256);
 
-	// Create a RTV for each frame.
-	renderDevice->frameBuffer = make_shared<GPUBuffer>();
-	for (uint n = 0; n < frameCount; ++n)
-	{
-		DescriptorHandle rtvHandle = renderDevice->rtvHeap->Alloc();
-		AssertHr(renderDevice->swapChain3->GetBuffer(n, IID_PPV_ARGS(&renderDevice->frameBuffer->resource[n].resource.Get())));
-		renderDevice->device->CreateRenderTargetView(renderDevice->frameBuffer->resource[n].resource, nullptr, rtvHandle.cpu);
-		renderDevice->frameBuffer->rtvs[n] = rtvHandle;
-	}
-	renderDevice->frameBuffer->desc.type = GPUBufferType::Texture2D;
-	renderDevice->frameBuffer->desc.usage = GPUUsage_ShaderResource | GPUUsage_RenderTarget;
-	renderDevice->frameBuffer->desc.format = dxSwapChainDesc.Format;
-
 	// Create the submit command list.
 	AssertHr(renderDevice->device->CreateCommandAllocator(
 		D3D12_COMMAND_LIST_TYPE_DIRECT,
@@ -408,9 +373,6 @@ RenderDevicePtr RenderDevice::Create(const RenderDeviceDesc& desc, const SwapCha
 		IID_PPV_ARGS(&renderDevice->submitCL.Get())));
 	renderDevice->submitCL->Close();
 
-	// Create frame fence
-	renderDevice->frameFence = renderDevice->CreateFence();
-
 	return renderDevice;
 }
 
@@ -418,7 +380,9 @@ RenderDevicePtr RenderDevice::Create(const RenderDeviceDesc& desc, const SwapCha
 
 SwapChainPtr RenderDevice::CreateSwapChain(const SwapChainDesc& swapChainDesc)
 {
-	return make_shared<SwapChain>();
+	return make_shared<SwapChain>(
+		swapChainDesc, device, dxgiFactory, rtvHeap.get(),
+		this, commandQueue);
 }
 
 
@@ -930,8 +894,18 @@ void RenderDevice::PrepareResourceLayout(ResourceLayoutPtr rl)
 
 
 
+void RenderDevice::BeginRender(SwapChainPtr swapChain)
+{
+	Assert(curSwapChain == nullptr || swapChain == curSwapChain);
+	curSwapChain = swapChain;
+}
+
+
+
 RenderContextPtr RenderDevice::BeginRenderContext()
 {
+	Assert(curSwapChain != nullptr);
+
 	RenderContextPtr renderContext;
 
 	if (freeContexts.empty())
@@ -962,7 +936,7 @@ RenderContextPtr RenderDevice::BeginRenderContext()
 
 	ID3D12DescriptorHeap* heaps[] = { viewTableHeap->GetHeap(), samplerHeap->GetHeap() };
 	renderContext->commandList->SetDescriptorHeaps(_countof(heaps), heaps);
-	renderContext->frameIndex = frameIndex;
+	renderContext->frameIndex = curSwapChain->GetFrameIndex();
 
 	commitedContexts.push_back(renderContext);
 	commitedCLs.push_back(renderContext->commandList);
@@ -972,35 +946,14 @@ RenderContextPtr RenderDevice::BeginRenderContext()
 
 
 
-void RenderDevice::Flush()
-{
-	if (submitingResources)
-		submitCL->Close();
-		
-	for (auto& renderContext : commitedContexts)
-	{
-		renderContext->commandList->Close();
-		freeContexts.push_back(renderContext);
-	}
-	commandQueue->ExecuteCommandLists(commitedCLs.size(), commitedCLs.data());
-	commitedContexts.clear();
-	commitedCLs.clear();
-	submitingResources = false;
-
-	// Set Fence
-	SetFence(frameFence);
-
-	// Wait for frame
-	WaitForFence(frameFence);
-	frameIndex = swapChain3->GetCurrentBackBufferIndex();
-
-	pendingResources.clear();
-}
-
-
-
 void RenderDevice::Present()
 {
+	Assert(curSwapChain != nullptr);
+
+	auto finalRC = BeginRenderContext();
+	finalRC->AddResourceBarrier(curSwapChain->GetBackBuffer(), D3D12_RESOURCE_STATE_PRESENT);
+	finalRC->FlushResourceBarriers();
+
 	if (submitingResources)
 		submitCL->Close();
 
@@ -1014,15 +967,10 @@ void RenderDevice::Present()
 	commitedCLs.clear();
 	submitingResources = false;
 
-	// Present the frame.
-	AssertHr(swapChain3->Present(1, 0));
-	SetFence(frameFence);
-
-	// Wait for frame
-	WaitForFence(frameFence);
-	frameIndex = swapChain3->GetCurrentBackBufferIndex();
+	curSwapChain->Present(this);
 
 	pendingResources.clear();
+	curSwapChain.reset();
 }
 
 
@@ -1043,6 +991,59 @@ void RenderDevice::WaitForFence(RenderFence& fence)
 		AssertHr(fence.fence->SetEventOnCompletion(fence.waitValue, fence.event));
 		WaitForSingleObject(fence.event, INFINITE);
 	}
+}
+
+
+
+SwapChain::SwapChain(const SwapChainDesc& swapChainDesc, ID3D12Device* device, IDXGIFactory4* dxgiFactory, DescriptorHeap* rtvHeap, RenderDevice* renderDevice, ID3D12CommandQueue* commandQueue)
+{
+	DXGI_SWAP_CHAIN_DESC1 dxSwapChainDesc{};
+	dxSwapChainDesc.BufferCount = frameCount;
+	dxSwapChainDesc.Width = swapChainDesc.width;
+	dxSwapChainDesc.Height = swapChainDesc.height;
+	dxSwapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	dxSwapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	dxSwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+	dxSwapChainDesc.SampleDesc.Count = 1;
+
+	Pointer<IDXGISwapChain1> swapChain;
+	AssertHr(dxgiFactory->CreateSwapChainForHwnd(
+		commandQueue,        // Swap chain needs the queue so that it can force a flush on it.
+		HWND(swapChainDesc.windowHandle),
+		&dxSwapChainDesc,
+		nullptr,
+		nullptr,
+		&swapChain.Get()));
+	AssertHr(dxgiFactory->MakeWindowAssociation(HWND(swapChainDesc.windowHandle), DXGI_MWA_NO_ALT_ENTER));
+	swapChain3 = QueryInterface<IDXGISwapChain3>(swapChain);
+
+	frameBuffer = make_shared<GPUBuffer>();
+	for (uint n = 0; n < frameCount; ++n)
+	{
+		DescriptorHandle rtvHandle = rtvHeap->Alloc();
+		AssertHr(swapChain3->GetBuffer(n, IID_PPV_ARGS(&frameBuffer->resource[n].resource.Get())));
+		device->CreateRenderTargetView(frameBuffer->resource[n].resource, nullptr, rtvHandle.cpu);
+		frameBuffer->rtvs[n] = rtvHandle;
+	}
+	frameBuffer->desc.type = GPUBufferType::Texture2D;
+	frameBuffer->desc.usage = GPUUsage_ShaderResource | GPUUsage_RenderTarget;
+	frameBuffer->desc.format = dxSwapChainDesc.Format;
+	frameBuffer->frameIndex = swapChain3->GetCurrentBackBufferIndex();
+
+	frameFence = renderDevice->CreateFence();
+}
+
+
+
+void SwapChain::Present(RenderDevice* renderDevice)
+{
+	// Present the frame.
+	AssertHr(swapChain3->Present(1, 0));
+	renderDevice->SetFence(frameFence);
+
+	// Wait for frame
+	renderDevice->WaitForFence(frameFence);
+	frameBuffer->frameIndex = swapChain3->GetCurrentBackBufferIndex();
 }
 
 

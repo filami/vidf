@@ -1107,7 +1107,7 @@ void H2Dx12()
 	swapChainDesc.width = width;
 	swapChainDesc.height = height;
 
-	RenderDevicePtr renderDevice = RenderDevice::Create(renderDeviceDesc, swapChainDesc);
+	RenderDevicePtr renderDevice = RenderDevice::Create(renderDeviceDesc);
 	SwapChainPtr swapChain =  renderDevice->CreateSwapChain(swapChainDesc);
 
 	// create some resources
@@ -1782,6 +1782,7 @@ void H2Dx12()
 
 	// build raytrace AS
 	{
+		renderDevice->BeginRender(swapChain);
 		auto renderContext = renderDevice->BeginRenderContext();
 		PD3D12GraphicsCommandList4 commandList4;
 		AssertHr(renderContext->commandList->QueryInterface(IID_PPV_ARGS(&commandList4.Get())));
@@ -1832,8 +1833,6 @@ void H2Dx12()
 		commandList4->BuildRaytracingAccelerationStructure(&bottomLevelBuildDesc, 0, nullptr);
 		commandList4->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(bottomLevelAccelerationStructure));
 		commandList4->BuildRaytracingAccelerationStructure(&topLevelBuildDesc, 0, nullptr);
-				
-		renderDevice->Flush();
 	}
 
 	//
@@ -1870,8 +1869,9 @@ void H2Dx12()
 
 		// Render
 
-		GPUBufferPtr frameBuffer = renderDevice->GetFrameBuffer();
+		GPUBufferPtr frameBuffer = swapChain->GetBackBuffer();
 
+		renderDevice->BeginRender(swapChain);
 		auto renderContext = renderDevice->BeginRenderContext();
 		Pointer<ID3D12GraphicsCommandList> commandList = renderContext->commandList;
 		PD3D12GraphicsCommandList4 commandList4;
@@ -1963,9 +1963,6 @@ void H2Dx12()
 			renderContext->AddResourceBarrier(frameBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
 			renderContext->FlushResourceBarriers();
 			commandList->CopyResource(frameBuffer->resource[renderContext->frameIndex].resource, finalBuffer->resource[renderContext->frameIndex].resource);
-
-			// finalize
-			renderContext->SetFrameBuffer(frameBuffer);
 		}
 
 		renderDevice->Present();

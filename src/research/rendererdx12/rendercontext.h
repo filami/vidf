@@ -45,7 +45,6 @@ public:
 	void ClearDepthStencilTarget(GPUBufferPtr buffer);
 	void BeginRenderPass(RenderPassPtr renderPass);
 	void EndRenderPass();
-	void SetFrameBuffer(GPUBufferPtr frameBuffer);
 	void SetResourceSet(uint index, ResourceSetPtr set);
 	void Draw(const DrawBatch& batch);
 
