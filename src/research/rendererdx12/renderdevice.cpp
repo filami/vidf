@@ -331,6 +331,7 @@ RenderDevicePtr RenderDevice::Create(const RenderDeviceDesc& desc, const SwapCha
 	renderDevice->device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS3, &featureData3, sizeof(featureData3));
 	renderDevice->device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &featureData4, sizeof(featureData4));
 	renderDevice->device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &featureData5, sizeof(featureData5));
+	AssertHr(renderDevice->device->QueryInterface(IID_PPV_ARGS(&renderDevice->device5.Get())));
 
 	// create command queue
 	Pointer<ID3D12CommandQueue> commandQueue;
@@ -823,6 +824,15 @@ ResourceLayoutPtr RenderDevice::CreateResourceLayout()
 
 
 
+DescriptorHandle RenderDevice::CreateSampler(const D3D12_SAMPLER_DESC& desc)
+{
+	DescriptorHandle sampler = samplerHeap->Alloc();
+	device->CreateSampler(&desc, sampler.cpu);
+	return sampler;
+}
+
+
+
 void RenderDevice::PrepareResourceSet(ResourceSetPtr rs)
 {
 	// TODO : properly design this thing
@@ -950,6 +960,10 @@ RenderContextPtr RenderDevice::BeginRenderContext()
 		renderContext->commandList->Reset(renderContext->commandAllocator, nullptr);
 	}
 
+	ID3D12DescriptorHeap* heaps[] = { viewTableHeap->GetHeap(), samplerHeap->GetHeap() };
+	renderContext->commandList->SetDescriptorHeaps(_countof(heaps), heaps);
+	renderContext->frameIndex = frameIndex;
+
 	commitedContexts.push_back(renderContext);
 	commitedCLs.push_back(renderContext->commandList);
 
@@ -962,7 +976,7 @@ void RenderDevice::Flush()
 {
 	if (submitingResources)
 		submitCL->Close();
-
+		
 	for (auto& renderContext : commitedContexts)
 	{
 		renderContext->commandList->Close();

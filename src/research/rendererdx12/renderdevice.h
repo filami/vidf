@@ -154,6 +154,7 @@ public:
 	ComputePtr        CreateCompute(const ComputeDesc& desc);
 	ResourceSetPtr    CreateResourceSet();
 	ResourceLayoutPtr CreateResourceLayout();
+	DescriptorHandle  CreateSampler(const D3D12_SAMPLER_DESC& desc);	// TODO - abstract
 	void              PrepareResourceSet(ResourceSetPtr rs);
 	void              PrepareResourceLayout(ResourceLayoutPtr rl);
 
@@ -161,11 +162,18 @@ public:
 	void              Flush();
 	void              Present();
 
+	// TODO - remove when not needed
+	PD3D12Device  GetDevice() const { return device; }
+	PD3D12Device5 GetDevice5() const { return device5; }
+	GPUBufferPtr GetFrameBuffer() const { return frameBuffer; }
+
+private:
 	void SetFence(RenderFence& fence);
 	void WaitForFence(RenderFence& fence);
 
-	// private:
-	PD3D12Device           device;
+private:
+	PD3D12Device  device;
+	PD3D12Device5 device5;
 	unique_ptr<DescriptorHeap> viewHeap;
 	unique_ptr<DescriptorHeap> viewTableHeap;
 	unique_ptr<DescriptorHeap> rtvHeap;

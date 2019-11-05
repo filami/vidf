@@ -1264,8 +1264,7 @@ void H2Dx12()
 		samplerDesc.MaxAnisotropy = 8;
 		samplerDesc.MinLOD = 0.0f;
 		samplerDesc.MaxLOD = std::numeric_limits<float>::max();
-		sampler = renderDevice->samplerHeap->Alloc();
-		renderDevice->device->CreateSampler(&samplerDesc, sampler.cpu);
+		sampler = renderDevice->CreateSampler(samplerDesc);
 	}
 
 	// draw batches
@@ -1479,7 +1478,7 @@ void H2Dx12()
 		ViewportConstantSlot = 0,
 		Count,
 	};
-	PD3D12Device5 device5;
+	PD3D12Device5 device5 = renderDevice->GetDevice5();
 	PD3D12Resource scratchResource0;
 	PD3D12Resource scratchResource1;
 	PD3D12Resource bottomLevelAccelerationStructure;
@@ -1502,8 +1501,6 @@ void H2Dx12()
 	ResourceSetPtr globalRS;
 	ResourceSetPtr rayGenRS;
 	{
-		AssertHr(renderDevice->device->QueryInterface(IID_PPV_ARGS(&device5.Get())));
-
 		// prepare resources
 		{
 			globalRS = renderDevice->CreateResourceSet();
@@ -1637,7 +1634,7 @@ void H2Dx12()
 			Pointer<ID3DBlob> blob;
 			Pointer<ID3DBlob> error;
 			AssertHr(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &blob.Get(), &error.Get()));
-			AssertHr(renderDevice->device->CreateRootSignature(1, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&raytracingGlobalRootSignature.Get())));
+			AssertHr(device5->CreateRootSignature(1, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&raytracingGlobalRootSignature.Get())));
 		}
 		{
 			vector<D3D12_DESCRIPTOR_RANGE> ranges;
@@ -1657,7 +1654,7 @@ void H2Dx12()
 			Pointer<ID3DBlob> blob;
 			Pointer<ID3DBlob> error;
 			AssertHr(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &blob.Get(), &error.Get()));
-			AssertHr(renderDevice->device->CreateRootSignature(1, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&raytracingLocalRootSignature.Get())));
+			AssertHr(device5->CreateRootSignature(1, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&raytracingLocalRootSignature.Get())));
 		}
 		
 		// shader identifier
@@ -1788,8 +1785,6 @@ void H2Dx12()
 		auto renderContext = renderDevice->BeginRenderContext();
 		PD3D12GraphicsCommandList4 commandList4;
 		AssertHr(renderContext->commandList->QueryInterface(IID_PPV_ARGS(&commandList4.Get())));
-
-		renderContext->frameIndex = renderDevice->frameIndex;
 		
 		vector<D3D12_RAYTRACING_GEOMETRY_DESC> geomDescs;
 		D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc{};
@@ -1875,8 +1870,7 @@ void H2Dx12()
 
 		// Render
 
-		GPUBufferPtr frameBuffer = renderDevice->frameBuffer;
-		uint frameIndex = renderDevice->frameIndex;
+		GPUBufferPtr frameBuffer = renderDevice->GetFrameBuffer();
 
 		auto renderContext = renderDevice->BeginRenderContext();
 		Pointer<ID3D12GraphicsCommandList> commandList = renderContext->commandList;
@@ -1890,10 +1884,6 @@ void H2Dx12()
 			renderContext->indexBuffer = nullptr;
 			renderContext->vertexBuffers.fill(nullptr);
 			renderContext->topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
-			renderContext->frameIndex = frameIndex;
-			
-			ID3D12DescriptorHeap* heaps[] = { renderDevice->viewTableHeap->GetHeap(), renderDevice->samplerHeap->GetHeap() };
-			commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 
 			// update viewCB
 			renderContext->CopyResource(viewCB, viewConsts);
@@ -1961,7 +1951,7 @@ void H2Dx12()
 				renderContext->AddResourceBarrier(temporalCpySrc, D3D12_RESOURCE_STATE_COPY_SOURCE);
 				renderContext->AddResourceBarrier(temporalOut, D3D12_RESOURCE_STATE_COPY_DEST);
 				renderContext->FlushResourceBarriers();
-				commandList->CopyResource(temporalOut->resource[frameIndex].resource, temporalCpySrc->resource[frameIndex].resource);
+				commandList->CopyResource(temporalOut->resource[renderContext->frameIndex].resource, temporalCpySrc->resource[renderContext->frameIndex].resource);
 				
 				for (uint i = 1; i < svgfAtrousPasses.size(); ++i)
 					renderContext->ComputeDispatch(svgfAtrousPasses[i], DivUp(width, 8), DivUp(height, 8), 1);
@@ -1972,7 +1962,7 @@ void H2Dx12()
 			renderContext->AddResourceBarrier(finalBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE);
 			renderContext->AddResourceBarrier(frameBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
 			renderContext->FlushResourceBarriers();
-			commandList->CopyResource(frameBuffer->resource[frameIndex].resource, finalBuffer->resource[frameIndex].resource);
+			commandList->CopyResource(frameBuffer->resource[renderContext->frameIndex].resource, finalBuffer->resource[renderContext->frameIndex].resource);
 
 			// finalize
 			renderContext->SetFrameBuffer(frameBuffer);
