@@ -1947,11 +1947,8 @@ void H2Dx12()
 				renderContext->ComputeDispatch(svgfTemporalPass, DivUp(width, 8), DivUp(height, 8), 1);
 
 				renderContext->ComputeDispatch(svgfAtrousPasses[0], DivUp(width, 8), DivUp(height, 8), 1);
-				
-				renderContext->AddResourceBarrier(temporalCpySrc, D3D12_RESOURCE_STATE_COPY_SOURCE);
-				renderContext->AddResourceBarrier(temporalOut, D3D12_RESOURCE_STATE_COPY_DEST);
-				renderContext->FlushResourceBarriers();
-				commandList->CopyResource(temporalOut->resource[renderContext->frameIndex].resource, temporalCpySrc->resource[renderContext->frameIndex].resource);
+
+				renderContext->CopyResource(temporalOut, temporalCpySrc);
 				
 				for (uint i = 1; i < svgfAtrousPasses.size(); ++i)
 					renderContext->ComputeDispatch(svgfAtrousPasses[i], DivUp(width, 8), DivUp(height, 8), 1);
@@ -1959,10 +1956,7 @@ void H2Dx12()
 
 			renderContext->ComputeDispatch(finalizePass, DivUp(width, 64), height, 1);
 
-			renderContext->AddResourceBarrier(finalBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE);
-			renderContext->AddResourceBarrier(frameBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
-			renderContext->FlushResourceBarriers();
-			commandList->CopyResource(frameBuffer->resource[renderContext->frameIndex].resource, finalBuffer->resource[renderContext->frameIndex].resource);
+			renderContext->CopyResource(frameBuffer, finalBuffer);
 		}
 
 		renderDevice->Present();

@@ -218,6 +218,19 @@ void RenderContext::CopyResource(GPUBufferPtr buffer, const void* dataPtr, uint 
 
 
 
+void RenderContext::CopyResource(GPUBufferPtr dst, GPUBufferPtr src)
+{
+	AddResourceBarrier(src, D3D12_RESOURCE_STATE_COPY_SOURCE);
+	AddResourceBarrier(dst, D3D12_RESOURCE_STATE_COPY_DEST);
+	FlushResourceBarriers();
+
+	const uint srcFrameIndex = src->frameIndex;
+	const uint dstFrameIndex = dst->frameIndex;
+	commandList->CopyResource(dst->resource[dstFrameIndex].resource, src->resource[srcFrameIndex].resource);
+}
+
+
+
 void DrawBatch::AddVertexBuffer(GPUBufferPtr buffer)
 {
 	D3D12_VERTEX_BUFFER_VIEW view;

@@ -53,6 +53,7 @@ public:
 	void CopyResource(GPUBufferPtr buffer, const void* dataPtr, uint dataSize);
 	template<typename Type>
 	void CopyResource(GPUBufferPtr buffer, const Type& object) { CopyResource(buffer, &object, sizeof(Type)); }
+	void CopyResource(GPUBufferPtr dst, GPUBufferPtr src);
 
 	// private:
 	void AddResourceBarrier(GPUBufferPtr buffer, D3D12_RESOURCE_STATES state);
