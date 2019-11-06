@@ -1479,8 +1479,6 @@ void H2Dx12()
 		Count,
 	};
 	PD3D12Device5 device5 = renderDevice->GetDevice5();
-	PD3D12Resource scratchResource0;
-	PD3D12Resource scratchResource1;
 	PD3D12Resource bottomLevelAccelerationStructure;
 	PD3D12Resource topLevelAccelerationStructure;
 	PD3D12Resource instanceDescs;
@@ -1493,10 +1491,6 @@ void H2Dx12()
 	Pointer<ID3D12StateObject> stateObject;
 	Pointer<ID3D12StateObjectProperties> stateObjectProperties;
 	vector<D3D12_RAYTRACING_GEOMETRY_DESC> geomDescs;
-	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS  topLevelInputs{};
-	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo{};
-	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS  bottomLevelInputs{};
-	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO bottomLevelPrebuildInfo{};
 	D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc{};
 	ResourceSetPtr globalRS;
 	ResourceSetPtr rayGenRS;
@@ -1518,109 +1512,6 @@ void H2Dx12()
 			rayGenRS->AddShaderResource(7, lightManager.GetShadesBuffer());
 			rayGenRS->AddUnorderedAccess(1, momentsBuffer);
 			renderDevice->PrepareResourceSet(rayGenRS);
-		}
-		
-		// tlas
-		{
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
-			topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-			topLevelInputs.Flags = buildFlags;
-			topLevelInputs.NumDescs = 1;
-			topLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-			device5->GetRaytracingAccelerationStructurePrebuildInfo(&topLevelInputs, &topLevelPrebuildInfo);
-			Assert(topLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
-		}
-
-		// blas
-		{
-			vector<D3D12_RAYTRACING_GEOMETRY_DESC> geomDescs;
-			D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc{};
-			geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-			geometryDesc.Triangles.IndexBuffer = indexBuffer->resource[0].resource->GetGPUVirtualAddress();
-			geometryDesc.Triangles.IndexCount = indices.size();
-			geometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
-			geometryDesc.Triangles.Transform3x4 = 0;
-			geometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-			geometryDesc.Triangles.VertexCount = vertices.size();
-			geometryDesc.Triangles.VertexBuffer.StartAddress = vertexBuffer->resource[0].resource->GetGPUVirtualAddress();
-			geometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
-			geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-			D3D12_GPU_VIRTUAL_ADDRESS indexAddr = indexBuffer->resource[0].resource->GetGPUVirtualAddress();
-			for (const auto& batch : solidBatches)
-			{
-				geometryDesc.Triangles.IndexBuffer = indexAddr + batch.first * 4;
-				geometryDesc.Triangles.IndexCount = batch.count;
-				geomDescs.push_back(geometryDesc);
-			}
-
-			bottomLevelInputs = topLevelInputs;
-			bottomLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-			bottomLevelInputs.NumDescs = geomDescs.size();
-			//	bottomLevelInputs.pGeometryDescs = &geometryDesc;
-			bottomLevelInputs.pGeometryDescs = geomDescs.data();
-			device5->GetRaytracingAccelerationStructurePrebuildInfo(&bottomLevelInputs, &bottomLevelPrebuildInfo);
-			Assert(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
-		}
-		
-		// scratch buffer?
-		{
-			uint bufferSize = max(topLevelPrebuildInfo.ScratchDataSizeInBytes, bottomLevelPrebuildInfo.ScratchDataSizeInBytes);
-			AssertHr(device5->CreateCommittedResource(
-				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-				D3D12_HEAP_FLAG_NONE,
-				&CD3DX12_RESOURCE_DESC::Buffer(bufferSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
-				D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-				nullptr,
-				IID_PPV_ARGS(&scratchResource0.Get())));
-			scratchResource0->SetName(L"ScratchBuffer0");
-
-			AssertHr(device5->CreateCommittedResource(
-				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-				D3D12_HEAP_FLAG_NONE,
-				&CD3DX12_RESOURCE_DESC::Buffer(bufferSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
-				D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-				nullptr,
-				IID_PPV_ARGS(&scratchResource1.Get())));
-			scratchResource1->SetName(L"ScratchBuffer1");
-
-			AssertHr(device5->CreateCommittedResource(
-				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-				D3D12_HEAP_FLAG_NONE,
-				&CD3DX12_RESOURCE_DESC::Buffer(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
-				D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
-				nullptr,
-				IID_PPV_ARGS(&bottomLevelAccelerationStructure.Get())));
-			bottomLevelAccelerationStructure->SetName(L"BLAS");
-
-			AssertHr(device5->CreateCommittedResource(
-				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-				D3D12_HEAP_FLAG_NONE,
-				&CD3DX12_RESOURCE_DESC::Buffer(topLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
-				D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
-				nullptr,
-				IID_PPV_ARGS(&topLevelAccelerationStructure.Get())));
-			topLevelAccelerationStructure->SetName(L"TLAS");
-		}
-
-		// instance buffer
-		{
-			D3D12_RAYTRACING_INSTANCE_DESC instanceDesc{};
-			instanceDesc.Transform[0][0] = instanceDesc.Transform[1][1] = instanceDesc.Transform[2][2] = 1;
-			instanceDesc.InstanceMask = 1;
-			instanceDesc.AccelerationStructure = bottomLevelAccelerationStructure->GetGPUVirtualAddress();
-			instanceDesc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
-
-			AssertHr(device5->CreateCommittedResource(
-				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-				D3D12_HEAP_FLAG_NONE,
-				&CD3DX12_RESOURCE_DESC::Buffer(sizeof(instanceDesc)),
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&instanceDescs.Get())));
-			void *pMappedData;
-			instanceDescs->Map(0, nullptr, &pMappedData);
-			memcpy(pMappedData, &instanceDesc, sizeof(instanceDesc));
-			instanceDescs->Unmap(0, nullptr);
 		}
 
 		// root signatures
@@ -1782,6 +1673,7 @@ void H2Dx12()
 
 	// build raytrace AS
 	{
+		// blas
 		renderDevice->BeginRender(swapChain);
 		auto renderContext = renderDevice->BeginRenderContext();
 		PD3D12GraphicsCommandList4 commandList4;
@@ -1807,30 +1699,71 @@ void H2Dx12()
 			geomDescs.push_back(geometryDesc);
 		}
 
-		bottomLevelInputs = topLevelInputs;
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS  bottomLevelInputs{};
+		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO bottomLevelPrebuildInfo{};
 		bottomLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
 		bottomLevelInputs.NumDescs = geomDescs.size();
-	//	bottomLevelInputs.pGeometryDescs = &geometryDesc;
 		bottomLevelInputs.pGeometryDescs = geomDescs.data();
 		device5->GetRaytracingAccelerationStructurePrebuildInfo(&bottomLevelInputs, &bottomLevelPrebuildInfo);
 		Assert(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
+
+		AssertHr(device5->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+			D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+			nullptr,
+			IID_PPV_ARGS(&bottomLevelAccelerationStructure.Get())));
+		bottomLevelAccelerationStructure->SetName(L"BLAS");
 		
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC bottomLevelBuildDesc{};
 		bottomLevelBuildDesc.Inputs = bottomLevelInputs;
-		bottomLevelBuildDesc.ScratchAccelerationStructureData = scratchResource0->GetGPUVirtualAddress();
+		bottomLevelBuildDesc.ScratchAccelerationStructureData = renderDevice->GetScratchAllocator()->Alloc(
+			D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			bottomLevelPrebuildInfo.ScratchDataSizeInBytes);
 		bottomLevelBuildDesc.DestAccelerationStructureData = bottomLevelAccelerationStructure->GetGPUVirtualAddress();
-
-		D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
-		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC topLevelBuildDesc{};
-		topLevelInputs.InstanceDescs = instanceDescs->GetGPUVirtualAddress();
-		topLevelBuildDesc.Inputs = topLevelInputs;
-		topLevelBuildDesc.ScratchAccelerationStructureData = scratchResource1->GetGPUVirtualAddress();
-		topLevelBuildDesc.DestAccelerationStructureData = topLevelAccelerationStructure->GetGPUVirtualAddress();
 
 		renderContext->AddResourceBarrier(vertexBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 		renderContext->AddResourceBarrier(indexBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 		renderContext->FlushResourceBarriers();
 		commandList4->BuildRaytracingAccelerationStructure(&bottomLevelBuildDesc, 0, nullptr);
+
+		// tlas
+		D3D12_RAYTRACING_INSTANCE_DESC instanceDesc{};
+		instanceDesc.Transform[0][0] = instanceDesc.Transform[1][1] = instanceDesc.Transform[2][2] = 1;
+		instanceDesc.InstanceMask = 1;
+		instanceDesc.AccelerationStructure = bottomLevelAccelerationStructure->GetGPUVirtualAddress();
+		instanceDesc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
+
+		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS tlasBuildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS topLevelInputs{};
+		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo{};
+		topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+		topLevelInputs.Flags = tlasBuildFlags;
+		topLevelInputs.NumDescs = 1;
+		topLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+		device5->GetRaytracingAccelerationStructurePrebuildInfo(&topLevelInputs, &topLevelPrebuildInfo);
+		Assert(topLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
+
+		AssertHr(device5->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(topLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+			D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+			nullptr,
+			IID_PPV_ARGS(&topLevelAccelerationStructure.Get())));
+		topLevelAccelerationStructure->SetName(L"TLAS");
+
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC topLevelBuildDesc{};
+		topLevelInputs.InstanceDescs = renderDevice->GetScratchAllocator()->Alloc(
+			D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ,
+			sizeof(instanceDesc), &instanceDesc);
+		topLevelBuildDesc.Inputs = topLevelInputs;
+		topLevelBuildDesc.ScratchAccelerationStructureData = renderDevice->GetScratchAllocator()->Alloc(
+			D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			topLevelPrebuildInfo.ScratchDataSizeInBytes);
+		topLevelBuildDesc.DestAccelerationStructureData = topLevelAccelerationStructure->GetGPUVirtualAddress();
+
 		commandList4->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(bottomLevelAccelerationStructure));
 		commandList4->BuildRaytracingAccelerationStructure(&topLevelBuildDesc, 0, nullptr);
 	}

@@ -361,6 +361,7 @@ RenderDevicePtr RenderDevice::Create(const RenderDeviceDesc& desc)
 		renderDevice->device,
 		D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
 		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 256);
+	renderDevice->scratchAllocator = make_unique<ScratchAllocator>(renderDevice->device);
 
 	// Create the submit command list.
 	AssertHr(renderDevice->device->CreateCommandAllocator(
@@ -970,6 +971,7 @@ void RenderDevice::Present()
 	curSwapChain->Present(this);
 
 	pendingResources.clear();
+	scratchAllocator->Reset();
 	curSwapChain.reset();
 }
 

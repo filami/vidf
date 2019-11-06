@@ -16,6 +16,7 @@ namespace vidf::dx12
 
 
 
+	// TODO - implement Free and make it a slab allocator
 	class DescriptorHeap
 	{
 	public:
@@ -31,6 +32,23 @@ namespace vidf::dx12
 		uint descriptorSize;
 		uint lastDescriptor = 0;
 		uint maxDescriptors;
+	};
+
+
+
+	// TODO - allocate pages instead of individual resources
+	class ScratchAllocator
+	{
+	public:
+		ScratchAllocator(PD3D12Device _device);
+
+		void Reset();
+
+		D3D12_GPU_VIRTUAL_ADDRESS Alloc(D3D12_HEAP_TYPE heap, D3D12_RESOURCE_STATES state, uint size, void* data = nullptr);
+
+	private:
+		PD3D12Device device;
+		vector<PD3D12Resource> commited;
 	};
 
 

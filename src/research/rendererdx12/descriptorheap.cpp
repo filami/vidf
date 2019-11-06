@@ -33,4 +33,49 @@ DescriptorHandle DescriptorHeap::Alloc(uint count)
 
 
 
+ScratchAllocator::ScratchAllocator(PD3D12Device _device)
+	: device(_device)
+{
+}
+
+
+
+void ScratchAllocator::Reset()
+{
+	commited.clear();
+}
+
+
+
+D3D12_GPU_VIRTUAL_ADDRESS ScratchAllocator::Alloc(D3D12_HEAP_TYPE heap, D3D12_RESOURCE_STATES state, uint size, void* data)
+{
+	PD3D12Resource page;
+
+	D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
+	if (state == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+		flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	AssertHr(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(heap),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(size, flags),
+		state,
+		nullptr,
+		IID_PPV_ARGS(&page.Get())));
+
+	if (data)
+	{
+		void *pMappedData;
+		page->Map(0, nullptr, &pMappedData);
+		memcpy(pMappedData, data, size);
+		page->Unmap(0, nullptr);
+	}
+
+	commited.push_back(page);
+
+	return page->GetGPUVirtualAddress();
+}
+
+
+
 }
