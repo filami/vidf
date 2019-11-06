@@ -1719,7 +1719,7 @@ void H2Dx12()
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC bottomLevelBuildDesc{};
 		bottomLevelBuildDesc.Inputs = bottomLevelInputs;
 		bottomLevelBuildDesc.ScratchAccelerationStructureData = renderDevice->GetUavScratch()->Alloc(
-			bottomLevelPrebuildInfo.ScratchDataSizeInBytes);
+			bottomLevelPrebuildInfo.ScratchDataSizeInBytes)->GetGPUVirtualAddress();
 		bottomLevelBuildDesc.DestAccelerationStructureData = bottomLevelAccelerationStructure->GetGPUVirtualAddress();
 
 		renderContext->AddResourceBarrier(vertexBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
@@ -1755,10 +1755,10 @@ void H2Dx12()
 
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC topLevelBuildDesc{};
 		topLevelInputs.InstanceDescs = renderDevice->GetUploadScratch()->Alloc(
-			sizeof(instanceDesc), &instanceDesc);
+			sizeof(instanceDesc), &instanceDesc)->GetGPUVirtualAddress();
 		topLevelBuildDesc.Inputs = topLevelInputs;
 		topLevelBuildDesc.ScratchAccelerationStructureData = renderDevice->GetUavScratch()->Alloc(
-			topLevelPrebuildInfo.ScratchDataSizeInBytes);
+			topLevelPrebuildInfo.ScratchDataSizeInBytes)->GetGPUVirtualAddress();
 		topLevelBuildDesc.DestAccelerationStructureData = topLevelAccelerationStructure->GetGPUVirtualAddress();
 
 		commandList4->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(bottomLevelAccelerationStructure));

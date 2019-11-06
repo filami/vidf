@@ -44,7 +44,7 @@ namespace vidf::dx12
 
 		void Reset();
 
-		D3D12_GPU_VIRTUAL_ADDRESS Alloc(uint size, void* data = nullptr);
+		PD3D12Resource Alloc(uint size, void* data = nullptr);
 
 	private:
 		PD3D12Device           device;

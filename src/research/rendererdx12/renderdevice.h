@@ -141,7 +141,7 @@ private:
 
 
 
-class RenderDevice
+class RenderDevice : public enable_shared_from_this<RenderDevice>
 {
 public:
 	static RenderDevicePtr Create(const RenderDeviceDesc& desc);
@@ -184,7 +184,6 @@ private:
 
 	PD3D12CommandAllocator    submitCLAlloc;
 	PD3D12GraphicsCommandList submitCL;
-	deque<PD3D12Resource>  pendingResources;
 	bool                   submitingResources = false;
 
 	PD3D12CommandQueue         commandQueue;

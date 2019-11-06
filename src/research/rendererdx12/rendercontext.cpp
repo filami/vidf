@@ -207,13 +207,15 @@ void RenderContext::CopyResource(GPUBufferPtr buffer, const void* dataPtr, uint 
 	AddResourceBarrier(buffer, D3D12_RESOURCE_STATE_COPY_DEST);
 	FlushResourceBarriers();
 
+	PD3D12Resource transient = renderDevice->GetUploadScratch()->Alloc(dataSize);
+
 	D3D12_SUBRESOURCE_DATA data{};
 	data.pData = dataPtr;
 	data.RowPitch = dataSize;
 	data.SlicePitch = 0;
 	UpdateSubresources(
 		commandList, buffer->resource[0].resource,
-		buffer->copyBuffer, 0, 0, 1, &data);
+		transient, 0, 0, 1, &data);
 }
 
 

@@ -52,14 +52,14 @@ void ScratchAllocator::Reset()
 
 
 
-D3D12_GPU_VIRTUAL_ADDRESS ScratchAllocator::Alloc(uint size, void* data)
+PD3D12Resource ScratchAllocator::Alloc(uint size, void* data)
 {
 	PD3D12Resource page;
 
 	AssertHr(device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(heap),
 		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(size, flags),
+		&CD3DX12_RESOURCE_DESC::Buffer(DivUp(size, 256) * 256, flags),
 		state,
 		nullptr,
 		IID_PPV_ARGS(&page.Get())));
@@ -74,7 +74,7 @@ D3D12_GPU_VIRTUAL_ADDRESS ScratchAllocator::Alloc(uint size, void* data)
 
 	commited.push_back(page);
 
-	return page->GetGPUVirtualAddress();
+	return page;
 }
 
 

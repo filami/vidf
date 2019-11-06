@@ -60,6 +60,7 @@ public:
 	void FlushResourceBarriers();
 
 	// private:
+	RenderDevicePtr                renderDevice;
 	PD3D12CommandAllocator         commandAllocator;
 	PD3D12GraphicsCommandList      commandList;
 	vector<D3D12_RESOURCE_BARRIER> barriers;

@@ -623,18 +623,6 @@ GPUBufferPtr RenderDevice::CreateBuffer(const GPUBufferDesc& desc)
 		buffer->rtvs[1] = buffer->rtvs[0];
 	}
 
-	if ((desc.usage & GPUUsage_Dynamic) != 0)
-	{
-		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(buffer->resource[0].resource, 0, 1);
-		AssertHr(device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&buffer->copyBuffer.Get())));
-	}
-
 	if (desc.dataPtr)
 	{
 		if (!submitingResources)
@@ -673,14 +661,7 @@ GPUBufferPtr RenderDevice::CreateBuffer(const GPUBufferDesc& desc)
 		}
 		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(buffer->resource[0].resource, firstResource, numResources);
 
-		PD3D12Resource transient;
-		AssertHr(device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&transient.Get())));
+		PD3D12Resource transient = uploadScratch->Alloc(uploadBufferSize);
 
 		submitCL->ResourceBarrier(
 			1, &CD3DX12_RESOURCE_BARRIER::Transition(buffer->resource[0].resource,
@@ -688,8 +669,6 @@ GPUBufferPtr RenderDevice::CreateBuffer(const GPUBufferDesc& desc)
 				D3D12_RESOURCE_STATE_COPY_DEST));
 		buffer->resource[0].state = D3D12_RESOURCE_STATE_COPY_DEST;
 		UpdateSubresources(submitCL, buffer->resource[0].resource, transient, 0, firstResource, numResources, data.data());
-
-		pendingResources.push_back(transient);
 	}
 
 	return buffer;
@@ -929,6 +908,7 @@ RenderContextPtr RenderDevice::BeginRenderContext()
 			IID_PPV_ARGS(&commandList.Get())));
 
 		renderContext = make_shared<RenderContext>();
+		renderContext->renderDevice = shared_from_this();
 		renderContext->commandAllocator = commandAllocator;
 		renderContext->commandList = commandList;
 	}
@@ -975,7 +955,6 @@ void RenderDevice::Present()
 
 	curSwapChain->Present(this);
 
-	pendingResources.clear();
 	uploadScratch->Reset();
 	uavScratch->Reset();
 	curSwapChain.reset();

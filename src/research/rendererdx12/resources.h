@@ -63,7 +63,6 @@ public:
 
 	// private:
 	Resource                  resource[frameCount];
-	PD3D12Resource            copyBuffer;
 	D3D12_GPU_VIRTUAL_ADDRESS gpuHandle;
 	DescriptorHandle          rtvs[frameCount];
 	D3D12_VERTEX_BUFFER_VIEW  vbvs;
