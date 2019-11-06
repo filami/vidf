@@ -168,6 +168,9 @@ public:
 	// TODO - remove when not needed
 	PD3D12Device  GetDevice() const { return device; }
 	PD3D12Device5 GetDevice5() const { return device5; }
+	DescriptorHeap* GetViewHeap() const { return viewHeap.get(); }
+	DescriptorHeap* GetRTVHeap() const { return rtvHeap.get(); }
+	DescriptorHeap* GetDSVHeap() const { return dsvHeap.get(); }
 	ScratchAllocator* GetUploadScratch() const { return uploadScratch.get(); }
 	ScratchAllocator* GetUavScratch() const { return uavScratch.get(); }
 

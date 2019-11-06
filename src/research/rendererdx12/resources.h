@@ -53,15 +53,19 @@ struct GPUBufferDesc
 
 class GPUBuffer
 {
-	// private:
 public:
+// private:
 	struct Resource
 	{
 		PD3D12Resource        resource;
 		D3D12_RESOURCE_STATES state;
 	};
 
-	// private:
+public:
+	GPUBuffer();
+	GPUBuffer(RenderDevice* renderDevice, ID3D12GraphicsCommandList* submitCL, const GPUBufferDesc& _desc);
+
+// private:
 	Resource                  resource[frameCount];
 	D3D12_GPU_VIRTUAL_ADDRESS gpuHandle;
 	DescriptorHandle          rtvs[frameCount];
