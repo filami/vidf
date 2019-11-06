@@ -1718,8 +1718,7 @@ void H2Dx12()
 		
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC bottomLevelBuildDesc{};
 		bottomLevelBuildDesc.Inputs = bottomLevelInputs;
-		bottomLevelBuildDesc.ScratchAccelerationStructureData = renderDevice->GetScratchAllocator()->Alloc(
-			D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		bottomLevelBuildDesc.ScratchAccelerationStructureData = renderDevice->GetUavScratch()->Alloc(
 			bottomLevelPrebuildInfo.ScratchDataSizeInBytes);
 		bottomLevelBuildDesc.DestAccelerationStructureData = bottomLevelAccelerationStructure->GetGPUVirtualAddress();
 
@@ -1755,12 +1754,10 @@ void H2Dx12()
 		topLevelAccelerationStructure->SetName(L"TLAS");
 
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC topLevelBuildDesc{};
-		topLevelInputs.InstanceDescs = renderDevice->GetScratchAllocator()->Alloc(
-			D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ,
+		topLevelInputs.InstanceDescs = renderDevice->GetUploadScratch()->Alloc(
 			sizeof(instanceDesc), &instanceDesc);
 		topLevelBuildDesc.Inputs = topLevelInputs;
-		topLevelBuildDesc.ScratchAccelerationStructureData = renderDevice->GetScratchAllocator()->Alloc(
-			D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		topLevelBuildDesc.ScratchAccelerationStructureData = renderDevice->GetUavScratch()->Alloc(
 			topLevelPrebuildInfo.ScratchDataSizeInBytes);
 		topLevelBuildDesc.DestAccelerationStructureData = topLevelAccelerationStructure->GetGPUVirtualAddress();
 

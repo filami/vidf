@@ -168,7 +168,8 @@ public:
 	// TODO - remove when not needed
 	PD3D12Device  GetDevice() const { return device; }
 	PD3D12Device5 GetDevice5() const { return device5; }
-	ScratchAllocator* GetScratchAllocator() const { return scratchAllocator.get(); }
+	ScratchAllocator* GetUploadScratch() const { return uploadScratch.get(); }
+	ScratchAllocator* GetUavScratch() const { return uavScratch.get(); }
 
 private:
 	PD3D12Device  device;
@@ -178,7 +179,8 @@ private:
 	unique_ptr<DescriptorHeap> rtvHeap;
 	unique_ptr<DescriptorHeap> dsvHeap;
 	unique_ptr<DescriptorHeap> samplerHeap;
-	unique_ptr<ScratchAllocator> scratchAllocator;
+	unique_ptr<ScratchAllocator> uploadScratch;
+	unique_ptr<ScratchAllocator> uavScratch;
 
 	PD3D12CommandAllocator    submitCLAlloc;
 	PD3D12GraphicsCommandList submitCL;

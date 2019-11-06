@@ -361,7 +361,12 @@ RenderDevicePtr RenderDevice::Create(const RenderDeviceDesc& desc)
 		renderDevice->device,
 		D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
 		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 256);
-	renderDevice->scratchAllocator = make_unique<ScratchAllocator>(renderDevice->device);
+	renderDevice->uploadScratch = make_unique<ScratchAllocator>(
+		renderDevice->device,
+		D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
+	renderDevice->uavScratch = make_unique<ScratchAllocator>(
+		renderDevice->device,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// Create the submit command list.
 	AssertHr(renderDevice->device->CreateCommandAllocator(
@@ -971,7 +976,8 @@ void RenderDevice::Present()
 	curSwapChain->Present(this);
 
 	pendingResources.clear();
-	scratchAllocator->Reset();
+	uploadScratch->Reset();
+	uavScratch->Reset();
 	curSwapChain.reset();
 }
 

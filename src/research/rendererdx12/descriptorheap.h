@@ -40,14 +40,17 @@ namespace vidf::dx12
 	class ScratchAllocator
 	{
 	public:
-		ScratchAllocator(PD3D12Device _device);
+		ScratchAllocator(PD3D12Device _device, D3D12_HEAP_TYPE _heap, D3D12_RESOURCE_STATES _state);
 
 		void Reset();
 
-		D3D12_GPU_VIRTUAL_ADDRESS Alloc(D3D12_HEAP_TYPE heap, D3D12_RESOURCE_STATES state, uint size, void* data = nullptr);
+		D3D12_GPU_VIRTUAL_ADDRESS Alloc(uint size, void* data = nullptr);
 
 	private:
-		PD3D12Device device;
+		PD3D12Device           device;
+		D3D12_HEAP_TYPE        heap;
+		D3D12_RESOURCE_STATES  state;
+		D3D12_RESOURCE_FLAGS   flags;
 		vector<PD3D12Resource> commited;
 	};
 

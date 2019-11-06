@@ -33,9 +33,14 @@ DescriptorHandle DescriptorHeap::Alloc(uint count)
 
 
 
-ScratchAllocator::ScratchAllocator(PD3D12Device _device)
+ScratchAllocator::ScratchAllocator(PD3D12Device _device, D3D12_HEAP_TYPE _heap, D3D12_RESOURCE_STATES _state)
 	: device(_device)
+	, heap(_heap)
+	, state(_state)
 {
+	flags = D3D12_RESOURCE_FLAG_NONE;
+	if (state == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+		flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 }
 
 
@@ -47,13 +52,9 @@ void ScratchAllocator::Reset()
 
 
 
-D3D12_GPU_VIRTUAL_ADDRESS ScratchAllocator::Alloc(D3D12_HEAP_TYPE heap, D3D12_RESOURCE_STATES state, uint size, void* data)
+D3D12_GPU_VIRTUAL_ADDRESS ScratchAllocator::Alloc(uint size, void* data)
 {
 	PD3D12Resource page;
-
-	D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
-	if (state == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
-		flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	AssertHr(device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(heap),
