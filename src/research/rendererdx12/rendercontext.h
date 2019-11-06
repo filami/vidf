@@ -42,7 +42,9 @@ class RenderContext
 {
 public:
 	void ClearRenderTarget(GPUBufferPtr buffer, Color color);
-	void ClearDepthStencilTarget(GPUBufferPtr buffer);
+	void ClearRenderTargetFast(GPUBufferPtr buffer);
+	void ClearDepthStencilTargetFast(GPUBufferPtr buffer);
+
 	void BeginRenderPass(RenderPassPtr renderPass);
 	void EndRenderPass();
 	void SetResourceSet(uint index, ResourceSetPtr set);

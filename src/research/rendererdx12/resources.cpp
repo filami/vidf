@@ -15,10 +15,9 @@ GPUBuffer::GPUBuffer()
 
 GPUBuffer::GPUBuffer(RenderDevice* renderDevice, ID3D12GraphicsCommandList* submitCL, const GPUBufferDesc& _desc)
 {
-	// TODO : add optional fast clear feature and disable EXECUTION WARNING #820: CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE goofy warning
-
 	PD3D12Device device = renderDevice->GetDevice();
 	desc = _desc;
+	desc.fastClear.Format = desc.format;
 
 	Assert(desc.type != GPUBufferType::IndexBuffer || desc.format == DXGI_FORMAT_R16_UINT || desc.format == DXGI_FORMAT_R32_UINT);
 
@@ -28,9 +27,7 @@ GPUBuffer::GPUBuffer(RenderDevice* renderDevice, ID3D12GraphicsCommandList* subm
 	bufferDesc.SampleDesc.Count = 1;
 	bufferDesc.SampleDesc.Quality = 0;
 
-	D3D12_CLEAR_VALUE clearValue{};
 	bool hasGpuHandle = false;
-	bool hasClearValue = false;
 
 	switch (desc.type)
 	{
@@ -73,20 +70,12 @@ GPUBuffer::GPUBuffer(RenderDevice* renderDevice, ID3D12GraphicsCommandList* subm
 	if (desc.usage & GPUUsage_RenderTarget)
 		bufferDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
-	if (desc.usage & GPUUsage_DepthStencil)
-	{
-		clearValue.Format = desc.format;
-		clearValue.DepthStencil.Depth = 1.0f;
-		clearValue.DepthStencil.Stencil = 0;
-		hasClearValue = true;
-	}
-
 	AssertHr(device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&bufferDesc,
 		state,
-		hasClearValue ? &clearValue : nullptr,
+		desc.hasFastClear ? &desc.fastClear : nullptr,
 		IID_PPV_ARGS(&resource[0].resource.Get())));
 	resource[0].resource->SetName(ToWString(desc.name.c_str()).c_str());
 	resource[0].state = state;

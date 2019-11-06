@@ -197,6 +197,7 @@ private:
 	PDXGIFactory4   dxgiFactory;
 	PDXGIAdapter1   dxgiAdapter;
 	PD3D12Debug     debugController;
+	PD3D12InfoQueue infoQeue;
 
 	PD3DUserDefinedAnnotation userAnnotations;
 

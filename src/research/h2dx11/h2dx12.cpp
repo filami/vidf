@@ -1146,6 +1146,8 @@ void H2Dx12()
 		bufferDesc.width = width;
 		bufferDesc.height = height;
 		bufferDesc.format = DXGI_FORMAT_D32_FLOAT;
+		bufferDesc.hasFastClear = true;
+		bufferDesc.fastClear.DepthStencil.Depth = 1.0f;
 		bufferDesc.name = "DepthBuffer";
 		depthBuffer = renderDevice->CreateBuffer(bufferDesc);
 						
@@ -1302,6 +1304,7 @@ void H2Dx12()
 		dxrOutput = renderDevice->CreateBuffer(bufferDesc);
 
 		bufferDesc.name = "momentsBuffer";
+		bufferDesc.hasFastClear = true;
 		bufferDesc.usage |= GPUUsage_RenderTarget;	// so can be cleared
 		momentsBuffer = renderDevice->CreateBuffer(bufferDesc);
 	}
@@ -1318,6 +1321,7 @@ void H2Dx12()
 		bufferDesc.width = width;
 		bufferDesc.height = height;
 		bufferDesc.format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		bufferDesc.hasFastClear = true;
 		bufferDesc.name = "temporalOut";
 		temporalOut = renderDevice->CreateBuffer(bufferDesc);
 	}
@@ -1819,8 +1823,7 @@ void H2Dx12()
 			renderContext->CopyResource(viewCB, viewConsts);
 
 			// set and clear render target
-			renderContext->ClearRenderTarget(finalBuffer, Color(0.2f, 0.5f, 1.0f));
-			renderContext->ClearDepthStencilTarget(depthBuffer);
+			renderContext->ClearDepthStencilTargetFast(depthBuffer);
 			renderContext->BeginRenderPass(renderPass);
 
 			// draw
@@ -1843,8 +1846,8 @@ void H2Dx12()
 				uint clearTemporal = 0;
 				if (resetTemporal)
 				{
-					renderContext->ClearRenderTarget(temporalOut, Color(0.0f, 0.0f, 0.0f));
-					renderContext->ClearRenderTarget(momentsBuffer, Color(0.0f, 0.0f, 0.0f));
+					renderContext->ClearRenderTargetFast(temporalOut);
+					renderContext->ClearRenderTargetFast(momentsBuffer);
 					clearTemporal = 1;
 				}
 				renderContext->CopyResource(temporalCB, clearTemporal);

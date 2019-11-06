@@ -31,6 +31,7 @@ typedef Pointer<ID3D12Resource>            PD3D12Resource;
 typedef Pointer<ID3D12RootSignature>       PD3D12RootSignature;
 typedef Pointer<ID3D12PipelineState>       PD3D12PipelineState;
 typedef Pointer<ID3DUserDefinedAnnotation> PD3DUserDefinedAnnotation;
+typedef Pointer<ID3D12InfoQueue>           PD3D12InfoQueue;
 
 typedef Pointer<ID3D12Device5>              PD3D12Device5;
 typedef Pointer<ID3D12GraphicsCommandList4> PD3D12GraphicsCommandList4;

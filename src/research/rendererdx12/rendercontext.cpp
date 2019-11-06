@@ -13,17 +13,38 @@ void RenderContext::ClearRenderTarget(GPUBufferPtr buffer, Color color)
 	Assert((buffer->desc.usage & GPUUsage_RenderTarget) != 0);
 	AddResourceBarrier(buffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	FlushResourceBarriers();
-	commandList->ClearRenderTargetView(buffer->rtvs[frameIndex].cpu, &color.r, 0, nullptr);
+	commandList->ClearRenderTargetView(
+		buffer->rtvs[frameIndex].cpu, &color.r,
+		0, nullptr);
 }
 
 
 
-void RenderContext::ClearDepthStencilTarget(GPUBufferPtr buffer)
+void RenderContext::ClearRenderTargetFast(GPUBufferPtr buffer)
+{
+	Assert((buffer->desc.usage & GPUUsage_RenderTarget) != 0);
+	Assert(buffer->desc.hasFastClear);
+	AddResourceBarrier(buffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	FlushResourceBarriers();
+	commandList->ClearRenderTargetView(
+		buffer->rtvs[frameIndex].cpu, buffer->desc.fastClear.Color,
+		0, nullptr);
+}
+
+
+
+void RenderContext::ClearDepthStencilTargetFast(GPUBufferPtr buffer)
 {
 	Assert((buffer->desc.usage & GPUUsage_DepthStencil) != 0);
+	Assert(buffer->desc.hasFastClear);
 	AddResourceBarrier(buffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	FlushResourceBarriers();
-	commandList->ClearDepthStencilView(buffer->dsv.cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	const auto& desc = buffer->desc;
+	commandList->ClearDepthStencilView(
+		buffer->dsv.cpu, D3D12_CLEAR_FLAG_DEPTH,
+		desc.fastClear.DepthStencil.Depth,
+		desc.fastClear.DepthStencil.Stencil,
+		0, nullptr);
 }
 
 

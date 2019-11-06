@@ -47,6 +47,8 @@ struct GPUBufferDesc
 	uint   height = 0;
 	uint   mipLevels = 1;
 	string name;
+	bool   hasFastClear = false;
+	D3D12_CLEAR_VALUE fastClear{};
 };
 
 

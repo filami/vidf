@@ -170,6 +170,21 @@ RenderDevicePtr RenderDevice::Create(const RenderDeviceDesc& desc)
 	}
 	Assert(renderDevice->device != nullptr);
 
+	renderDevice->infoQeue = QueryInterface<ID3D12InfoQueue>(renderDevice->device);
+	if (renderDevice->infoQeue)
+	{
+		D3D12_MESSAGE_ID disable[] =
+		{
+			// disabling missing fast clear mismatch, render context and GPUBuffer now has
+			// fast clear as an option
+			D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+		};
+		D3D12_INFO_QUEUE_FILTER filter = {};
+		filter.DenyList.NumIDs = _countof(disable);
+		filter.DenyList.pIDList = disable;
+		renderDevice->infoQeue->AddStorageFilterEntries(&filter);
+	}
+
 	// check features
 	D3D12_FEATURE_DATA_D3D12_OPTIONS featureData = {};
 	D3D12_FEATURE_DATA_D3D12_OPTIONS1 featureData1 = {};
