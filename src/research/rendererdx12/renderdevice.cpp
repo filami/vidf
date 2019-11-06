@@ -273,14 +273,13 @@ RenderFence RenderDevice::CreateFence()
 
 GPUBufferPtr RenderDevice::CreateBuffer(const GPUBufferDesc& desc)
 {
-	if (!submitingResources)
+	if (desc.dataPtr != nullptr && !submitingResources)
 	{
 		submitCLAlloc->Reset();
 		submitCL->Reset(submitCLAlloc, nullptr);
 		commitedCLs.insert(commitedCLs.begin(), submitCL);
+		submitingResources = true;
 	}
-	submitingResources = true;
-
 	return make_shared<GPUBuffer>(this, submitCL, desc);
 }
 
