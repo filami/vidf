@@ -78,6 +78,7 @@ AddFilesToProject
 		"common/vector2.h",
 		"common/vector3.h",
 		"common/vector4.h",
+		"common/string.h",
 	},
 	
 	["Platform"] =

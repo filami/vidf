@@ -899,6 +899,10 @@ void H2Dx12()
 	using namespace h2;
 	using namespace dx12;
 
+
+	string res = Format("%1, %%, %0, %", "test", 4);
+
+
 	FileManager fileManager;
 	fileManager.AddPak("data/h2dx11/Htic2-0.pak");
 	fileManager.AddPak("data/h2dx11/Htic2-1.pak");

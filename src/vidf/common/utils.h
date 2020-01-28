@@ -5,6 +5,7 @@
 #include "interpolate.h"
 #include "vector2.h"
 #include "vector3.h"
+#include "string.h"
 
 
 #define ZeroStruct(str) ZeroMemory(&str, sizeof(str))
@@ -235,50 +236,6 @@ namespace vidf
 		*actual = *actual + delta*Min(frameTime * speed, 1.0f);
 	}
 
-
-
-	inline std::string ToString(const wchar_t* str)
-	{
-		std::string out;
-		while (*str != 0)
-			out.push_back(char((*str++)&0xff));
-		return out;
-	}
-
-
-
-	inline std::wstring ToWString(const char* str)
-	{
-		std::wstring out;
-		while (*str != 0)
-			out.push_back(wchar_t(*str++));
-		return out;
-	}
-
-
-
-	template<typename TChar>
-	inline std::basic_string<TChar> ToLower(const TChar* str)
-	{
-		std::basic_string<TChar> out;
-		while (*str != 0)
-			out.push_back(std::tolower(*str++));
-		return out;
-	}
-
-
-
-	template<typename Char, uint N>
-	void Format(Char output[N], const Char* format)
-	{
-		strcpy_s<N>(output, format);
-	}
-
-	template<typename Char, uint N, typename Car, typename ... Cdr>
-	void Format(Char output[N], const Char* format, Car car, Cdr ... cdr)
-	{
-		strcpy_s<N>(output, format);
-	}
 
 
 }
