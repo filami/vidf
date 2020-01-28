@@ -29,14 +29,7 @@ function CreateProject(projName, projPch, options, projUUID)
 	location(buildLocation)
 	language "c++"
 	cppdialect "C++17"
-	--[[
-	if projPch ~= nil then
-		pchheader(projPch..".h")
-		pchsource(projPch..".cpp")
-	end
-	]]
 	if options.pedantic then
-		-- flags {"ExtraWarnings", "FatalWarnings"}
 		flags {"NoWarnings"}
 	else
 		flags {"NoWarnings"}
@@ -112,22 +105,6 @@ function ConfigVIDFDependencies()
 		_WORKING_DIR.."/ext/brofiler/",
 		_WORKING_DIR.."/ext/dxc/",
 	}
-
-	links
-	{
-		-- "viext",
-		"d3d11.lib",
-		"d3d12.lib",
-		"D3DCompiler.lib",
-		"dxguid.lib",
-		"DXGI.lib",
-	}
-	
-	configuration(debugConfig)
-	links{"vidf_x64_"..debugConfig}
-	
-	configuration(profileConfig)
-	links{"vidf_x64_"..profileConfig}
 end
 
 
@@ -176,6 +153,27 @@ function AddFilesToProject(projFiles)
 	end
 	vpaths(projFiles)
 	files(allFiles)
+end
+
+
+
+function AddIncludeFolder(incName)
+	includedirs
+	{
+		_WORKING_DIR.."/"..incName.."/",
+	}
+end
+
+
+
+function AddStaticLibLink(libName)
+	configuration(debugConfig)
+	links{libName.."_x64_"..debugConfig}
+	
+	configuration(profileConfig)
+	links{libName.."_x64_"..profileConfig}
+
+	configuration(allConfigs)
 end
 
 

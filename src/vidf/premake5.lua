@@ -1,4 +1,18 @@
-vidfProj = CreateVIDFProject()
+
+CreateVIDFLibProject("vidf", "pch", nil, "DD97FFC2-D13C-4317-AD1F-300F8513C7CE")
+
+links
+{
+	"d3d11.lib",
+	"d3d12.lib",
+	"D3DCompiler.lib",
+	"dxguid.lib",
+	"DXGI.lib",
+	"dxcompiler.lib",
+}
+
+-- AddStaticLibLink("viext")
+
 
 AddFilesToProject
 {

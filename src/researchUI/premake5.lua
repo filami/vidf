@@ -3,6 +3,9 @@ local qt = premake.extensions.qt
 
 CreateVIDFAppProject("ResearchUI", --[["pch"]] nil, nil, "B1AF6BD6-530C-4224-B5DF-FE3BC0E0D84C")
 
+AddIncludeFolder("src/research")
+AddStaticLibLink("Research")
+
 rtti "on"
 
 qtpath "C:/Qt/5.9.1/msvc2017_64/"

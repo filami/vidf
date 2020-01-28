@@ -13,7 +13,9 @@ rule "Bison"
 	buildoutputs  '%(RootDir)%(Directory)%(Filename).cpp'
 
 
-CreateVIDFAppProject("Research", "pch", nil, "5117F2A9-B4A2-400C-AD7B-9C560B85BF99")
+CreateVIDFLibProject("Research", "pch", nil, "5117F2A9-B4A2-400C-AD7B-9C560B85BF99")
+
+AddStaticLibLink("vidf")
 
 
 AddFilesToProject
@@ -25,7 +27,6 @@ AddFilesToProject
 	
 	["common"] =
 	{
-		"main.cpp",
 		"pch.h",
 		"pch.cpp",
 	},
