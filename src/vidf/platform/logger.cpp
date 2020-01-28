@@ -8,6 +8,21 @@ namespace vidf
 
 
 
+	LogListener::LogListener()
+	{
+		vidf::Logger::Get()->listeners.push_back(this);
+	}
+
+
+
+	LogListener::~LogListener()
+	{
+		auto& listeners = vidf::Logger::Get()->listeners;
+		listeners.erase(find(listeners.begin(), listeners.end(), this));
+	}
+
+
+
 	Logger* Logger::Get()
 	{
 		static Logger logger;
@@ -16,11 +31,14 @@ namespace vidf
 
 
 
-	void Logger::Log(LogLevel logLevel, const wchar_t* _text)
+	void Logger::Log(LogLevel logLevel, const char* _text)
 	{
 		std::unique_lock<std::mutex> loc(mtx);
 
-		static wstring str;
+		for (auto& listener : listeners)
+			listener->Log(logLevel, _text);
+
+		static string str;
 		str.clear();
 				
 		for (; *_text != 0; ++_text)
@@ -33,7 +51,7 @@ namespace vidf
 
 
 
-	void Logger::CommitLine(LogLevel logLevel, const wstring& _text)
+	void Logger::CommitLine(LogLevel logLevel, const string& _text)
 	{
 		Line line;
 		line.begin = text.size();
@@ -41,8 +59,8 @@ namespace vidf
 		text.insert(text.end(), _text.begin(), _text.end());
 		lines.push_back(line);
 
-		wcout << _text;
-		OutputDebugStringW(_text.c_str());
+		cout << _text;
+		OutputDebugStringA(_text.c_str());
 	}
 
 

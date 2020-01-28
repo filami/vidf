@@ -16,6 +16,15 @@ namespace vidf
 
 
 
+	class LogListener
+	{
+	public:
+		LogListener();
+		virtual ~LogListener();
+		virtual void Log(LogLevel logLevel, const char* _text) = 0;
+	};
+
+
 	class Logger
 	{
 	private:
@@ -29,7 +38,7 @@ namespace vidf
 		static Logger* Get();
 
 		template<typename ... Args>
-		void Log(LogLevel logLevel, const wchar_t* _text, Args ... args)
+		void Log(LogLevel logLevel, const char* _text, Args ... args)
 		{
 		//	wchar_t buffer[256];
 		//	Format(buffer, _text, args...);
@@ -37,16 +46,18 @@ namespace vidf
 			Log(logLevel, _text);
 		}
 
-		void Log(LogLevel logLevel, const wchar_t* _text);
+		void Log(LogLevel logLevel, const char* _text);
 
 	private:
-		void CommitLine(LogLevel logLevel, const wstring& _text);
+		void CommitLine(LogLevel logLevel, const string& _text);
 		void Terminate();
 
 	private:
-		deque<Line>    lines;
-		deque<wchar_t> text;
-		std::mutex     mtx;
+		friend class LogListener;
+		deque<Line> lines;
+		deque<char> text;
+		deque<LogListener*> listeners;
+		std::mutex  mtx;
 	};
 
 

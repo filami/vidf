@@ -63,7 +63,7 @@ namespace vidf { namespace dx11 {
 
 		UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 /* | D3DCOMPILE_WARNINGS_ARE_ERRORS */ | D3DCOMPILE_DEBUG /*| D3DCOMPILE_SKIP_OPTIMIZATION*/;
 
-		VI_INFO(L"Compiling shader \"%0\"\n", filePath.c_str());
+		VI_INFO("Compiling shader \"%0\"\n", filePath.c_str());
 
 		PD3DBlob output;
 		PD3DBlob _byteCode;
@@ -73,9 +73,9 @@ namespace vidf { namespace dx11 {
 		if (output)
 		{
 			if (hr == S_OK)
-				VI_WARNING(ToWString((const char*)output->GetBufferPointer()).c_str())
+				VI_WARNING((const char*)output->GetBufferPointer())
 			else
-				VI_ERROR(ToWString((const char*)output->GetBufferPointer()).c_str())
+				VI_ERROR((const char*)output->GetBufferPointer())
 		}
 		if (hr != S_OK)
 			return;
