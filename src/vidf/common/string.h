@@ -90,6 +90,8 @@ inline string Format(const char* format, const deque<string>& elements)
 		int index = 0;
 		for (; *format != '0' && isdigit(*format); ++format)
 			index = index * 10 + (*format - '0');
+		if (*format != 0)
+			result.push_back(*format);
 		if (index < elements.size())
 			result += elements[index];
 	}

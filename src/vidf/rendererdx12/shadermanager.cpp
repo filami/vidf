@@ -31,8 +31,6 @@ namespace vidf::dx12
 	{
 		Assert(shaderManager != nullptr);
 
-		VI_INFO("Compiling shader \"%0\"\n", filePath.c_str());
-
 		// TODO - DXIL compiler bugged out with csSvgfAtrous
 		if (type == ShaderType::Library)
 		{
@@ -40,6 +38,8 @@ namespace vidf::dx12
 			wstring wEntryPoint = ToWString(entryPoint.c_str());
 			dxil == nullptr;
 			state = ShaderState::Error;	// set to error by default and only set to ready if code compiles
+
+			VI_INFO(Format("DXC - Compiling shader \"%0\"\n", filePath));
 
 			ifstream ifs{ filePath, ios::binary };
 			if (!ifs)
@@ -117,7 +117,7 @@ namespace vidf::dx12
 
 			UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 /* | D3DCOMPILE_WARNINGS_ARE_ERRORS */ | D3DCOMPILE_DEBUG /*| D3DCOMPILE_SKIP_OPTIMIZATION*/;
 
-			VI_INFO("Compiling shader \"%0\"\n", filePath.c_str());
+			VI_INFO(Format("FXC47 - Compiling shader \"%0\" %1 %2\n", filePath, entryPoint, target));
 
 			Pointer<ID3DBlob> output;
 			Pointer<ID3DBlob> _byteCode;
