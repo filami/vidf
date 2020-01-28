@@ -30,24 +30,6 @@ AddFilesToProject
 		"pch.h",
 		"pch.cpp",
 	},
-
-	["RendererDx12"] =
-	{
-		"rendererdx12/common.h",
-		"rendererdx12/d3dx12.h",
-		"rendererdx12/descriptorheap.h",
-		"rendererdx12/descriptorheap.cpp",
-		"rendererdx12/pipeline.h",
-		"rendererdx12/pipeline.cpp",
-		"rendererdx12/rendercontext.h",
-		"rendererdx12/rendercontext.cpp",
-		"rendererdx12/renderdevice.h",
-		"rendererdx12/renderdevice.cpp",
-		"rendererdx12/resources.h",
-		"rendererdx12/resources.cpp",
-		"rendererdx12/shadermanager.h",
-		"rendererdx12/shadermanager.cpp",
-	},
 	
 	["tests"] =
 	{

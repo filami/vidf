@@ -10,11 +10,11 @@
 #include <unordered_map>
 #include <vector>
 
-#include "rendererdx12/common.h"
-#include "rendererdx12/renderdevice.h"
-#include "rendererdx12/rendercontext.h"
-#include "rendererdx12/shadermanager.h"
-#include "rendererdx12/resources.h"
+#include "vidf/rendererdx12/common.h"
+#include "vidf/rendererdx12/renderdevice.h"
+#include "vidf/rendererdx12/rendercontext.h"
+#include "vidf/rendererdx12/shadermanager.h"
+#include "vidf/rendererdx12/resources.h"
 
 #include "stream.h"
 #include "pak.h"
