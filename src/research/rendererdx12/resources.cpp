@@ -57,7 +57,7 @@ GPUBuffer::GPUBuffer(RenderDevice* renderDevice, ID3D12GraphicsCommandList* subm
 		__debugbreak();
 	};
 
-	D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_GENERIC_READ;
+	state = D3D12_RESOURCE_STATE_GENERIC_READ;
 	if (desc.usage & GPUUsage_DepthStencil)
 	{
 		bufferDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
@@ -76,29 +76,30 @@ GPUBuffer::GPUBuffer(RenderDevice* renderDevice, ID3D12GraphicsCommandList* subm
 		&bufferDesc,
 		state,
 		desc.hasFastClear ? &desc.fastClear : nullptr,
-		IID_PPV_ARGS(&resource[0].resource.Get())));
-	resource[0].resource->SetName(ToWString(desc.name.c_str()).c_str());
-	resource[0].state = state;
-	resource[1] = resource[0];
+		IID_PPV_ARGS(&resource.Get())));
+	resource->SetName(ToWString(desc.name.c_str()).c_str());
+	// TODO - according to d3d12 debug layer, the resource is not
+	// being created with the expected state. This only happens on the very beggining
+	// and eventually it fixes itself after a few frames
 	if (hasGpuHandle)
-		gpuHandle = resource[0].resource->GetGPUVirtualAddress();
+		gpuHandle = resource->GetGPUVirtualAddress();
 
 	switch (desc.type)
 	{
 	case GPUBufferType::VertexBuffer:
-		vbvs.BufferLocation = resource[0].resource->GetGPUVirtualAddress();
+		vbvs.BufferLocation = resource->GetGPUVirtualAddress();
 		vbvs.StrideInBytes = desc.dataStride;
 		vbvs.SizeInBytes = desc.dataSize;
 		break;
 	case GPUBufferType::IndexBuffer:
-		ibv.BufferLocation = resource[0].resource->GetGPUVirtualAddress();
+		ibv.BufferLocation = resource->GetGPUVirtualAddress();
 		ibv.Format = desc.format;
 		ibv.SizeInBytes = desc.dataSize;
 		break;
 	case GPUBufferType::ConstantBuffer:
 	{
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
-		cbvDesc.BufferLocation = resource[0].resource->GetGPUVirtualAddress();
+		cbvDesc.BufferLocation = resource->GetGPUVirtualAddress();
 		cbvDesc.SizeInBytes = bufferDesc.Width;
 		cbv = renderDevice->GetViewHeap()->Alloc();
 		device->CreateConstantBufferView(&cbvDesc, cbv.cpu);
@@ -123,7 +124,7 @@ GPUBuffer::GPUBuffer(RenderDevice* renderDevice, ID3D12GraphicsCommandList* subm
 		};
 
 		dsv = renderDevice->GetDSVHeap()->Alloc();
-		device->CreateDepthStencilView(resource[0].resource, &viewDesc, dsv.cpu);
+		device->CreateDepthStencilView(resource, &viewDesc, dsv.cpu);
 	}
 
 	if (desc.usage & GPUUsage_ShaderResource)
@@ -165,7 +166,7 @@ GPUBuffer::GPUBuffer(RenderDevice* renderDevice, ID3D12GraphicsCommandList* subm
 			break;
 		}
 		srv = renderDevice->GetViewHeap()->Alloc();
-		device->CreateShaderResourceView(resource[0].resource, &viewDesc, srv.cpu);
+		device->CreateShaderResourceView(resource, &viewDesc, srv.cpu);
 	}
 
 	if (desc.usage & GPUUsage_UnorderedAccess)
@@ -197,7 +198,7 @@ GPUBuffer::GPUBuffer(RenderDevice* renderDevice, ID3D12GraphicsCommandList* subm
 			break;
 		}
 		uav = renderDevice->GetViewHeap()->Alloc();
-		device->CreateUnorderedAccessView(resource[0].resource, nullptr, &viewDesc, uav.cpu);
+		device->CreateUnorderedAccessView(resource, nullptr, &viewDesc, uav.cpu);
 	}
 
 	if (desc.usage & GPUUsage_RenderTarget)
@@ -216,9 +217,8 @@ GPUBuffer::GPUBuffer(RenderDevice* renderDevice, ID3D12GraphicsCommandList* subm
 			__debugbreak();
 		};
 
-		rtvs[0] = renderDevice->GetRTVHeap()->Alloc();
-		device->CreateRenderTargetView(resource[0].resource, &viewDesc, rtvs[0].cpu);
-		rtvs[1] = rtvs[0];
+		rtv = renderDevice->GetRTVHeap()->Alloc();
+		device->CreateRenderTargetView(resource, &viewDesc, rtv.cpu);
 	}
 
 	if (desc.dataPtr)
@@ -249,16 +249,16 @@ GPUBuffer::GPUBuffer(RenderDevice* renderDevice, ID3D12GraphicsCommandList* subm
 			data[0].RowPitch = desc.dataSize;
 			data[0].SlicePitch = 0;
 		}
-		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(resource[0].resource, firstResource, numResources);
+		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(resource, firstResource, numResources);
 
 		PD3D12Resource transient = renderDevice->GetUploadScratch()->Alloc(uploadBufferSize);
 
 		submitCL->ResourceBarrier(
-			1, &CD3DX12_RESOURCE_BARRIER::Transition(resource[0].resource,
+			1, &CD3DX12_RESOURCE_BARRIER::Transition(resource,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				D3D12_RESOURCE_STATE_COPY_DEST));
-		resource[0].state = D3D12_RESOURCE_STATE_COPY_DEST;
-		UpdateSubresources(submitCL, resource[0].resource, transient, 0, firstResource, numResources, data.data());
+		state = D3D12_RESOURCE_STATE_COPY_DEST;
+		UpdateSubresources(submitCL, resource, transient, 0, firstResource, numResources, data.data());
 	}
 }
 

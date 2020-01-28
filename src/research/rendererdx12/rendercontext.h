@@ -71,7 +71,6 @@ public:
 	ID3D12Resource*      indexBuffer = nullptr;
 	array<ID3D12Resource*, 128> vertexBuffers;
 	D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
-	uint frameIndex;
 };
 
 

@@ -68,9 +68,10 @@ public:
 	GPUBuffer(RenderDevice* renderDevice, ID3D12GraphicsCommandList* submitCL, const GPUBufferDesc& _desc);
 
 // private:
-	Resource                  resource[frameCount];
+	PD3D12Resource            resource;
+	D3D12_RESOURCE_STATES     state;
 	D3D12_GPU_VIRTUAL_ADDRESS gpuHandle;
-	DescriptorHandle          rtvs[frameCount];
+	DescriptorHandle          rtv;
 	D3D12_VERTEX_BUFFER_VIEW  vbvs;
 	D3D12_INDEX_BUFFER_VIEW   ibv;
 	DescriptorHandle          cbv{};
@@ -78,7 +79,6 @@ public:
 	DescriptorHandle          srv{};
 	DescriptorHandle          uav{};
 	GPUBufferDesc             desc{};
-	uint                      frameIndex = 0;
 };
 
 

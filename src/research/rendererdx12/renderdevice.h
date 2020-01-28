@@ -100,7 +100,7 @@ private:
 	friend class RenderContext;
 	string         name;
 	RenderPassDesc desc;
-	vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvs[frameCount]{};
+	vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvs{};
 	D3D12_CPU_DESCRIPTOR_HANDLE dsv{};
 	D3D12_RECT scissor;
 };
@@ -211,18 +211,19 @@ class SwapChain
 public:
 	SwapChain(const SwapChainDesc& swapChainDesc, ID3D12Device* device, IDXGIFactory4* dxgiFactory, DescriptorHeap* rtvHeap, RenderDevice* renderDevice, ID3D12CommandQueue* commandQueue);
 
-	GPUBufferPtr GetBackBuffer() const { return frameBuffer; }
+	GPUBufferPtr GetBackBuffer() const { return frameBuffers[frameIndex]; }
 
 private:
 	friend class RenderDevice;
 	void Present(RenderDevice* renderDevice);
-	uint GetFrameIndex() const { return frameBuffer->frameIndex; }
+	uint GetFrameIndex() const { return 0; }
 
 private:
 	PDXGISwapChain3 swapChain3;
-	GPUBufferPtr    frameBuffer;
-	uint rtvDescriptorSize;
-	RenderFence frameFence;
+	GPUBufferPtr    frameBuffers[frameCount];
+	RenderFence     frameFence;
+	uint            rtvDescriptorSize;
+	uint            frameIndex;
 };
 
 

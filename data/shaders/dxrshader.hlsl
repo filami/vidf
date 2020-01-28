@@ -300,7 +300,7 @@ void rgMain()
 			const uint lightIdx = lightIdsSRV[kdLeaf.firstLightIdx + uint(RandUNorm(rngState) * numLights)];
 			
 			LightShade light = lightShadeSRV[lightIdx];
-			float3 lightPos = light.position + SampleSphere(RandUFloat2(rngState)) * 0.15;
+			float3 lightPos = light.position + SampleSphere(RandUFloat2(rngState)) * 0.05;
 			float3 wToLight = lightPos - position.xyz;
 			const float dist = length(wToLight);
 			wToLight = normalize(wToLight);

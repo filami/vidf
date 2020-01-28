@@ -1686,16 +1686,16 @@ void H2Dx12()
 		vector<D3D12_RAYTRACING_GEOMETRY_DESC> geomDescs;
 		D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc{};
 		geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-		geometryDesc.Triangles.IndexBuffer = indexBuffer->resource[0].resource->GetGPUVirtualAddress();
+		geometryDesc.Triangles.IndexBuffer = indexBuffer->resource->GetGPUVirtualAddress();
 		geometryDesc.Triangles.IndexCount = indices.size();
 		geometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
 		geometryDesc.Triangles.Transform3x4 = 0;
 		geometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
 		geometryDesc.Triangles.VertexCount = vertices.size();
-		geometryDesc.Triangles.VertexBuffer.StartAddress = vertexBuffer->resource[0].resource->GetGPUVirtualAddress();
+		geometryDesc.Triangles.VertexBuffer.StartAddress = vertexBuffer->resource->GetGPUVirtualAddress();
 		geometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
 		geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-		D3D12_GPU_VIRTUAL_ADDRESS indexAddr = indexBuffer->resource[0].resource->GetGPUVirtualAddress();
+		D3D12_GPU_VIRTUAL_ADDRESS indexAddr = indexBuffer->resource->GetGPUVirtualAddress();
 		for (const auto& batch : solidBatches)
 		{
 			geometryDesc.Triangles.IndexBuffer = indexAddr + batch.first * 4;

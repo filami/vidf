@@ -291,11 +291,8 @@ RenderPassPtr RenderDevice::CreateRenderPass(const RenderPassDesc& desc, const c
 	renderPass->name = name;
 	renderPass->desc = desc;
 
-	for (uint frame = 0; frame < frameCount; ++frame)
-	{
-		for (uint i = 0; i < desc.rtvs.size(); ++i)
-			renderPass->rtvs[frame].push_back(desc.rtvs[i]->rtvs[frame].cpu);
-	}
+	for (uint i = 0; i < desc.rtvs.size(); ++i)
+		renderPass->rtvs.push_back(desc.rtvs[i]->rtv.cpu);
 	if (desc.dsv)
 		renderPass->dsv = desc.dsv->dsv.cpu;
 
@@ -339,7 +336,7 @@ GraphicsPSOPtr RenderDevice::CreateGraphicsPSO(const GraphicsPSODesc& desc)
 	psoDesc.DepthStencilState = desc.depthStencil;
 	psoDesc.SampleMask = desc.sampleMask;
 	psoDesc.PrimitiveTopologyType = desc.topologyType;
-	psoDesc.NumRenderTargets = desc.renderPass->rtvs->size();
+	psoDesc.NumRenderTargets = desc.renderPass->rtvs.size();
 	psoDesc.SampleDesc = desc.sampleDesc;
 	for (uint i = 0; i < psoDesc.NumRenderTargets; ++i)
 		psoDesc.RTVFormats[i] = desc.renderPass->desc.rtvs[i]->desc.format;
@@ -531,7 +528,6 @@ RenderContextPtr RenderDevice::BeginRenderContext()
 
 	ID3D12DescriptorHeap* heaps[] = { viewTableHeap->GetHeap(), samplerHeap->GetHeap() };
 	renderContext->commandList->SetDescriptorHeaps(_countof(heaps), heaps);
-	renderContext->frameIndex = curSwapChain->GetFrameIndex();
 
 	commitedContexts.push_back(renderContext);
 	commitedCLs.push_back(renderContext->commandList);
@@ -612,20 +608,21 @@ SwapChain::SwapChain(const SwapChainDesc& swapChainDesc, ID3D12Device* device, I
 		&swapChain.Get()));
 	AssertHr(dxgiFactory->MakeWindowAssociation(HWND(swapChainDesc.windowHandle), DXGI_MWA_NO_ALT_ENTER));
 	swapChain3 = QueryInterface<IDXGISwapChain3>(swapChain);
-
-	frameBuffer = make_shared<GPUBuffer>();
+	frameIndex = swapChain3->GetCurrentBackBufferIndex();
+		
 	for (uint n = 0; n < frameCount; ++n)
 	{
+		frameBuffers[n] = make_shared<GPUBuffer>();
+		frameBuffers[n]->desc.type = GPUBufferType::Texture2D;
+		frameBuffers[n]->desc.usage = GPUUsage_ShaderResource | GPUUsage_RenderTarget;
+		frameBuffers[n]->desc.format = dxSwapChainDesc.Format;
+
 		DescriptorHandle rtvHandle = rtvHeap->Alloc();
-		AssertHr(swapChain3->GetBuffer(n, IID_PPV_ARGS(&frameBuffer->resource[n].resource.Get())));
-		device->CreateRenderTargetView(frameBuffer->resource[n].resource, nullptr, rtvHandle.cpu);
-		frameBuffer->resource[n].state = D3D12_RESOURCE_STATE_PRESENT;
-		frameBuffer->rtvs[n] = rtvHandle;
+		AssertHr(swapChain3->GetBuffer(n, IID_PPV_ARGS(&frameBuffers[n]->resource.Get())));
+		device->CreateRenderTargetView(frameBuffers[n]->resource, nullptr, rtvHandle.cpu);
+		frameBuffers[n]->state = D3D12_RESOURCE_STATE_PRESENT;
+		frameBuffers[n]->rtv = rtvHandle;
 	}
-	frameBuffer->desc.type = GPUBufferType::Texture2D;
-	frameBuffer->desc.usage = GPUUsage_ShaderResource | GPUUsage_RenderTarget;
-	frameBuffer->desc.format = dxSwapChainDesc.Format;
-	frameBuffer->frameIndex = swapChain3->GetCurrentBackBufferIndex();
 
 	frameFence = renderDevice->CreateFence();
 }
@@ -640,7 +637,7 @@ void SwapChain::Present(RenderDevice* renderDevice)
 
 	// Wait for frame
 	renderDevice->WaitForFence(frameFence);
-	frameBuffer->frameIndex = swapChain3->GetCurrentBackBufferIndex();
+	frameIndex = swapChain3->GetCurrentBackBufferIndex();
 }
 
 

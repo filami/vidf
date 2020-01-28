@@ -14,7 +14,7 @@ void RenderContext::ClearRenderTarget(GPUBufferPtr buffer, Color color)
 	AddResourceBarrier(buffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	FlushResourceBarriers();
 	commandList->ClearRenderTargetView(
-		buffer->rtvs[frameIndex].cpu, &color.r,
+		buffer->rtv.cpu, &color.r,
 		0, nullptr);
 }
 
@@ -27,7 +27,7 @@ void RenderContext::ClearRenderTargetFast(GPUBufferPtr buffer)
 	AddResourceBarrier(buffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	FlushResourceBarriers();
 	commandList->ClearRenderTargetView(
-		buffer->rtvs[frameIndex].cpu, buffer->desc.fastClear.Color,
+		buffer->rtv.cpu, buffer->desc.fastClear.Color,
 		0, nullptr);
 }
 
@@ -60,7 +60,7 @@ void RenderContext::BeginRenderPass(RenderPassPtr renderPass)
 	for (uint i = 0; i < renderPass->desc.rtvs.size(); ++i)
 		AddResourceBarrier(renderPass->desc.rtvs[i], D3D12_RESOURCE_STATE_RENDER_TARGET);
 	commandList->OMSetRenderTargets(
-		renderPass->rtvs[frameIndex].size(), renderPass->rtvs[frameIndex].data(),
+		renderPass->rtvs.size(), renderPass->rtvs.data(),
 		false, dsv);
 	commandList->RSSetViewports(1, &renderPass->desc.viewport);
 	commandList->RSSetScissorRects(1, &renderPass->scissor);
@@ -113,10 +113,10 @@ void RenderContext::Draw(const DrawBatch& batch)
 	for (uint i = 0; i < batch.vertexStream.size(); ++i)
 	{
 		AddResourceBarrier(batch.vertexBuffers[i], D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-		if (vertexBuffers[i] != batch.vertexBuffers[i]->resource[0].resource)
+		if (vertexBuffers[i] != batch.vertexBuffers[i]->resource)
 		{
 			setVBs = true;
-			vertexBuffers[i] = batch.vertexBuffers[i]->resource[0].resource;
+			vertexBuffers[i] = batch.vertexBuffers[i]->resource;
 		}
 	}
 	if (setVBs)
@@ -125,10 +125,10 @@ void RenderContext::Draw(const DrawBatch& batch)
 	if (batch.indexBuffer)
 	{
 		AddResourceBarrier(batch.indexBuffer, D3D12_RESOURCE_STATE_INDEX_BUFFER);
-		if (indexBuffer != batch.indexBuffer->resource[0].resource)
+		if (indexBuffer != batch.indexBuffer->resource)
 		{
 			commandList->IASetIndexBuffer(&batch.indexBuffer->ibv);
-			indexBuffer = batch.indexBuffer->resource[0].resource;
+			indexBuffer = batch.indexBuffer->resource;
 		}
 	}
 
@@ -195,16 +195,16 @@ void RenderContext::ComputeDispatch(ComputePtr compute, uint x, uint y, uint z)
 
 void RenderContext::AddResourceBarrier(GPUBufferPtr buffer, D3D12_RESOURCE_STATES state)
 {
-	if (buffer->resource[frameIndex].state != state)
+	if (buffer->state != state)
 	{
 		D3D12_RESOURCE_BARRIER barrier{};
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = buffer->resource[frameIndex].resource;
-		barrier.Transition.StateBefore = buffer->resource[frameIndex].state;
+		barrier.Transition.pResource = buffer->resource;
+		barrier.Transition.StateBefore = buffer->state;
 		barrier.Transition.StateAfter = state;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		buffer->resource[frameIndex].state = state;
+		buffer->state = state;
 		barriers.push_back(barrier);
 	}
 }
@@ -235,7 +235,7 @@ void RenderContext::CopyResource(GPUBufferPtr buffer, const void* dataPtr, uint 
 	data.RowPitch = dataSize;
 	data.SlicePitch = 0;
 	UpdateSubresources(
-		commandList, buffer->resource[0].resource,
+		commandList, buffer->resource,
 		transient, 0, 0, 1, &data);
 }
 
@@ -246,10 +246,7 @@ void RenderContext::CopyResource(GPUBufferPtr dst, GPUBufferPtr src)
 	AddResourceBarrier(src, D3D12_RESOURCE_STATE_COPY_SOURCE);
 	AddResourceBarrier(dst, D3D12_RESOURCE_STATE_COPY_DEST);
 	FlushResourceBarriers();
-
-	const uint srcFrameIndex = src->frameIndex;
-	const uint dstFrameIndex = dst->frameIndex;
-	commandList->CopyResource(dst->resource[dstFrameIndex].resource, src->resource[srcFrameIndex].resource);
+	commandList->CopyResource(dst->resource, src->resource);
 }
 
 
