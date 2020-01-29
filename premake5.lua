@@ -1,7 +1,5 @@
-dofile "src/build/buildlib.lua"
+dofile "vidf.lua"
 
--- include "src/ext"
-include "src/vidf"
 include "src/research"
 include "src/researchApp"
 include "src/researchUI"
