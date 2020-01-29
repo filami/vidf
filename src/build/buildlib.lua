@@ -3,8 +3,6 @@ allConfigs = "*"
 debugConfig = "debug"
 profileConfig = "profile"
 
-solution "vidf"
-uuid(os.uuid("vidf"))
 location (buildLocation)
 platforms {"x64"}
 configurations {debugConfig, profileConfig}
